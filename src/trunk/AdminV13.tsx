@@ -267,7 +267,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
       if (!token) { setToast({ kind: "err", text: "Session requise." }); return; }
       const result = await setManagedStaffRole({ token, accountId, role, status: desired, reason: trimmed });
       if (result.ok) {
-        setToast({ kind: "ok", text: `${label} ${desired === "active" ? "ajouté" : "révoqué"} — ${role}.` });
+        setToast({ kind: "ok", text: `${label} ${desired === "active" ? "ajouté" : "révoqué"} : ${role}.` });
         setRoleDraft(null);
         setRoleDraftText("");
         void load();
@@ -299,7 +299,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
       if (!token) { setToast({ kind: 'err', text: 'Session requise.' }); return; }
       const result = await adminActivateSellerAccount({ token, accountId: candidate.accountId });
       if (result.ok) {
-        setToast({ kind: 'ok', text: 'Compte vendeur activé — le switch montrera Vendeur.' });
+        setToast({ kind: 'ok', text: 'Compte vendeur activé. Le sélecteur de rôle montrera Vendeur.' });
         void load();
       } else {
         setToast({ kind: 'err', text: result.error?.message ?? 'Activation non enregistrée.' });
@@ -487,7 +487,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
                         type="text"
                         value={roleDraftText}
                         onChange={(e) => setRoleDraftText(e.target.value)}
-                        placeholder={`${roleDraft?.desired === 'active' ? 'Octroi' : 'Révocation'} — motif audité`}
+                        placeholder={`${roleDraft?.desired === 'active' ? 'Octroi' : 'Révocation'} · motif audité`}
                         disabled={roleBusy !== null}
                         onKeyDown={(e) => { if (e.key === 'Enter') void confirmRoleComposer(); }}
                       />
@@ -702,7 +702,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
           )}
           <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>Le compteur de ventes ne se modifie pas ici. Chaque décision est motivée & auditée.</p>
           <div className="btnrow">
-            <button className="btn ghost sm" type="button" disabled>Compteur — volet opérateur</button>
+            <button className="btn ghost sm" type="button" disabled>Compteur · volet opérateur</button>
           </div>
         </>
       )}

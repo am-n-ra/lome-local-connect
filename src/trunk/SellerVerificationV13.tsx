@@ -78,7 +78,7 @@ export function SellerVerificationV13({ onClose }: Props) {
               )}
               <div className="kv"><span>Preuves exigées</span><b>{data.requiredCount > 1 ? `${data.requiredCount} ventes (commerce)` : '1 vente (particulier)'}</b></div>
             </div>
-            <p className="lead">Vous <b>publiez déjà</b> (S-31) ; la vérification est une couche gagnée. Vous voyez ici <b>où elle en est</b> — l’équipe décide du badge, jamais cette page.</p>
+            <p className="lead">Vous <b>publiez déjà</b> ; la vérification est une couche gagnée. Vous voyez ici <b>où elle en est</b>. L’équipe décide du badge, jamais cette page.</p>
             <div className="cardbox">
               <div className="kv"><span><ShieldCheck size={13} /> Ventes qualifiantes</span><b>{data.requiredCount > 1 ? `${data.qualifyingSales}/${data.requiredCount}` : data.qualifyingSales > 0 ? 'Acquise' : 'En attente'}</b></div>
             </div>

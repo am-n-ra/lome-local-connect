@@ -20,7 +20,7 @@ const STATE_LABEL: Record<string, string> = {
  * idea what to fix. Each message names the ONE fact to add, not a generic "not allowed".
  */
 export function publicationMessage(code: string): string {
-  if (code === 'MEDIA_REQUIRED') return "Ajoutez d'abord un visuel : la maquette exige 1 image par offre.";
+  if (code === 'MEDIA_REQUIRED') return "Ajoutez d'abord un visuel : une image est exigée pour chaque offre.";
   if (code === 'ADVANTAGE_REQUIRED') return "Ajoutez d'abord un avantage Omni (une remise) : il est requis pour publier.";
   if (code === 'UNIQUENESS_REQUIRED') return "Dites si l'offre est renouvelable ou une pièce unique : une offre muette ne se publie pas.";
   if (code === 'HANDOVER_REQUIRED') return 'Précisez le mode de remise (retrait, livraison ou immatériel).';
@@ -63,7 +63,7 @@ export function ProductCatalogueV13({ onClose, onStockEvent }: ProductCatalogueV
         setNotice(`${product.name} : ${to === 'published' ? 'publiée' : 'archivée'}.`);
         void load();
       } else {
-        setError(`${product.name} — ${publicationMessage(result.error?.code ?? '')}`);
+        setError(`${product.name} · ${publicationMessage(result.error?.code ?? '')}`);
       }
     } finally { setBusyId(null); }
   }, [load]);
@@ -85,7 +85,7 @@ export function ProductCatalogueV13({ onClose, onStockEvent }: ProductCatalogueV
       if (!token) return;
       const result = await uploadSellerProductMedia({ token, productId, file });
       if (result.ok) { setNotice("Visuel ajouté à l'offre."); void load(); }
-      else setError(`Visuel refusé — ${result.error?.message ?? 'réessayez.'}`);
+      else setError(`Visuel refusé : ${result.error?.message ?? 'réessayez.'}`);
     } catch {
       setError('Envoi du visuel interrompu. Réessayez.');
     } finally { setUploadingId(null); }
@@ -160,7 +160,7 @@ export function ProductCatalogueV13({ onClose, onStockEvent }: ProductCatalogueV
         })}
       </div>
       <p className="tiny muted" style={{ marginTop: 7 }}>L'allocation Omni ≠ votre stock total. C'est la part que vous rendez disponible aux transactions Omni.</p>
-      <p className="tiny muted" style={{ marginTop: 4 }}>Une offre ne peut être publiée qu'avec <b>1 visuel</b> et un <b>avantage Omni</b> — la disponibilité affichée doit être vérifiable.</p>
+      <p className="tiny muted" style={{ marginTop: 4 }}>Une offre ne peut être publiée qu'avec <b>1 visuel</b> et un <b>avantage Omni</b>, et la disponibilité affichée doit être vérifiable.</p>
       <div className="btnrow" style={{ marginTop: 5 }}>
         <button className="btn ghost" type="button" onClick={() => { if (products[0]) onStockEvent(products[0].id); }}><PackageOpen size={14} /> Historique stock</button>
       </div>

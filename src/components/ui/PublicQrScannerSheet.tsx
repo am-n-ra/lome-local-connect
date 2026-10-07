@@ -143,7 +143,7 @@ export function PublicQrScannerSheet({ target = 'facility', onDetected, onClose 
         </div>
       </div>
       <p className="sub" style={{ textAlign: 'center', marginTop: 8, fontSize: 10, color: 'var(--ink-soft)' }}>
-        {target === 'entity' ? 'QR public d’une entité — affiché en boutique, il applique la remise Omni.' : 'QR public — découvrir les offres.'} ≠ QR transaction.
+        {target === 'entity' ? 'QR public d’une entité : affiché en boutique, il applique la remise Omni.' : 'QR public : découvrir les offres.'} ≠ QR transaction.
 
       </p>
     </section>

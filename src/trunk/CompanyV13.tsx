@@ -69,7 +69,7 @@ export function CompanyV13({ onClose, onProducts, onOffers, catalogue }: Company
             {qrPayload && (
               <div style={{ marginTop: 8, display: 'grid', placeItems: 'center', textAlign: 'center', gap: 6 }}>
                 <OmniQr value={qrPayload} size={132} />
-                <span className="tiny muted" style={{ fontSize: 9 }}>QR public — affichez-le en boutique : votre client le scanne, la remise Omni s’applique.</span>
+                <span className="tiny muted" style={{ fontSize: 9 }}>QR public : affichez-le en boutique. Votre client le scanne, la remise Omni s’applique.</span>
               </div>
             )}
             <div className="btnrow" style={{ marginTop: 8 }}>

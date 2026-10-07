@@ -4,8 +4,8 @@ import { cameraPreviewShouldBeVisible, cameraStatusLabel } from "./camera-scanne
 describe("camera scanner contract", () => {
   it("keeps permission and fallback states explicit", () => {
     expect(cameraStatusLabel("permission_pending")).toContain("autorisation");
-    expect(cameraStatusLabel("denied")).toContain("saisie manuelle");
-    expect(cameraStatusLabel("unsupported")).toContain("saisie manuelle");
+    expect(cameraStatusLabel("denied")).toContain("Saisie manuelle");
+    expect(cameraStatusLabel("unsupported")).toContain("Saisie manuelle");
   });
 
   it("only marks the live preview visible when the stream is active", () => {

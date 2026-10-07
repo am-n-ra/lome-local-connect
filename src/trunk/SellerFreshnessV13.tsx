@@ -63,9 +63,9 @@ export function SellerFreshnessV13({ onClose }: Props) {
         setNotice(`${product.name} : disponibilité re-confirmée (${windowHours} h).`);
         void load();
       } else if (result.error?.code === 'FORBIDDEN_OR_PRO_REQUIRED') {
-        setError('Le Pro de l’entité est requis pour déclarer une disponibilité vivante (D-04).');
+        setError('Le Pro de l’entité est requis pour déclarer une disponibilité vivante.');
       } else {
-        setError(`Refusé — ${result.error?.message ?? 'réessayez.'}`);
+        setError(`Refusé : ${result.error?.message ?? 'réessayez.'}`);
       }
     } catch {
       setError('Confirmation interrompue. Réessayez.');
@@ -102,7 +102,7 @@ export function SellerFreshnessV13({ onClose }: Props) {
       <div className="cardbox">
         <div className="kv"><span>Dernière confirmation</span><b>{worst ? freshnessLabel(worst, now) : 'Aucune offre publiée'}</b></div>
         <div className="kv"><span>Seuil frais / expiré</span><b>4 h frais · 24 h expiré</b></div>
-        <div className="kv"><span>Badge affiché</span><b className={`status ${worstBadge?.tone ?? 'gray'}`}>{worstBadge?.label ?? '—'}</b></div>
+        <div className="kv"><span>Badge affiché</span><b className={`status ${worstBadge?.tone ?? 'gray'}`}>{worstBadge?.label ?? 'N/D'}</b></div>
       </div>
 
       <div className="section-kicker">Fenêtre de confirmation</div>
@@ -120,7 +120,7 @@ export function SellerFreshnessV13({ onClose }: Props) {
 
       <div className="section-kicker" style={{ marginTop: 12 }}>Vos offres publiées</div>
       <div className="plist">
-        {published.length === 0 && <p className="tiny muted">Aucune offre publiée — publiez une offre pour déclarer sa disponibilité.</p>}
+        {published.length === 0 && <p className="tiny muted">Aucune offre publiée. Publiez une offre pour déclarer sa disponibilité.</p>}
         {published.map((product) => {
           const fresh = computeOfferFreshness(product.availabilityState, product.availabilityExpiresAt, now);
           const badge = badgeFor(product, now);

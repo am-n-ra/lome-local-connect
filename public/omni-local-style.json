@@ -1,6 +1,6 @@
 {
   "version": 8,
-  "name": "Omni — Positron",
+  "name": "Omni · Positron",
   "projection": {"type": "mercator"},
   "sources": {
     "basemap": {

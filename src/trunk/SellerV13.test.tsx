@@ -55,7 +55,7 @@ describe('SellerV13 entry boundary (founder bug: switch → installed shell inst
   // montrait la coquille d'un vendeur installé (barre, ON/OFF, catalogue).
   it('shows the claim/create entry — not the installed shell — for an account with no facility', () => {
     render(emptyCatalogue, claimable);
-    expect(text()).toContain('Bienvenue — espace vendeur');
+    expect(text()).toContain('Bienvenue dans votre espace vendeur');
     expect(text()).toContain('Revendiquez une facilité déjà sur la carte');
     expect(text()).toContain('Créer une facilité');
     // la coquille d'un vendeur installé ne doit PAS apparaître
@@ -82,7 +82,7 @@ describe('SellerV13 entry boundary (founder bug: switch → installed shell inst
   it('shows the operating shell once the account actually owns a facility', () => {
     render(installedCatalogue, []);
     expect(text()).toContain('Je suis actif en ce moment');
-    expect(text()).not.toContain('Bienvenue — espace vendeur');
+    expect(text()).not.toContain('Bienvenue dans votre espace vendeur');
   });
 
   it('opens straight into the create form when entered from "la facilité n\'est pas sur la carte"', () => {

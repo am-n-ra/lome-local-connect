@@ -246,7 +246,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
         setQrToken(null);
         setQrExpires('');
         setStage('txn');
-        setToast('QR révoqué — vous pouvez en émettre un nouveau.');
+        setToast('QR révoqué. Vous pouvez en émettre un nouveau.');
       } else { setError(result.error?.message ?? 'QR non révoqué.'); }
     } finally { setBusy(false); }
   }, [needAuth, txnId]);
@@ -281,7 +281,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
         declareExternalPayment({ transactionId: txnId, method, token }).catch(() => null),
         transitionTransaction({ transactionId: txnId, from: 'intent_created', to: 'payment_declared', actorRole: 'buyer', token }).catch(() => null),
       ]);
-      if (declared?.ok || moved?.ok) { setStage('txn'); setToast('Paiement déclaré — le vendeur confirme.'); void loadTxn(txnId); }
+      if (declared?.ok || moved?.ok) { setStage('txn'); setToast('Paiement déclaré. Le vendeur confirme.'); void loadTxn(txnId); }
       else setError('Déclaration de paiement non reçue.');
     } finally { setBusy(false); }
   }, [needAuth, txnId, loadTxn]);
@@ -294,7 +294,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
       const result = await submitTransactionRating({ transactionId: txnId, score, note: note, token });
       if (result.ok) {
         await transitionTransaction({ transactionId: txnId, from: 'received', to: 'rated', actorRole: 'buyer', token }).catch(() => null);
-        setStage('rate'); setToast('Merci — votre avis est enregistré.');
+        setStage('rate'); setToast('Merci, votre avis est enregistré.');
       } else { setError(result.error?.message ?? 'Avis non enregistré.'); }
     } finally { setBusy(false); }
   }, [needAuth, txnId, score, note]);
@@ -336,7 +336,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
               <p className="tiny muted" style={{ marginTop: 5 }}>Le vendeur reste libre : il répond avec SON prix. Négocier, c’est chercher moins cher que le prix affiché.</p>
             </div>
           ) : (
-            <p className="tiny muted" style={{ marginTop: 8 }}>{product.priceKind === 'fixe' ? 'Offre à prix fixe — le prix affiché est le prix.' : 'Cette offre n’a pas déclaré de prix négociable.'}</p>
+            <p className="tiny muted" style={{ marginTop: 8 }}>{product.priceKind === 'fixe' ? 'Offre à prix fixe : le prix affiché est le prix.' : 'Cette offre n’a pas déclaré de prix négociable.'}</p>
           )}
           <div className="label" style={{ marginTop: 8 }}>Contraintes</div>
           <div className="seg" style={{ display: 'flex', gap: 0, borderRadius: 999, border: '1px solid var(--line)', overflow: 'hidden', marginTop: 4 }}>
@@ -356,7 +356,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
 
       {stage === 'pending' && (
         <div className="cardbox">
-          <p className="sub">Demande envoyée — le commerce confirme la dispo.</p>
+          <p className="sub">Demande envoyée. Le commerce confirme la disponibilité.</p>
           <div className="cardbox" style={{ marginTop: 8 }}>
             <div className="kv"><span>{product.name} ×{quantity}</span><b className="status gray">En attente</b></div>
           </div>
@@ -391,7 +391,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
             <span className="fdot" />
             Fraîcheur : {freshness.text || 'à l\'instant'} · reflète l'allocation Omni, pas l'inventaire total du vendeur
           </div>
-          <p className="sub" style={{ marginTop: 8 }}>Crée la transaction. Une fois dedans, vous suivez jusqu'à la note — pas de retour.</p>
+          <p className="sub" style={{ marginTop: 8 }}>Crée la transaction. Une fois dedans, vous suivez jusqu'à la note. Aucun retour en arrière.</p>
           <div className="btnrow" style={{ marginTop: 10 }}>
             <button className="btn ok" type="button" disabled={busy} onClick={() => void createIntent()}>Confirmer l'intention</button>
             <button className="btn ghost" type="button" onClick={() => setStage('avail')}>Retour</button>
@@ -403,7 +403,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
           <div className="cardbox" style={{ marginTop: 8 }} role="status">
             <div className="kv"><span>Étape</span><b>Expirée</b></div>
             <p className="tiny muted" style={{ marginTop: 6 }}>
-              Cette intention n'a pas été vérifiée à temps. <b>Rien n'a été débité</b> — la réservation de stock a été libérée.
+              Cette intention n'a pas été vérifiée à temps. <b>Rien n'a été débité</b>. La réservation de stock a été libérée.
             </p>
             <button className="btn ok" style={{ marginTop: 8 }} type="button" onClick={() => setStage('avail')}>Nouvelle demande de disponibilité</button>
           </div>
@@ -488,7 +488,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
               >
                 <Navigation size={15} /> Itinéraire vers le vendeur
               </button>
-              <p className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>Contact & localisation visibles après votre intention — le chat transactionnel reste disponible ici.</p>
+              <p className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>Contact et localisation visibles après votre intention. Le chat transactionnel reste disponible ici.</p>
             </div>
           )}
           <div className="btnrow">
@@ -506,7 +506,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
           </div>
           <p className="tiny muted" style={{ wordBreak: 'break-all' }}>{qrPayload(txnId!, qrToken)}</p>
           {qrExpired ? (
-            <p className="tiny" style={{ color: 'var(--warn)' }}>QR expiré — ré-émettez-en un nouveau pour continuer.</p>
+            <p className="tiny" style={{ color: 'var(--warn)' }}>QR expiré. Ré-émettez-en un nouveau pour continuer.</p>
           ) : (
             <p className="tiny muted">Expire {new Date(qrExpires).toLocaleString('fr-FR')} ({deadlineLabel(qrMinutesLeft)})</p>
           )}
@@ -523,7 +523,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
         <div>
           <div className="cardbox">
             <div className="row" style={{ justifyContent: 'space-between' }}>
-              <div><b>Omni Wallet</b><br /><span className="tiny muted">{walletBalanceMinor === null || walletBalanceMinor === undefined ? 'Solde indisponible — recharger via le Wallet' : `${formatMoney(walletBalanceMinor, 'XOF')} disponible`}</span></div>
+              <div><b>Omni Wallet</b><br /><span className="tiny muted">{walletBalanceMinor === null || walletBalanceMinor === undefined ? 'Solde indisponible. Rechargez via le Wallet' : `${formatMoney(walletBalanceMinor, 'XOF')} disponible`}</span></div>
               <span className="status gray">{walletBalanceMinor !== null && walletBalanceMinor !== undefined && walletBalanceMinor > 0 ? 'Disponible' : 'Indisponible'}</span>
             </div>
           </div>
@@ -535,12 +535,12 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
           </div>
           <div className="cardbox" style={{ marginTop: 6 }}>
             <div className="row" style={{ justifyContent: 'space-between' }}>
-              <div><b>Recharge FedaPay</b><br /><span className="tiny muted">Recharge externe — pas de paiement transaction</span></div>
+              <div><b>Recharge FedaPay</b><br /><span className="tiny muted">Recharge externe · pas de paiement transaction</span></div>
               <span className="status ink">Externe</span>
             </div>
           </div>
           <button className="btn ok" style={{ marginTop: 10 }} type="button" disabled={busy} onClick={() => void declarePay('cash')}>Déclarer le paiement</button>
-          <p className="tiny muted" style={{ textAlign: 'center', marginTop: 9 }}>L'argent ne transite pas par Omni en V1 (D-05).</p>
+          <p className="tiny muted" style={{ textAlign: 'center', marginTop: 9 }}>L'argent ne transite pas par Omni.</p>
           <button className="btn ghost sm" style={{ width: 'auto', minHeight: 30, marginTop: 8 }} type="button" onClick={() => setStage('txn')}>Retour</button>
         </div>
       )}

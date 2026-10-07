@@ -124,14 +124,14 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
   useEffect(() => { if (startInCreate) onConsumeCreateIntent?.(); }, [startInCreate, onConsumeCreateIntent]);
 
   const locateMe = useCallback(() => {
-    if (!('geolocation' in navigator)) { setCreateError('Géolocalisation indisponible — saisissez les coordonnées manuellement.'); return; }
+    if (!('geolocation' in navigator)) { setCreateError('Géolocalisation indisponible. Saisissez les coordonnées manuellement.'); return; }
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setFacilityLat(position.coords.latitude.toFixed(6));
         setFacilityLng(position.coords.longitude.toFixed(6));
         setCreateError('');
       },
-      () => setCreateError('Géolocalisation refusée — saisissez les coordonnées manuellement.'),
+      () => setCreateError('Géolocalisation refusée. Saisissez les coordonnées manuellement.'),
       { enableHighAccuracy: true, timeout: 10_000 },
     );
   }, []);
@@ -153,7 +153,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
       const idempotencyKey = crypto.randomUUID();
       const result = await createSellerFacility({ token, name: facilityName.trim(), facilityType, ownerKind, category: facilityCategory.trim() || null, description: null, address: facilityAddress.trim() || null, latitude, longitude, rayonKm, contactPhone: facilityPhone.trim() || null, contactWhatsapp: facilityWhatsapp.trim() || null, idempotencyKey });
       if (result.ok && result.data) {
-        setToast('Facilité créée — complétez le parcours de preuve pour être trouvé.');
+        setToast('Facilité créée. Complétez le parcours de preuve pour être trouvé.');
         setShowCreateForm(false);
         setFacilityName('');
         setFacilityCategory('');
@@ -204,7 +204,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
         positionKind: offerPosition, uniquenessKind: offerUniqueness, handoverKind: offerHandover, priceKind: offerPriceKind, conditionKind: offerCondition,
       });
       if (result.ok && result.data) {
-        setToast('Offre créée en brouillon — publiez-la depuis le catalogue.');
+        setToast('Offre créée en brouillon. Publiez-la depuis le catalogue.');
         setShowOfferForm(false);
         setOfferName('');
         setOfferPrice('');
@@ -226,7 +226,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
     try {
       const result = await setSellerFacilityOperationalState({ token, facilityId: ws.selFacilityId, state: next });
       if (result.ok && result.data) {
-        setToast(next === 'ouvert' ? 'Votre commerce est ouvert.' : 'Votre commerce est fermé — indisponible dans la recherche.');
+        setToast(next === 'ouvert' ? 'Votre commerce est ouvert.' : 'Votre commerce est fermé : indisponible dans la recherche.');
         if (onRefresh) onRefresh(); else void load();
       } else {
         setError(result.error?.message ?? 'Changement d’état non enregistré.');
@@ -329,7 +329,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
       const result = await updateSellerFacilityContact({ token, facilityId: ws.selFacilityId, contactPhone: contactPhoneDraft.trim() || null, contactWhatsapp: contactWhatsappDraft.trim() || null });
       if (result.ok && result.data) {
         setContactEditOpen(false);
-        setToast('Contact enregistré — visible par les acheteurs après intention.');
+        setToast('Contact enregistré. Visible par les acheteurs après intention.');
         if (onRefresh) onRefresh(); else void load();
       } else {
         setError(result.error?.message ?? 'Contact non enregistré.');
@@ -349,7 +349,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
     try {
       const result = await setProductAutoAvailability({ token, productId, enabled });
       if (result.ok && result.data) {
-        setToast(enabled ? 'Disponibilité automatique activée — le badge suit votre stock alloué.' : 'Disponibilité automatique désactivée.');
+        setToast(enabled ? 'Disponibilité automatique activée. Le badge suit votre stock alloué.' : 'Disponibilité automatique désactivée.');
         if (onRefresh) onRefresh(); else void load();
       } else {
         setError(result.error?.message ?? 'Impossible de changer la disponibilité automatique.');
@@ -407,7 +407,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
       const result = await renewFacilityPro({ token, facilityId: ws.selFacilityId });
       if (result.ok && result.data) {
         if (result.data.renewed) setToast('Pro renouvelé pour 30 jours.');
-        else setToast(result.data.status === 'insufficient_funds' ? 'Solde insuffisant — rechargez votre portefeuille pour prolonger Pro.' : 'Pas de renouvellement dû pour le moment.');
+        else setToast(result.data.status === 'insufficient_funds' ? 'Solde insuffisant. Rechargez votre portefeuille pour prolonger Pro.' : 'Pas de renouvellement dû pour le moment.');
         void loadRenewal();
       } else {
         setError(result.error?.message ?? 'Impossible de renouveler Pro.');
@@ -434,7 +434,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
       </button>
       <div style={{ padding: 11, borderRadius: 15, background: 'var(--accent-soft)', border: '1px solid var(--line)' }}>
         <small className="fs-7" style={{ display: 'block', color: 'var(--ink-soft)' }}>{lang.facility}</small>
-        <strong className="fs-17" style={{ display: 'block', marginTop: 3 }}>{onMapCount ? `${onMapCount} sur la carte` : ws.selFacilityCatalogue?.name ?? '—'}</strong>
+        <strong className="fs-17" style={{ display: 'block', marginTop: 3 }}>{onMapCount ? `${onMapCount} sur la carte` : ws.selFacilityCatalogue?.name ?? 'N/D'}</strong>
       </div>
     </div>
   );
@@ -457,9 +457,9 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
       )}
       {hasData && !hasFacility && (
         <div className="cardbox" style={{ marginTop: 9 }}>
-          <div className="eyebrow">Bienvenue — espace vendeur</div>
+          <div className="eyebrow">Bienvenue dans votre espace vendeur</div>
           <p className="sub">Tout compte Omni peut vendre: une facilité d'abord, puis un catalogue et des offres.</p>
-          <p className="tiny muted">Revendiquez une facilité déjà sur la carte — ou créez la vôtre en 2 minutes.</p>
+          <p className="tiny muted">Revendiquez une facilité déjà sur la carte, ou créez la vôtre en 2 minutes.</p>
 
           {ws.claimable.length > 0 ? (
             <>
@@ -521,7 +521,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
                   </div>
                 </>
               ) : (
-                <p className="tiny muted" style={{ marginTop: 9 }}>Un établissement digital n'a pas de point physique — il sera découvert par nom/catégorie.</p>
+                <p className="tiny muted" style={{ marginTop: 9 }}>Un établissement digital n'a pas de point physique : il sera découvert par nom ou catégorie.</p>
               )}
               {facilityType === 'mobile' && (
                 <>
@@ -557,9 +557,9 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
             <div>
               <b className="tiny" style={{ display: 'block' }}>Bonus confiance</b>
               {bonusStatus?.status === 'granted' ? (
-                <span className="tiny" style={{ color: 'var(--accent)' }}>✓ {BONUS_LABEL} crédités dans le portefeuille — merci pour votre confiance.</span>
+                <span className="tiny" style={{ color: 'var(--accent)' }}>✓ {BONUS_LABEL} crédités dans le portefeuille. Merci pour votre confiance.</span>
               ) : bonusStatus?.status === 'eligible' ? (
-                <span className="tiny" style={{ color: 'var(--accent)' }}>3/3 acheteurs distincts — le bonus {BONUS_LABEL} est débloqué.</span>
+                <span className="tiny" style={{ color: 'var(--accent)' }}>3/3 acheteurs distincts : le bonus {BONUS_LABEL} est débloqué.</span>
               ) : (
                 <span className="tiny muted">{bonusStatus?.distinctBuyerCount ?? 0}/3 acheteurs distincts · {BONUS_LABEL} verrouillé (ventes QR)</span>
               )}
@@ -681,7 +681,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
                 <button className="btn" type="button" disabled={offerBusy} onClick={() => void submitOffer()}>{offerBusy ? 'Publication…' : 'Publier mon offre'}</button>
                 <button className="btn ghost" type="button" disabled={offerBusy} onClick={() => setShowOfferForm(false)}>Annuler</button>
               </div>
-              <p className="tiny muted" style={{ marginTop: 6 }}>L'offre est créée en brouillon : publiez-la depuis le catalogue. Le badge de confiance reste propre à l'entité — jamais à l'offre.</p>
+              <p className="tiny muted" style={{ marginTop: 6 }}>L'offre est créée en brouillon : publiez-la depuis le catalogue. Le badge de confiance reste propre à l'entité, jamais à l'offre.</p>
             </div>
           )}
         </div>
@@ -694,9 +694,9 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
               {renewalStatus.plan === 'pro_active' ? (
                 <span className="tiny muted">Actif · reste {renewalStatus.daysLeft} j · {formatUsdSticker(renewalStatus.baseProPriceUsdMinor)}/mois ≈ {formatMoney(renewalStatus.proPriceMinor, renewalStatus.billingCurrency)}</span>
               ) : renewalStatus.plan === 'pro_expired' ? (
-                <span className="tiny muted">Expiré — renouvellement via portefeuille</span>
+                <span className="tiny muted">Expiré · renouvellement via portefeuille</span>
               ) : (
-                <span className="tiny muted">Gratuit — le Pro débloque catalogue + dispo auto</span>
+                <span className="tiny muted">Gratuit · le Pro débloque catalogue + dispo auto</span>
               )}
             </div>
             {renewalStatus.plan !== 'free' && (
@@ -719,7 +719,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
           <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
             <div>
               <b className="tiny" style={{ display: 'block' }}>Automatisation · disponibilité (Pro)</b>
-              <span className="tiny muted">Le badge suit votre stock alloué — jamais l'acheteur à sa place.</span>
+              <span className="tiny muted">Le badge suit votre stock alloué, jamais l'acheteur à sa place.</span>
             </div>
           </div>
           {!autoEligible ? (
@@ -781,7 +781,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
           <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
             <div>
               <b className="tiny" style={{ display: 'block' }}>Transactions</b>
-              <span className="tiny muted">Vos ventes Omni — conversation, paiement et remise par transaction.</span>
+              <span className="tiny muted">Vos ventes Omni : conversation, paiement et remise par transaction.</span>
             </div>
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} type="button" onClick={() => void loadSellerTransactions()}>Actualiser</button>
           </div>
@@ -834,7 +834,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
             )}
           </div>
           {renewalStatus.plan !== 'pro_active' ? (
-            <p className="tiny muted" style={{ marginTop: 6 }}>Activez Omni Pro pour lancer une campagne sponsorisée — votre facilité apparaît en premier dans la recherche avec le badge « Sponsorisé ».</p>
+            <p className="tiny muted" style={{ marginTop: 6 }}>Activez Omni Pro pour lancer une campagne sponsorisée : votre facilité apparaît en premier dans la recherche avec le badge « Sponsorisé ».</p>
           ) : (
             <div style={{ marginTop: 9 }}>
               <div className="row" style={{ gap: 6, marginBottom: 6 }}>
@@ -876,13 +876,13 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
           </div>
           {((propsCatalogue ?? catalogue)?.products?.length ?? 0) > 0 && (
             <p className="tiny" style={{ marginTop: 3, color: (propsCatalogue ?? catalogue)?.catalogReady ? 'var(--accent)' : 'var(--warn)' }}>
-              {(propsCatalogue ?? catalogue)?.catalogReady ? 'Catalogue prêt — produits visibles' : 'Catalogue incomplet pour la vente'}
+              {(propsCatalogue ?? catalogue)?.catalogReady ? 'Catalogue prêt · produits visibles' : 'Catalogue incomplet pour la vente'}
             </p>
           )}
           <div className="btnrow" style={{ marginTop: 7 }}>
             <button className="btn ghost" type="button" onClick={onScan}><ScanLine size={14} /> {lang.scanner}</button>
           </div>
-          <p className="tiny muted" style={{ marginTop: 6 }}>{lang.wallet} — depuis votre menu.</p>
+          <p className="tiny muted" style={{ marginTop: 6 }}>{lang.wallet} : recharge depuis votre menu.</p>
         </>
       )}
     </section>

@@ -111,7 +111,7 @@ describe('TransactionRoom — S-27, surface symétrique acheteur/vendeur', () =>
 
   it('transaction clôturée : signaler un problème désactivé honnête, aucune action', async () => {
     await renderRoom('buyer', 'closed');
-    expect(text()).toContain('Signaler un problème — bientôt');
+    expect(text()).toContain('Signaler un problème · bientôt');
     expect(text()).not.toContain('Confirmer la réception');
   });
 

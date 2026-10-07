@@ -52,7 +52,7 @@ export function OnboardV13({ pendingSearch, hasSession, onClose, onComplete, onA
     // S-16 : le numéro est optionnel ; s'il est saisi, il doit être un vrai format Togo.
     const phoneTrimmed = phone.trim();
     if (mode === 'signup' && phoneTrimmed !== '' && normalizeTogoPhone(phoneTrimmed) === null) {
-      setAuthError('Numéro invalide — attendu +228 puis 8 chiffres (ou laissez vide).');
+      setAuthError('Numéro invalide : attendu +228 puis 8 chiffres (ou laissez vide).');
       return;
     }
     setBusy(true);
@@ -91,7 +91,7 @@ export function OnboardV13({ pendingSearch, hasSession, onClose, onComplete, onA
       onAuthenticated?.(user);
       setStep(3);
     } catch {
-      setAuthError(mode === 'signup' ? 'Création impossible — cet email est peut-être déjà utilisé.' : 'Connexion impossible — vérifiez vos identifiants.');
+      setAuthError(mode === 'signup' ? 'Création impossible : cet email est peut-être déjà utilisé.' : 'Connexion impossible. Vérifiez vos identifiants.');
     } finally {
       setBusy(false);
     }
@@ -121,7 +121,7 @@ export function OnboardV13({ pendingSearch, hasSession, onClose, onComplete, onA
             <div className="kv"><span>2 · Interroger</span><b>Disponibilité confirmée</b></div>
             <div className="kv"><span>3 · Vérifier & transiger</span><b>QR tracé, paiement sûr</b></div>
           </div>
-          <p className="tiny muted" style={{ marginTop: 7 }}>La disponibilité n'apparaît qu'une fois confirmée — jamais une promesse invérifiée.</p>
+          <p className="tiny muted" style={{ marginTop: 7 }}>La disponibilité n'apparaît qu'une fois confirmée, jamais une promesse invérifiée.</p>
           <button className="btn ok" style={{ marginTop: 10 }} type="button" onClick={() => setStep(2)}>Créer mon compte</button>
           <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>Vous pouvez explorer la carte sans compte ; l'accès sert à envoyer une demande.</p>
         </>
@@ -147,7 +147,7 @@ export function OnboardV13({ pendingSearch, hasSession, onClose, onComplete, onA
             <>
               <div className="label" style={{ marginTop: 8 }}>Téléphone (optionnel)</div>
               <input className="field lg" inputMode="tel" autoComplete="tel" placeholder="+228 90 12 34 56" value={phone} onChange={(e) => setPhone(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void submitAccount(); }} />
-              <p className="tiny muted" style={{ marginTop: 5 }}>Au Togo le numéro est plus courant que l'email. Statut : {phoneDeclarationLabel()} — Omni ne vérifie pas ce numéro.</p>
+              <p className="tiny muted" style={{ marginTop: 5 }}>Au Togo le numéro est plus courant que l'email. Statut : {phoneDeclarationLabel()}. Omni ne vérifie pas ce numéro.</p>
             </>
           )}
           <button className="btn ok" style={{ marginTop: 10 }} type="button" disabled={busy || !email.trim() || password.length < 6} onClick={() => void submitAccount()}>
@@ -171,7 +171,7 @@ export function OnboardV13({ pendingSearch, hasSession, onClose, onComplete, onA
               <div><b>Acheteur Pro</b><br /><span className="tiny muted">Recherches illimitées + alertes</span></div>
               <span className="status ink">{planPriceLabel('buyerPro', resolveUserCurrency(currencyInput))}</span>
             </div>
-            <p className="tiny muted" style={{ marginTop: 6 }}>≈ {localPlanPriceLabel('buyerPro', resolveUserCurrency(currencyInput))} — sans engagement.</p>
+            <p className="tiny muted" style={{ marginTop: 6 }}>≈ {localPlanPriceLabel('buyerPro', resolveUserCurrency(currencyInput))} . Sans engagement.</p>
           </div>
           <div className="cardbox">
             <div className="row" style={{ justifyContent: 'space-between' }}>

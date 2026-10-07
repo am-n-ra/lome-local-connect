@@ -648,12 +648,12 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   }, []);
 
   const handleQrDetected = useCallback(async (facilityId: string) => {
-    if (!parseFacilityIdFromQr(facilityId)) { setQrError('QR non reconnu — visez le QR public d’une facilité.'); return; }
+    if (!parseFacilityIdFromQr(facilityId)) { setQrError('QR non reconnu. Visez le QR public d’une facilité.'); return; }
     const found = facilities.find((item) => item.id === facilityId) ?? null;
     if (found) { setSheet('qr'); await handlePinSelect(found); return; }
     const result = await listPublicFacilities(undefined, undefined, { category: '' });
     const detail = (result.ok ? (result.data ?? []) : []).find((item) => item.id === facilityId) ?? null;
-    if (!detail) { setQrError('Facilité introuvable dans cette zone — QR inconnu.'); setSheet('qr'); return; }
+    if (!detail) { setQrError('Facilité introuvable dans cette zone : QR inconnu.'); setSheet('qr'); return; }
     setSheet('qr'); await handlePinSelect(detail);
   }, [facilities, handlePinSelect]);
 
@@ -702,7 +702,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     const token = await requireAuth();
     if (!token || bulkSending) return;
     if (bulkCost.count === 0) { setBulkErrors('Sélectionnez au moins une facilité pour le bulk.'); return; }
-    if (bulkCost.count < 2) { setBulkErrors('Un bulk compare un besoin chez au moins 2 facilités — une seule passe en vérification manuelle gratuite.'); return; }
+    if (bulkCost.count < 2) { setBulkErrors('Un bulk compare un besoin chez au moins 2 facilités. Une seule passe en vérification manuelle gratuite.'); return; }
     const productRef = bulkCost.targets
       .map((facility) => bulkDetails[facility.id]?.products)
       .filter((products): products is NonNullable<typeof products> => Boolean(products && products.length > 0))
@@ -970,7 +970,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       const result = await acceptTeamInvite({ token, inviteId });
       if (result.ok && result.data) {
         setMyTeamInvites((prev) => prev.filter((i) => i.id !== inviteId));
-        setInviteToast('Invitation acceptée — vous rejoignez l’équipe.');
+        setInviteToast('Invitation acceptée. Vous rejoignez l’équipe.');
       } else {
         setInviteToast(result.error?.message ?? 'Impossible d’accepter l’invitation.');
       }
@@ -987,7 +987,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     if (!token) return;
     const trimmed = phoneDraft.trim();
     if (trimmed !== '' && normalizeTogoPhone(trimmed) === null) {
-      setPhoneMsg('Numéro invalide — attendu +228 puis 8 chiffres.');
+      setPhoneMsg('Numéro invalide : attendu +228 puis 8 chiffres.');
       return;
     }
     setPhoneBusy(true);
@@ -996,7 +996,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       const result = await setDeclaredPhone({ token, phone: trimmed === '' ? null : trimmed });
       if (result.ok && result.data) {
         setPhoneDeclared(result.data.phoneDeclared);
-        setPhoneMsg(result.data.phoneDeclared ? 'Numéro déclaré enregistré — non confirmé.' : 'Numéro retiré.');
+        setPhoneMsg(result.data.phoneDeclared ? 'Numéro déclaré enregistré : non confirmé.' : 'Numéro retiré.');
         setPhoneDraft('');
       } else {
         setPhoneMsg(result.error?.message ?? 'Impossible d’enregistrer le numéro.');
@@ -1311,7 +1311,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     try {
       const result = await claimVisit({ visitId, token });
       if (result.ok && result.data) {
-        setVisitToast(result.data.alreadyMine ? 'Dossier déjà pris.' : 'Dossier pris — à vous de constater.');
+        setVisitToast(result.data.alreadyMine ? 'Dossier déjà pris.' : 'Dossier pris. À vous de constater.');
         void openTour();
       } else {
         setVisitToast(result.error?.message ?? 'Ce dossier ne peut pas être pris.');
@@ -1331,7 +1331,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         setFindingPosition({ latitude: position.coords.latitude, longitude: position.coords.longitude });
         setFindingLocating(false);
       },
-      () => { setVisitToast('Position indisponible — autorisez la localisation pour constater.'); setFindingLocating(false); },
+      () => { setVisitToast('Position indisponible. Autorisez la localisation pour constater.'); setFindingLocating(false); },
       { enableHighAccuracy: true, timeout: 15000 },
     );
   }, []);
@@ -1794,7 +1794,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       }
     } catch {
       setEntityResults([]);
-      setError('Réseau indisponible — réessayez.');
+      setError('Réseau indisponible. Réessayez.');
     } finally {
       setEntityLoading(false);
     }
@@ -1808,7 +1808,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       if (result.ok && result.data) { setSelectedEntity(result.data); setSheet('entity'); }
       else setError(result.error?.message ?? 'La page de cette entité est indisponible.');
     } catch {
-      setError('Réseau indisponible — réessayez.');
+      setError('Réseau indisponible. Réessayez.');
     } finally {
       setEntityLoading(false);
     }
@@ -1822,7 +1822,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
 
   // S1b (S-21) — le QR public d'entité : scan in-store → page de l'entité (ses offres, son avantage).
   const handleEntityQrDetected = useCallback(async (entityId: string) => {
-    if (!parseEntityIdFromQr(entityId)) { setQrError('QR non reconnu — visez le QR public d’une entité.'); return; }
+    if (!parseEntityIdFromQr(entityId)) { setQrError('QR non reconnu. Visez le QR public d’une entité.'); return; }
     setQrError(null);
     setSheet('none');
     await openEntity(entityId);
@@ -1908,7 +1908,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         /* S-05 : ne jamais laisser un vide illisible. Un filtre qui ne trouve rien doit le dire,
            et rappeler que le fond de carte `unclaimed` n'est ni un commerce ni un particulier. */
         <div className="map-legend" role="status">
-          <span>{`Aucun ${MAP_FILTERS.find((f) => f.id === mapFilter)?.label.toLowerCase() ?? ''} dans cette zone — élargissez ou revenez à « Tout ».`}</span>
+          <span>{`Aucun ${MAP_FILTERS.find((f) => f.id === mapFilter)?.label.toLowerCase() ?? ''} dans cette zone. Élargissez ou revenez à « Tout ».`}</span>
         </div>
       )}
       <div className="rolepill" role="tablist" aria-label="Changer de rôle">
@@ -2060,7 +2060,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 <div><div className="eyebrow">Entités · offreurs par identité</div><h1>Entités trouvées</h1></div>
                 <span className="status gray">{entityResults.length}</span>
               </div>
-              <p className="lead" style={{ marginTop: 4 }}>Le niveau <b>entité</b> cherche un <b>offreur</b> — les contraintes d’offre (distance, budget, quantité) ne s’appliquent pas ici.</p>
+              <p className="lead" style={{ marginTop: 4 }}>Le niveau <b>entité</b> cherche un <b>offreur</b>. Les contraintes d’offre (distance, budget, quantité) ne s’appliquent pas ici.</p>
               {entityLoading && <Skeleton variant="pitem" count={3} />}
               {!entityLoading && entityResults.length === 0 && (
                 <div className="cardbox">
@@ -2151,7 +2151,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               : <div><div className="eyebrow">Demande bulk</div><h1>Un besoin, plusieurs facilités</h1></div>}
           </div>
           {bulkOrigin === 'fiche' && bulkResults && (
-            <p className="tiny muted">Gratuit — chaque produit fait l'objet d'une vérification manuelle auprès de cette facilité.</p>
+            <p className="tiny muted">Gratuit : chaque produit fait l'objet d'une vérification manuelle auprès de cette facilité.</p>
           )}
           <p className="tiny muted">La demande part vers chaque facilité sélectionnée (2 minimum). Coût : <b>1 crédit par besoin</b>, quel que soit le nombre de facilités. La vérification d'une seule facilité reste gratuite.</p>
           {!bulkLoading && !bulkResults && bulkCreditSummary && (
@@ -2165,7 +2165,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               </div>
               {bulkCost.remaining < 0 && (
                 <p className="sub" role="alert" style={{ marginTop: 6 }}>
-                  Crédits insuffisants — il manque {-bulkCost.remaining} crédit(s).{' '}
+                  Crédits insuffisants : il manque {-bulkCost.remaining} crédit(s).{' '}
                   <button type="button" className="textbtn" style={{ textDecoration: 'underline' }} onClick={() => void openWallet()}>Rechargez en packs</button> pour envoyer ce bulk.
                 </p>
               )}
@@ -2303,7 +2303,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         <section className="sheet h-full" data-sheet="facility" role="region" aria-label="Facilité">
           <div className="handle" />
           <div className="sheet-head">
-            <div><div className="eyebrow">Facilité</div><h1>{selectedFacility?.name ?? '—'}</h1></div>
+            <div><div className="eyebrow">Facilité</div><h1>{selectedFacility?.name ?? 'N/D'}</h1></div>
             {selectedFacility && (
               <button type="button" className="iconbtn" aria-label={favoriteFacilityIds.has(selectedFacility.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'} title={favoriteFacilityIds.has(selectedFacility.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'} style={{ color: favoriteFacilityIds.has(selectedFacility.id) ? 'var(--accent)' : 'var(--ink)', background: 'transparent', border: 'none', cursor: 'pointer' }} onClick={() => void toggleFavorite(selectedFacility.id)}>
                 <Star size={20} fill={favoriteFacilityIds.has(selectedFacility.id) ? 'currentColor' : 'none'} />
@@ -2326,7 +2326,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               </div>
               {selectedFacility.trust === 'unclaimed' && (
                 <div className="cardbox" style={{ marginTop: 8 }}>
-                  <p className="sub">Cette facilité est découvrable, elle contribue à la représentation de la fourniture, mais n'a pas de gestionnaire — elle ne peut pas encore recevoir de transaction Omni.</p>
+                  <p className="sub">Cette facilité est découvrable, elle contribue à la représentation de la fourniture, mais n'a pas de gestionnaire. Elle ne peut pas encore recevoir de transaction Omni.</p>
                   <button className="btn" type="button" disabled={claimState === 'loading'} style={{ marginTop: 10 }} onClick={() => void startClaim(selectedFacility!)}>{claimState === 'loading' ? 'Ouverture du brouillon…' : 'Revendiquer cette facilité'}</button>
                   <button className="btn ghost" style={{ marginTop: 7 }} onClick={() => { setSellerCreateIntent(true); setSheet('seller'); }}>La facilité n'est pas sur la carte? Créer</button>
                 </div>
@@ -2363,15 +2363,15 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                   >
                     <Navigation size={15} /> Itinéraire vers ce vendeur
                   </button>
-                  <p className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>Requis : votre intention d’achat — comme le contact vendeur, l’itinéraire se débloque après avoir choisi cette offre.</p>
+                  <p className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>Requis : votre intention d’achat. Comme le contact vendeur, l’itinéraire se débloque après avoir choisi cette offre.</p>
                   {selectedFacility.products.length > 0 && (
-                    <p className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>Sélectionnez un produit ci-dessous, puis « Demander la disponibilité ». L’itinéraire se débloque après votre intention d’achat — pas simplement en cochant un produit.</p>
+                    <p className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>Sélectionnez un produit ci-dessous, puis « Demander la disponibilité ». L’itinéraire se débloque après votre intention d’achat, pas simplement en cochant un produit.</p>
                   )}
                 </div>
               )}
               {claimState === 'error' && <p className="sub" role="alert">{claimError}</p>}
               {selectedFacility.products.length === 0 && selectedFacility.trust !== 'unclaimed' && <p className="tiny muted" style={{ marginTop: 8 }}>Cette facilité n’a pas encore de produits référencés.</p>}
-              {selectedFacility.trust !== 'unclaimed' && selectedFacility.products.length > 0 && <div className="label" style={{ marginTop: 8 }}>Produits — sélectionnez (panier de demande propre à cette facilité)</div>}
+              {selectedFacility.trust !== 'unclaimed' && selectedFacility.products.length > 0 && <div className="label" style={{ marginTop: 8 }}>Produits · sélectionnez (panier de demande propre à cette facilité)</div>}
               {highlightedProductId && <p className="tiny" style={{ marginTop: 4 }}><span className="status ink">Produit recherché</span> mis en avant pour « {searchedTerm} ».</p>}
               {typeof selectedFacility.existenceLevel === 'number' && (
                 <div style={{ marginTop: 8 }}>
@@ -2390,7 +2390,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     <span className={`chk${on ? ' on' : ''}`} aria-hidden="true">{on ? '✓' : ''}</span>
                     <span className="pthumb" />
                     <span><b>{product.name}</b>{highlighted && <span className="status ink" style={{ marginLeft: 6 }}>Recherché</span>}<small>{product.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small>{carac.length > 0 && <small style={{ display: 'block', marginTop: 2 }}>{carac.map((c) => c.value).join(' · ')}</small>}
-                      <span className={`trust${trust.ok ? ' ok' : ''}${trust.muted ? ' muted' : ''}`}>{trust.text}{trust.missing.length > 0 && <span className="miss"> — {trust.missing.join(', ')}</span>}</span>
+                      <span className={`trust${trust.ok ? ' ok' : ''}${trust.muted ? ' muted' : ''}`}>{trust.text}{trust.missing.length > 0 && <span className="miss"> · {trust.missing.join(', ')}</span>}</span>
                     </span>
                     <span className="pr">{formatMoney(product.prixReduit, currencyFor(product.currency).currency)}</span>
                     <button className="btn ghost sm" type="button" style={{ width: 'auto', minHeight: 26, fontSize: 11 }} title="Signaler un problème sur cette offre" onClick={(e) => { e.stopPropagation(); openSignal(product.id, product.name); }}>Signaler</button>
@@ -2441,7 +2441,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             {selectedEntity.category && <div className="kv"><span>Catégorie</span><b>{selectedEntity.category}</b></div>}
             <div className="kv"><span>Offres publiées</span><b>{selectedEntity.offerCount}</b></div>
           </div>
-          <p className="lead">Le contact du vendeur <b>et</b> l’itinéraire routier apparaissent <b>après</b> une intention d’achat — jamais avant.</p>
+          <p className="lead">Le contact du vendeur <b>et</b> l’itinéraire routier apparaissent <b>après</b> une intention d’achat, jamais avant.</p>
           {(() => {
             // S1b (S-21) — « Vos avantages Omni ici » : la remise réelle (Seed S-19). On se tait si
             // l'entité n'a aucun avantage — jamais un faux « −15 % ».
@@ -2616,7 +2616,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           </div>
           <div className="cardbox" style={{ marginTop: 8 }}>
             <div className="kv"><span>Numéro de téléphone</span><b>{phoneDeclared ?? 'Aucun'}</b></div>
-            {phoneDeclared && <p className="tiny muted" style={{ marginTop: 4 }}>{phoneDeclarationLabel()} — Omni ne vérifie pas ce numéro ; c'est un contact que vous déclarez.</p>}
+            {phoneDeclared && <p className="tiny muted" style={{ marginTop: 4 }}>{phoneDeclarationLabel()}. Omni ne vérifie pas ce numéro ; c'est un contact que vous déclarez.</p>}
             <div className="label" style={{ marginTop: 6 }}>Déclarer un numéro Togo</div>
             <input className="field" inputMode="tel" autoComplete="tel" placeholder="+228 90 12 34 56" value={phoneDraft} onChange={(e) => setPhoneDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void declarePhone(); }} />
             <div className="row" style={{ gap: 6, marginTop: 6 }}>
@@ -2646,7 +2646,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <Skeleton variant="kv" count={2} />
           )}
           <div className="cardbox" style={{ marginTop: 8 }}>
-            <div className="kv"><span>Wallet</span><b>{walletState === 'idle' && wallet ? formatMoney(wallet.balanceMinor ?? 0, wallet.currency ?? userCurrency.currency) : '—'}</b></div>
+            <div className="kv"><span>Wallet</span><b>{walletState === 'idle' && wallet ? formatMoney(wallet.balanceMinor ?? 0, wallet.currency ?? userCurrency.currency) : 'N/D'}</b></div>
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" onClick={() => setSheet('wallet')}>Recharger le wallet</button>
           </div>
           <div className="cardbox" style={{ marginTop: 8 }}>
@@ -2710,13 +2710,13 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div role="alert"><p className="tiny muted" style={{ marginTop: 6 }}>Vos transactions ne peuvent pas être chargées pour le moment.</p></div>
           )}
           {openTxnState === 'idle' && openTxn.length === 0 && (
-            <p className="sub" style={{ marginTop: 6 }}>Aucune transaction en cours. Une intention d’achat reste verrouillée jusqu’à la clôture — vous pouvez quitter et revenir ici à tout moment.</p>
+            <p className="sub" style={{ marginTop: 6 }}>Aucune transaction en cours. Une intention d’achat reste verrouillée jusqu’à la clôture. Vous pouvez quitter et revenir ici à tout moment.</p>
           )}
           {openTxn.map((transaction) => (
             <div key={transaction.transactionId} style={{ marginTop: 6 }}>
               <button type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => void resumeTransaction(transaction)}>
                 <div className="row" style={{ justifyContent: 'space-between' }}>
-                  <div><b>{transaction.productName ?? 'Transaction'}</b><br /><span className="tiny muted">{transaction.facilityName ?? '—'} · {transaction.quantity} unité{transaction.quantity === 1 ? '' : 's'}</span></div>
+                  <div><b>{transaction.productName ?? 'Transaction'}</b><br /><span className="tiny muted">{transaction.facilityName ?? 'N/D'} · {transaction.quantity} unité{transaction.quantity === 1 ? '' : 's'}</span></div>
                   <span className="status gray">{transactionStateLabel(transaction.state)}</span>
                 </div>
                 <span className="tiny muted" style={{ marginTop: 4, display: 'block' }}>Reprendre · {relativeAge(transaction.lastEventAt)}</span>
@@ -2736,7 +2736,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div key={transaction.transactionId} style={{ marginTop: 6 }}>
               <button type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => { setReceiptTx(transaction); setSheet('receipt'); }}>
                 <div className="row" style={{ justifyContent: 'space-between' }}>
-                  <div><b>{transaction.productName ?? 'Transaction'}</b><br /><span className="tiny muted">{transaction.facilityName ?? '—'} · {transaction.quantity} unité{transaction.quantity === 1 ? '' : 's'}</span></div>
+                  <div><b>{transaction.productName ?? 'Transaction'}</b><br /><span className="tiny muted">{transaction.facilityName ?? 'N/D'} · {transaction.quantity} unité{transaction.quantity === 1 ? '' : 's'}</span></div>
                   <span className="status ok">Clôturée</span>
                 </div>
                 <span className="tiny muted" style={{ marginTop: 4, display: 'block' }}>Reçu · {relativeAge(transaction.lastEventAt)}</span>
@@ -3050,7 +3050,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 {tileResolved.category && <div className="kv"><span>Catégorie</span><b>{tileResolved.category}</b></div>}
                 {tileResolved.address && <div className="kv"><span>Adresse</span><b>{tileResolved.address}</b></div>}
               </div>
-              <p className="sub">Ce qu’Omni ne peut pas dire sur ce lieu : disponibilité, prix, horaires — tant qu’aucune entité ne le gère, il n’y a rien à interroger, et Omni ne l’inventera pas.</p>
+              <p className="sub">Ce qu’Omni ne peut pas dire sur ce lieu : disponibilité, prix, horaires. Tant qu’aucune entité ne le gère, il n’y a rien à interroger, et Omni ne l’inventera pas.</p>
               <label className="tiny muted" style={{ display: 'block', marginTop: 8 }}>Nom du lieu</label>
               <input className="input" type="text" value={tileName} maxLength={180} onChange={(event) => setTileName(event.currentTarget.value)} placeholder="Nommez ce lieu" aria-label="Nom du lieu" style={{ width: '100%' }} />
               {tileClaimError && <p className="sub" role="alert">{tileClaimError}</p>}
@@ -3090,7 +3090,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div><div className="eyebrow">Reprise</div><h1>Reprendre où j'en étais</h1></div>
             <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
           </div>
-          <p className="sub">Après une panne : rien n’est perdu — panier, recherche et transaction se reprennent.</p>
+          <p className="sub">Après une panne : rien n’est perdu. Panier, recherche et transaction se reprennent.</p>
           <RecoveryCartRow carts={carts} facilities={facilities} onOpenFacility={(facility) => void handlePinSelect(facility)} />
           <RecoverySearchRow lastQuery={lastSearchRef.current} onResume={(query) => { setQuery(query); void runSearch(query, currentSearchOptions()); }} />
           <RecoveryTxnsRow transactions={openTxn} state={openTxnState} onResume={(transaction) => void resumeTransaction(transaction)} />
@@ -3126,7 +3126,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           )}
           {signalState === 'duplicate' && (
             <div className="cardbox">
-              <p className="sub">Vous avez déjà signalé cette offre — l’équipe l’a en contrôle.</p>
+              <p className="sub">Vous avez déjà signalé cette offre. L’équipe l’a en contrôle.</p>
               <button className="btn ghost sm" style={{ marginTop: 9 }} onClick={() => setSheet('facility')}>Retour à l’offre</button>
             </div>
           )}
@@ -3171,13 +3171,13 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           )}
           {tourState === 'idle' && selVisitId !== null && (() => {
             const visit = visits.find((item) => item.id === selVisitId);
-            if (!visit) return <p className="sub">Dossier introuvable — rechargez la tournée.</p>;
+            if (!visit) return <p className="sub">Dossier introuvable. Rechargez la tournée.</p>;
             return (
               <>
                 <div className="cardbox">
                   <div className="eyebrow">Dossier · {visit.subjectType === 'offer_report' ? 'Signalement' : visit.subjectType === 'claim' ? 'Revendication' : 'Vérification'}</div>
-                  <div className="kv"><span>Objet</span><b>{visit.subjectName || '—'}</b></div>
-                  <div className="kv"><span>Zone</span><b>{visit.zone ?? '—'}</b></div>
+                  <div className="kv"><span>Objet</span><b>{visit.subjectName || 'N/D'}</b></div>
+                  <div className="kv"><span>Zone</span><b>{visit.zone ?? 'N/D'}</b></div>
                   <div className="kv"><span>État</span><b>{visit.state === 'a_visiter' ? 'À visiter' : visit.state === 'en_cours' ? 'En cours' : visit.state === 'transmis' ? 'Transmis' : 'Reprogrammé'}</b></div>
                 </div>
                 <button className="btn ghost sm" type="button" style={{ marginTop: 10, width: 'auto', minHeight: 32 }} onClick={() => { setOpSideVisitId(visit.id); setSheet('op-side'); }}>Voir ce que voit l'entité</button>
@@ -3214,14 +3214,14 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                       <input value={reprogramReason} onChange={(event) => setReprogramReason(event.target.value)} placeholder="Motif de reprogrammation…" aria-label="Motif de reprogrammation" maxLength={1000} />
                     </div>
                     <button className="btn ghost sm" type="button" style={{ marginTop: 6 }} disabled={visitBusy === visit.id} onClick={() => void reprogramDossier(visit.id)}>Reprogrammer</button>
-                    <p className="tiny muted" style={{ marginTop: 8 }}>Vous constatez et transmettez la preuve — l’admin décide du badge final.</p>
+                    <p className="tiny muted" style={{ marginTop: 8 }}>Vous constatez et transmettez la preuve. L’admin décide du badge final.</p>
                   </>
                 )}
                 {visit.state === 'en_cours' && !visit.mine && (
                   <p className="sub">Dossier pris par un autre membre de l’équipe.</p>
                 )}
                 {(visit.state === 'transmis' || visit.state === 'reprogramme') && (
-                  <p className="sub">{visit.state === 'transmis' ? 'Dossier transmis — la décision revient à l’équipe de revue.' : 'Dossier reprogrammé — il reviendra en tournée.'}</p>
+                  <p className="sub">{visit.state === 'transmis' ? 'Dossier transmis. La décision revient à l’équipe de revue.' : 'Dossier reprogrammé. Il reviendra en tournée.'}</p>
                 )}
                 <button className="btn ghost sm" style={{ marginTop: 10 }} onClick={() => setSelVisitId(null)}>Retour à la tournée</button>
               </>
@@ -3236,7 +3236,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div><div className="eyebrow">Reprise</div><h1>Reprendre où j'en étais</h1></div>
             <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
           </div>
-          <p className="sub">Après une panne : rien n’est perdu — panier, recherche et transaction se reprennent.</p>
+          <p className="sub">Après une panne : rien n’est perdu. Panier, recherche et transaction se reprennent.</p>
           <RecoveryCartRow carts={carts} facilities={facilities} onOpenFacility={(facility) => void handlePinSelect(facility)} />
           <RecoverySearchRow lastQuery={lastSearchRef.current} onResume={(query) => { setQuery(query); void runSearch(query, currentSearchOptions()); }} />
           <RecoveryTxnsRow transactions={openTxn} state={openTxnState} onResume={(transaction) => void resumeTransaction(transaction)} />

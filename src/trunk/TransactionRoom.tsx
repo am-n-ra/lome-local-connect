@@ -146,7 +146,7 @@ export function TransactionRoom({ transactionId, token, actorRole, counterparty,
       <div className="handle" />
       <div className="sheet-head">
         <div>
-          <div className="eyebrow">Transaction · {counterparty ?? '—'}</div>
+          <div className="eyebrow">Transaction · {counterparty ?? 'N/D'}</div>
           <h1>{txn ? `Transaction` : 'Chargement…'}</h1>
         </div>
         <div className="row" style={{ gap: 8, alignItems: 'center' }}>
@@ -170,7 +170,7 @@ export function TransactionRoom({ transactionId, token, actorRole, counterparty,
           <div className="cardbox" style={{ marginTop: 10 }}>
             <div className="kv"><span>Objet</span><b>{txn.quantity} unité{txn.quantity === 1 ? '' : 's'}</b></div>
             <div className="kv"><span>Total</span><b>{txn.netAmountMinor.toLocaleString('fr-FR')} {txn.couponCode ? `· ${txn.couponCode}` : ''}</b></div>
-            <div className="kv"><span>Vendeur</span><b>{txn.sellerFacilityName ?? counterparty ?? '—'}</b></div>
+            <div className="kv"><span>Vendeur</span><b>{txn.sellerFacilityName ?? counterparty ?? 'N/D'}</b></div>
             {(txn.sellerContactPhone || txn.sellerContactWhatsapp) && actorRole === 'buyer' && (
               <div className="kv"><span>Contact</span><b>{txn.sellerContactPhone ?? txn.sellerContactWhatsapp}</b></div>
             )}
@@ -180,7 +180,7 @@ export function TransactionRoom({ transactionId, token, actorRole, counterparty,
             <div className="kv"><span>Étape</span><b>{transactionStateLabel(currentState)}<small className="tiny muted" style={{ display: 'block' }}>{responsible === 'system' ? 'système' : responsible === 'buyer' ? 'à l\'acheteur' : 'au vendeur'}</small></b></div>
           </div>
           {deadline && (
-            <p className="tiny muted" style={{ marginTop: 6 }}>⏱ {deadlineLabel(deadline.minutesLeft)} — le temps relance, il n'annule jamais</p>
+            <p className="tiny muted" style={{ marginTop: 6 }}>⏱ {deadlineLabel(deadline.minutesLeft)}. Le temps relance, il n'annule jamais.</p>
           )}
 
           {actorRole === 'buyer' && (currentState === 'qr_ready' || currentState === 'intent_created') && (
@@ -259,7 +259,7 @@ export function TransactionRoom({ transactionId, token, actorRole, counterparty,
 
           {terminal && (
             <div className="btnrow" style={{ marginTop: 10 }}>
-              <button className="btn ghost sm" type="button" disabled aria-disabled="true" style={{ opacity: 0.55 }}>Signaler un problème — bientôt</button>
+              <button className="btn ghost sm" type="button" disabled aria-disabled="true" style={{ opacity: 0.55 }}>Signaler un problème · bientôt</button>
             </div>
           )}
         </>

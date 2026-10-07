@@ -8,11 +8,11 @@ export function cameraStatusLabel(status: CameraScannerStatus): string {
     case "active":
       return "Caméra prête à scanner";
     case "denied":
-      return "Caméra refusée — saisie manuelle disponible";
+      return "Caméra refusée. Saisie manuelle disponible";
     case "unsupported":
-      return "Scan indisponible — saisie manuelle disponible";
+      return "Scan indisponible. Saisie manuelle disponible";
     case "error":
-      return "Caméra indisponible — saisie manuelle disponible";
+      return "Caméra indisponible. Saisie manuelle disponible";
     default:
       return "Scanner QR prêt sur cet appareil";
   }

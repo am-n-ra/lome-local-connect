@@ -66,7 +66,7 @@ describe('offer characteristics (S-01 / R-B)', () => {
   it('renders the declared characteristics in the Seed order', () => {
     expect(offerCharacteristics({ positionKind: 'mobile', uniquenessKind: 'piece_unique', handoverKind: 'livraison', conditionKind: 'occasion', priceKind: 'negociable' })).toEqual([
       { label: 'Position', value: 'Mobile \u00b7 se d\u00e9place' },
-      { label: 'Unicit\u00e9', value: 'Pi\u00e8ce unique \u2014 dispara\u00eet apr\u00e8s vente' },
+      { label: 'Unicit\u00e9', value: 'Pi\u00e8ce unique : dispara\u00eet apr\u00e8s vente' },
       { label: 'Retrait / livraison', value: 'Livraison' },
       { label: '\u00c9tat', value: 'Occasion' },
       { label: 'Prix', value: '\u00c0 n\u00e9gocier' },

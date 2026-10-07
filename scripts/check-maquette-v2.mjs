@@ -238,6 +238,18 @@ check(/@media \(prefers-reduced-motion:reduce\)\{\.skel\.shimmer::after\{[^}]*di
 const slowBlock = (js.match(/SHEETS\['state-slow'\]\s*=\s*\(\)\s*=>\s*`([\s\S]*?)`;/m) || [])[1] || '';
 check(/class="skel hcard/.test(slowBlock), 'UI-10 loading surface (state-slow) shows the skeleton motif');
 
+// --- 8. Copy style: aucun tiret cadratin/demi-cadratin dans le texte visible ---
+// La maquette est l'autorité du texte. On retire les commentaires CSS /* */ et JS
+// // (jamais le // d'une URL, protégé par le [^:]) avant de chercher, pour ne
+// viser QUE ce que l'utilisateur lit. Un tiret long est un signe de rédaction
+// automatique : on écrit une phrase (deux-points, virgule, parenthèses) ou « - ».
+const visibleCopy = html
+  .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+  .replace(/(^|[^:])\/\/[^\n]*/g, (m) => m.replace(/[^\n]/g, ' '));
+const dashLine = visibleCopy.split('\n').findIndex((l) => /[\u2014\u2013]/.test(l));
+check(dashLine === -1, 'no em/en dash in visible maquette copy',
+  dashLine >= 0 ? `line ${dashLine + 1}` : '');
+
 if (failures.length) {
   console.error(`\nMAQUETTE V2 CHECK FAILED (${failures.length}):`);
   for (const f of failures) console.error(`  FAIL ${f}`);

@@ -7922,14 +7922,14 @@ function validateOfferReportDecision(body, reportId) {
     throw new ApiInputError("A valid decision outcome (constate_infirme, constate_confirme, traite) is required.");
   }
   const reason = typeof body.reason === "string" ? body.reason.trim() : "";
-  if (reason.length < 3 || reason.length > 1e3) throw new ApiInputError("A bounded decision reason (3\u20131000 chars) is required.");
+  if (reason.length < 3 || reason.length > 1e3) throw new ApiInputError("A bounded decision reason (3 to 1000 chars) is required.");
   return { reportId, outcome, reason };
 }
 function validateAcquisitionObjectiveCreate(body) {
   const query = typeof body.query === "string" ? body.query.trim() : "";
   const zone = body.zone === null || body.zone === void 0 ? null : typeof body.zone === "string" ? body.zone.trim() : "";
   const seekersSnapshot = typeof body.seekersSnapshot === "number" && Number.isInteger(body.seekersSnapshot) && body.seekersSnapshot >= 0 ? body.seekersSnapshot : 0;
-  if (query.length < 1 || query.length > 120) throw new ApiInputError("A bounded demand query (1\u2013120 chars) is required.");
+  if (query.length < 1 || query.length > 120) throw new ApiInputError("A bounded demand query (1 to 120 chars) is required.");
   if (zone !== null && (zone.length < 1 || zone.length > 120)) throw new ApiInputError("An optional zone (\u2264120 chars) is required.");
   return { query, zone, seekersSnapshot };
 }
@@ -7966,7 +7966,7 @@ function validateVisitReportSubmit(body, visitId) {
     throw new ApiInputError("The field findings (lieuOk, contactOk) are required.");
   }
   const activite = typeof body.activite === "string" ? body.activite.trim() : "";
-  if (activite.length < 1 || activite.length > 500) throw new ApiInputError("A bounded activity finding (1\u2013500 chars) is required.");
+  if (activite.length < 1 || activite.length > 500) throw new ApiInputError("A bounded activity finding (1 to 500 chars) is required.");
   const reserve = body.reserve === null || body.reserve === void 0 ? null : typeof body.reserve === "string" ? body.reserve.trim() : "";
   if (reserve !== null && reserve.length > 500) throw new ApiInputError("The visit reserve is bounded to 500 chars.");
   const prefix = `visits/${visitId}/photo/`;
@@ -7990,7 +7990,7 @@ function validateVisitReprogram(body, visitId) {
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const reason = typeof body.reason === "string" ? body.reason.trim() : "";
   if (!uuidPattern.test(visitId)) throw new ApiInputError("A valid visit id is required.");
-  if (reason.length < 3 || reason.length > 1e3) throw new ApiInputError("A bounded reprogram reason (3\u20131000 chars) is required.");
+  if (reason.length < 3 || reason.length > 1e3) throw new ApiInputError("A bounded reprogram reason (3 to 1000 chars) is required.");
   return { visitId, reason };
 }
 function validateClaimByOsmRef(body) {
@@ -8182,7 +8182,7 @@ async function handleApi(req, res, pathname, url) {
         result = await repository.setDeclaredPhone({ authUserId, phone });
       } catch (error) {
         if (error instanceof SellerCataloguePolicyError) {
-          json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Num\xE9ro Togo invalide \u2014 attendu +228 puis 8 chiffres."));
+          json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Num\xE9ro Togo invalide : attendu +228 puis 8 chiffres."));
           return true;
         }
         throw error;

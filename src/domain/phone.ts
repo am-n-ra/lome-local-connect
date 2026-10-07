@@ -29,7 +29,7 @@ export function phoneDeclarationLabel(): string {
  */
 export function whatsappDeclareLink(phone: string | null, accountRef: string | null, omniWhatsApp?: string | null): string {
   const ref = accountRef && accountRef.trim() !== '' ? accountRef.trim() : 'mon compte';
-  const text = `Omni — je déclare ce numéro pour mon compte ${ref}.`;
+  const text = `Omni : je déclare ce numéro pour mon compte ${ref}.`;
   const target = omniWhatsApp ? omniWhatsApp.replace(/[^\d]/g, '') : '';
   const base = target ? `https://wa.me/${target}` : 'https://wa.me/';
   return `${base}?text=${encodeURIComponent(text)}`;

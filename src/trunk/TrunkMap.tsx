@@ -509,7 +509,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
       // recherche ( computeSearchFlight + stagger + paliers( continu de s'exécuter
       // dessus grâce à la surface adaptatrice MapLibre-compatible.
 
-      console.error('MapLibre init failed — switching to fallback map:', err);
+      console.error('MapLibre init failed, switching to fallback map:', err);
       engine = createFallbackMapSurface({
         container: container.current,
         facilities: toFallbackFacilities(facilitiesRef.current),
@@ -1548,7 +1548,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
           setRouteStatus(`Itinéraire vers ${routeTarget.name} · ${roadRoute.distanceLabel} · ${roadRoute.durationLabel}`);
         } else {
           source.setData(routeFeatureCollection(routeTarget, origin));
-          setRouteStatus(`Itinéraire vers ${routeTarget.name} · ${routeDistanceLabel(origin, routeTarget)} (tracé direct — ${roadRouteReason ?? 'itinéraire routier indisponible'})`);
+          setRouteStatus(`Itinéraire vers ${routeTarget.name} · ${routeDistanceLabel(origin, routeTarget)} (tracé direct · ${roadRouteReason ?? 'itinéraire routier indisponible'})`);
         }
         pauseMotion('interaction', false);
         const isDesktop = window.innerWidth >= 1040;
@@ -1599,11 +1599,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
     const voices = synth ? synth.getVoices() : [];
     const capability = voiceCapability(synth, voices);
     if (capability === 'unsupported') {
-      setVoiceNote('Guidage vocal non supporté sur cet appareil — itinéraire consultable ci-dessus.');
+      setVoiceNote('Guidage vocal non supporté sur cet appareil. Itinéraire consultable ci-dessus.');
       return;
     }
     const voice = pickFrenchVoice(voices);
-    setVoiceNote(voice ? null : 'Voix française indisponible — lecture standard.');
+    setVoiceNote(voice ? null : 'Voix française indisponible. Lecture standard.');
     const summary = `Itinéraire vers ${routeTarget.name} : ${roadRoute.distanceLabel}, ${roadRoute.durationLabel}.`;
     const handle = speakRoute(synth, {
       summary,

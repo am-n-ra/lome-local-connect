@@ -1,5 +1,5 @@
 {
-  "name": "Omni — Voir avant de bouger",
+  "name": "Omni · Voir avant de bouger",
   "description": "Plateforme locale d'infrastructures et de commerce de proximité",
   "requestFramePermissions": [
     "geolocation",

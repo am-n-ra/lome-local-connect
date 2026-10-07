@@ -137,3 +137,37 @@ pin à y=**190** (milieu de la bande 0…304) → **visible**. 916/916 tests (+6
 Garde de source `src/trunk/facility-recenter-lock.test.ts` (falsifié : réintroduire le décalage fautif
 → 1 échec). Dossier : `docs/nature-way/omni-heartwood-map-recenter-evidence-2026-10-07.md`.
 
+## HEARTWOOD — passe de copie : professionnelle, adressée à de vrais utilisateurs, zéro tiret cadratin
+
+**Ordre fondateur :** « avant de clore, tout le texte partout dans Omni doit être révisé pour être
+professionnel et adressé à de vrais utilisateurs, et ne doit contenir aucun tiret cadratin ».
+
+**Mesure (le tiret cadratin est un signe de rédaction automatique, pas un choix d'interface) :**
+- `src/` : **112** tirets cadratins/demi-cadratins dans le **texte visible** (chaînes, gabarits, JSX) —
+  plus 292 dans les **commentaires** (hors périmètre : ils s'adressent aux développeurs).
+- Maquette de référence + servis : titres (`index.html`, `manifest.webmanifest`, `offline.html`,
+  `metadata.json`) et texte visible de la maquette Species V2 (et des maquettes V1.3/V2/design-system).
+
+**Livré :**
+1. **112** chaînes réécrites : un tiret long devient une phrase (deux-points, virgule, parenthèses),
+   un séparateur `·`, ou « N/D » pour un vide (jamais « — »).
+2. **4 codes internes retirés du texte utilisateur** : « (D-05) », « (S-31) », « (D-04) » et
+   « la maquette exige » — un utilisateur ne lit pas nos identifiants de décision.
+3. **Fichiers servis** nettoyés (titres, manifeste, page hors-ligne, métadonnées, nom de style).
+4. **Maquette de référence** nettoyée (texte visible uniquement) ; les plages de dates passent en
+   toutes lettres (« mar. à dim. 8h-20h »), plus lisibles qu'un tiret demi-cadratin.
+
+**Garde `src/trunk/copy-no-emdash.test.ts` (3 tests)** — scanne par **AST TypeScript** le **texte
+visible** (littéraux, gabarits **y compris les morceaux avec `${…}`**, JSX, `content:` CSS) et **les
+fichiers servis** ; les commentaires sont hors périmètre. **Falsifié dans les deux sens** : réinjecter
+un tiret dans une chaîne → échec ; le retirer → vert. `check:maquette` §8 garde la maquette de même.
+
+**Preuve :** **920/920 tests** (102 fichiers, +1 fichier de garde), `tsc` 0, les 8 gardes vertes,
+build `index-BzTrFedU.js`. Le seul tiret restant dans le bundle est dans une **table de normalisation
+Unicode d'une dépendance** (`"–":"︲","—":"︱"`), pas dans la copie Omni.
+
+**Distinction assumée :** commentaires de code et **titres de tests** gardent leurs tirets (ils
+s'adressent aux développeurs, pas à l'utilisateur) ; la règle « zéro tiret » porte sur **ce que
+l'utilisateur lit**. Décision : si le fondateur veut aussi la forme développeur sans tiret, c'est une
+passe séparée (mécanique, sans enjeu produit).
+

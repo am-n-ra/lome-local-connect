@@ -76,7 +76,7 @@ export function OperatorEntitySideV13({ visitId, onBack }: Props) {
             <div className="kv"><span>Offres publiées</span><b>{side.publishedOfferCount}</b></div>
             <div className="kv"><span>Sa file de demandes</span><b>{side.pendingRequestCount === 0 ? 'Aucune en attente' : `${side.pendingRequestCount} en attente`}</b></div>
           </div>
-          <p className="lead">L'opérateur peut <b>voir</b> ce que voit une entité pour comprendre un dossier — sans jamais modifier à sa place.</p>
+          <p className="lead">L'opérateur peut <b>voir</b> ce que voit une entité pour comprendre un dossier, sans jamais modifier à sa place.</p>
         </>
       )}
     </section>

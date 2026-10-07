@@ -32,7 +32,7 @@ export function TransactionReceiptV13({ summary, onClose }: {
   const ref = receiptRefFor(summary.transactionId);
   const amount = formatMoney(summary.netAmountMinor, 'XOF');
   const when = receiptWhen(summary.lastEventAt);
-  const shareText = `${ref} — ${summary.productName ?? 'Transaction'} × ${summary.quantity} — ${amount} — ${summary.sellerName ?? summary.facilityName ?? ''} — ${when}`;
+  const shareText = `${ref} · ${summary.productName ?? 'Transaction'} × ${summary.quantity} · ${amount} · ${summary.sellerName ?? summary.facilityName ?? ''} · ${when}`;
 
   const share = async () => {
     try {
@@ -54,14 +54,14 @@ export function TransactionReceiptV13({ summary, onClose }: {
     <section className="sheet h-mid" data-sheet="receipt" role="region" aria-label="Reçu de transaction">
       <div className="handle" />
       <div className="sheet-head">
-        <div><div className="eyebrow">Transaction terminée</div><h1>Remise effectuée — merci</h1></div>
+        <div><div className="eyebrow">Transaction terminée</div><h1>Remise effectuée. Merci.</h1></div>
         <button type="button" className="sheet-close" onClick={onClose} aria-label="Fermer"><X size={15} /></button>
       </div>
       <div className="cardbox">
         <div className="kv"><span>Reçu</span><b>{ref}</b></div>
         <div className="kv"><span>Objet</span><b>{summary.productName ?? 'Transaction'} × {summary.quantity}</b></div>
         <div className="kv"><span>Total</span><b>{amount}</b></div>
-        <div className="kv"><span>Vendeur</span><b>{summary.sellerName ?? summary.facilityName ?? '—'}</b></div>
+        <div className="kv"><span>Vendeur</span><b>{summary.sellerName ?? summary.facilityName ?? 'N/D'}</b></div>
         <div className="kv"><span>Quand</span><b>{when}</b></div>
       </div>
       <div className="btnrow" style={{ marginTop: 8 }}>

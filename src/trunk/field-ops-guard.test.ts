@@ -53,6 +53,6 @@ describe('TF-6 — la tournée constate, ne décide jamais', () => {
 
   it('la tournée dit que l’admin décide du badge final', () => {
     expect(app).toContain('Transmettre à l’admin');
-    expect(app).toContain('l’admin décide du badge final');
+    expect(app).toContain('admin décide du badge final');
   });
 });

@@ -143,7 +143,7 @@ export function offerCharacteristics(product: {
   const out: Array<{ label: string; value: string }> = [];
   const push = (label: string, value: string | null | undefined) => { if (value) out.push({ label, value }); };
   push('Position', ({ fixe: 'Fixe · sur place', mobile: 'Mobile · se déplace', immaterielle: 'Immatérielle' } as Record<string, string>)[product.positionKind ?? '']);
-  push('Unicité', ({ renouvelable: 'Offre renouvelable', piece_unique: 'Pièce unique — disparaît après vente' } as Record<string, string>)[product.uniquenessKind ?? '']);
+  push('Unicité', ({ renouvelable: 'Offre renouvelable', piece_unique: 'Pièce unique : disparaît après vente' } as Record<string, string>)[product.uniquenessKind ?? '']);
   push('Retrait / livraison', ({ retrait: 'Retrait', livraison: 'Livraison', immateriel: 'Immatériel (en ligne)' } as Record<string, string>)[product.handoverKind ?? '']);
   push('État', ({ neuf: 'Neuf', occasion: 'Occasion' } as Record<string, string>)[product.conditionKind ?? '']);
   push('Prix', ({ fixe: 'Fixe', negociable: 'À négocier' } as Record<string, string>)[product.priceKind ?? '']);

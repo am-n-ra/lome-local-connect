@@ -61,7 +61,7 @@ export function SellerQrScannerSheet({ onClose, onVerified }: Props) {
   const verify = useCallback(async (payload: string) => {
     if (doneRef.current) return;
     const parsed = extractTransactionPayload(payload);
-    if (!parsed) { setError('QR ou code illisible — attendez `<transactionId>:<jeton>`.'); return; }
+    if (!parsed) { setError('QR ou code illisible. Attendez `<transactionId>:<jeton>`.'); return; }
     setBusy(true);
     try {
       const token = await getAuthToken();
@@ -69,8 +69,8 @@ export function SellerQrScannerSheet({ onClose, onVerified }: Props) {
       const res = await verifyQrToken({ transactionId: parsed.transactionId, tokenHash: parsed.tokenHash, token });
       if (res.ok && res.data?.accepted) {
         doneRef.current = true;
-        setResult({ accepted: true, detail: 'QR vérifié — bon pour encaissement.' });
-        onVerifiedRef.current(true, 'QR vérifié — bon pour encaissement.');
+        setResult({ accepted: true, detail: 'QR vérifié : bon pour encaissement.' });
+        onVerifiedRef.current(true, 'QR vérifié : bon pour encaissement.');
       } else {
         setResult({ accepted: false, detail: res.data?.reason ?? res.error?.message ?? 'QR non vérifié.' });
         onVerifiedRef.current(false, res.data?.reason ?? res.error?.message ?? 'QR non vérifié.');
@@ -174,7 +174,7 @@ export function SellerQrScannerSheet({ onClose, onVerified }: Props) {
         </div>
       </div>
       <p className="tiny muted" style={{ marginTop: 7 }}>
-        <ShieldCheck size={12} /> Le scan marque la transaction vérifiée côté caisse — preuve d'encaissement.
+        <ShieldCheck size={12} /> Le scan marque la transaction vérifiée côté caisse, preuve d'encaissement.
       </p>
     </section>
   );

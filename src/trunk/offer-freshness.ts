@@ -96,13 +96,13 @@ export function freshnessLabel(freshness: OfferFreshness, now: number): string {
   const { level, expiresAtMs, state } = freshness;
   if (level === 'expired') {
     if (state === null) return 'Disponibilité non confirmée';
-    if (state === 'a_valider') return 'Disponibilité non confirmée — le vendeur ne l’a pas déclarée vivante';
-    if (state === 'bientot') return 'Disponibilité à venir — pas encore ouverte';
-    return 'Disponibilité expirée — à re-confirmer par le vendeur';
+    if (state === 'a_valider') return 'Disponibilité non confirmée : le vendeur ne l’a pas déclarée vivante';
+    if (state === 'bientot') return 'Disponibilité à venir : pas encore ouverte';
+    return 'Disponibilité expirée : à re-confirmer par le vendeur';
   }
-  if (expiresAtMs === null) return 'Disponibilité déclarée — sans fenêtre de fraîcheur';
+  if (expiresAtMs === null) return 'Disponibilité déclarée · sans fenêtre de fraîcheur';
   if (level === 'stale') {
-    return `Disponibilité vieillissante (expire dans ${humanDuration(expiresAtMs - now)}) — encore bonne`;
+    return `Disponibilité vieillissante (expire dans ${humanDuration(expiresAtMs - now)}) : encore bonne`;
   }
-  return `Disponibilité vivante — expire dans ${humanDuration(expiresAtMs - now)}`;
+  return `Disponibilité vivante · expire dans ${humanDuration(expiresAtMs - now)}`;
 }

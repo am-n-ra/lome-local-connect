@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Omni — Species V2 (prototype interactif)</title>
+<title>Omni · Species V2 (prototype interactif)</title>
 <style>
   :root{
     --ink:#0f0f0f; --ink-soft:#6b6b6b; --ink-faint:#d8d8d8; --line:#e6e6e6;
@@ -243,7 +243,7 @@ function levelLine(lv, label) {
   const seg = LEVELS.map((_, i) => `<i class="${i <= lv ? 'on' : ''}"></i>`).join('');
   return `<div class="stepline">${seg}</div>
     <div class="steplabels"><span>0 Présente</span><span>4 Transactable</span></div>
-    <p class="lead" style="margin-top:6px"><b>Niveau ${lv} · ${LEVELS[lv][0]}</b> — ${LEVELS[lv][1]}${label ? ' · ' + label : ''}</p>`;
+    <p class="lead" style="margin-top:6px"><b>Niveau ${lv} · ${LEVELS[lv][0]}</b> · ${LEVELS[lv][1]}${label ? ' · ' + label : ''}</p>`;
 }
 const S = {
   entityKind: 'fixe',
@@ -266,7 +266,7 @@ const S = {
       qte: '24 disponibles', depletion: 'Décompte à chaque vente',
       unique: null,
       position: 'Fixe · sur place',
-      temporalite: 'Ouvert · mar–dim 8h–20h',
+      temporalite: 'Ouvert · mar. à dim. 8h-20h',
       remise: 'Retrait sur place',
       etat: 'Neuf',
       prix: 'Fixe · négociable ? non',
@@ -405,7 +405,7 @@ function renderFilters() {
   const f = document.getElementById('filterrail');
   if (!show) { f.innerHTML = ''; return; }
   f.innerHTML = ['Tout', 'Commerces', 'Particuliers', 'Transport'].map((x, i) =>
-    `<span class="fchip ${i === 0 ? 'on' : (x === 'Transport' ? 'soon' : '')}" onclick="toast('${x === 'Transport' ? 'Transport — bientôt (V1+)' : 'Filtre ' + x}')">${x}</span>`).join('');
+    `<span class="fchip ${i === 0 ? 'on' : (x === 'Transport' ? 'soon' : '')}" onclick="toast('${x === 'Transport' ? 'Transport · bientôt (V1+)' : 'Filtre ' + x}')">${x}</span>`).join('');
 }
 
 function openOffer(kind) {
@@ -415,17 +415,17 @@ function openOffer(kind) {
   if (kind === 'immo' || kind === 'digital') {
     const immo = kind === 'immo';
     S.product = immo
-      ? { name: 'Studio meublé — Adawlato', price: '85 000 F', old: '95 000 F', promo: '−10 % Omni', seller: 'Agence Dovi', kind: 'immobilier', dist: '900 m',
+      ? { name: 'Studio meublé · Adawlato', price: '85 000 F', old: '95 000 F', promo: '−10 % Omni', seller: 'Agence Dovi', kind: 'immobilier', dist: '900 m',
           level: 4, levelProof: 'confirmée il y a 1 h',
           integ: 'Visuel ✓ · prix cohérent ✓', rep: 'Louée 3× · 4,8 ★',
           carac: { qte: '1 logement disponible', depletion: 'Retiré dès qu’il est loué', unique: true,
-                   position: 'Fixe · Adawlato (point sur la carte)', temporalite: 'Disponible · visite mar–sam 9h–17h',
+                   position: 'Fixe · Adawlato (point sur la carte)', temporalite: 'Disponible · visite mar. à sam. 9h-17h',
                    remise: 'Visite sur place', etat: 'Bon état · meublé', prix: 'Fixe · négociable ? non' } }
       : { name: 'Cours de maths (en ligne)', price: '5 000 F', old: '', promo: '', seller: 'M. Kodjo', kind: 'digital', dist: 'sans déplacement',
           level: 3, levelProof: 'déclarée, non confirmée',
           integ: 'Visuel ✓ · prix cohérent ✓', rep: 'Vendue 30× · 4,9 ★',
           carac: { qte: 'Place disponible · 4 h', depletion: 'Décompte à chaque séance', unique: null,
-                   position: 'Immatérielle — <b>origine : Lomé, Adawlato</b>', temporalite: 'Créneau · sam 10h–12h',
+                   position: 'Immatérielle · <b>origine : Lomé, Adawlato</b>', temporalite: 'Créneau · sam. 10h-12h',
                    remise: 'En ligne (visio)', etat: 'Neuf', prix: 'Fixe · négociable ? non' } };
     go('offer');
     return;
@@ -441,7 +441,7 @@ function openOffer(kind) {
         level: 4, levelProof: 'confirmée il y a 2 h',
         integ: 'Visuel \u2713 \u00b7 prix cohérent \u2713', rep: 'Achetée 12\u00d7 \u00b7 4,6 \u2605',
         carac: { qte: '24 disponibles', depletion: 'Décompte à chaque vente', unique: null,
-                 position: 'Fixe · sur place', temporalite: 'Ouvert · mar–dim 8h–20h',
+                 position: 'Fixe · sur place', temporalite: 'Ouvert · mar. à dim. 8h-20h',
                  remise: 'Retrait sur place', etat: 'Neuf', prix: 'Fixe · négociable ? non' } };
   go('offer');
 }
@@ -452,7 +452,7 @@ const SHEETS = {};
 SHEETS.search = () => {
   const c = S.constraints;
   const chip = (label, on, soon, fn) =>
-    `<span class="chip${on ? ' on' : ''}${soon ? ' soon' : ''}" onclick="${soon ? `toast('${label} — bientôt (V1+)')` : fn}">${label}</span>`;
+    `<span class="chip${on ? ' on' : ''}${soon ? ' soon' : ''}" onclick="${soon ? `toast('${label} · bientôt (V1+)')` : fn}">${label}</span>`;
   // D-CON-1/2 : un SEUIL se règle. La pastille active ; la valeur reste éditable.
   const seuil = (key, value, unit, fn) =>
     `<span class="chip seuil${c[key] ? ' on' : ''}" onclick="${fn}" title="${fn === 'toggleC(\'budget\')' ? 'Activer le plafond de budget' : 'Activer la quantité minimale'}">${key === 'budget' ? 'Budget ≤' : 'Au moins'}<input class="seuil-v" type="text" inputmode="numeric" value="${value}" aria-label="${key === 'budget' ? 'Budget maximum' : 'Quantité minimum'}" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter')this.blur()" onchange="setSeuil('${key}',this.value)"><span class="seuil-u">${unit}</span></span>`;
@@ -470,7 +470,7 @@ SHEETS.search = () => {
   </div>
   <div style="margin-top:9px"><div class="fld">${ICON.search}<input placeholder="${S.searchLevel === 'entity' ? 'Nom d’un commerce, d’une organisation ou d’une personne…' : 'Produit, service, propriété immobilière, compétence…'}" onkeydown="if(event.key==='Enter')${S.searchLevel === 'entity' ? 'doSearchEntity()' : 'doSearch()'}" id="q"></div></div>
   <p class="lead">${S.searchLevel === 'entity'
-    ? 'Un <b>offreur par son identité</b> — commerce, organisation ou personne seule, même objet. On aboutit à sa page publique.'
+    ? 'Un <b>offreur par son identité</b> · commerce, organisation ou personne seule, même objet. On aboutit à sa page publique.'
     : 'Tout ce qui existe autour de vous : commerces, particuliers, transport, services, <b>immobilier</b>. Aucune offre écartée par type.'}</p>
 
   <div class="oblock"${S.searchLevel === 'entity' ? ' style="display:none"' : ''}>
@@ -488,7 +488,7 @@ SHEETS.search = () => {
   </div>
 
   <div class="cgroup"${S.searchLevel === 'entity' ? ' style="display:none"' : ''}>
-    <div class="eyebrow">Votre besoin <em>— réglable</em></div>
+    <div class="eyebrow">Votre besoin <em>· réglable</em></div>
     <div class="chiprow grp">
       ${seuil('budget', c.budgetMax, c.budgetCurrency, "toggleC('budget')")}
       ${seuil('qte', c.qteMin, 'unités', "toggleC('qte')")}
@@ -522,20 +522,20 @@ SHEETS.search = () => {
 SHEETS.results = () => `
   <div class="handle"></div>
   <div class="sheet-head"><div><div class="eyebrow">Occurrences · offres correspondant à vos contraintes</div><h1>5 offres</h1></div><span class="status gray">5</span></div>
-  <p class="lead" style="margin-top:4px">Vous êtes au niveau <b>offre</b> — les entités <b>derrière</b> ces offres sont accessibles en un tap (page publique). <span style="cursor:pointer;text-decoration:underline" onclick="setSearchLevel('entity');go('search')">Chercher une entité</span></p>
+  <p class="lead" style="margin-top:4px">Vous êtes au niveau <b>offre</b> : les entités <b>derrière</b> ces offres sont accessibles en un tap (page publique). <span style="cursor:pointer;text-decoration:underline" onclick="setSearchLevel('entity');go('search')">Chercher une entité</span></p>
   <div class="hgrid">
     <div class="hcard" onclick="openOffer('commerce')"><div class="thumb">🍝<span class="vmark"></span><span class="promo">−15 % Omni</span></div><div class="body"><b>Spaghetti 500 g</b><small>Boutique Kodjo · commerce · 140 m</small><span class="pr">850 F<span class="old">1 000 F</span></span><span class="status ok" style="margin-top:5px">En stock</span> <span class="status ink" style="margin-top:5px;font-size:8px">Produit recherché</span> <span class="status ink" style="margin-top:5px;font-size:8px">Niv. 4 · Transactable</span><small class="trust">4,6 ★ · Achetée 12× · intégrité ✓</small></div></div>
     <div class="hcard" onclick="openOffer('person')"><div class="thumb person">💻</div><div class="body"><b>Ordinateur Dell</b><small>Awa T. · particulier · 380 m</small><span class="pr">45 000 F<span class="old">50 000 F</span></span><span class="status dash" style="margin-top:5px">Niv. 2 · À confirmer</span><small class="trust">4,2 ★ · Achetée 5× · intégrité ✓</small></div></div>
-    <div class="hcard" onclick="openOffer('immo')"><div class="thumb immo">🏠</div><div class="body"><b>Studio meublé — Adawlato</b><small>Agence Dovi · immobilier · 900 m</small><span class="pr">85 000 F<span class="old">95 000 F</span></span><span class="status ok" style="margin-top:5px">En stock</span> <span class="status ink" style="margin-top:5px;font-size:8px">Niv. 4 · Transactable</span><small class="trust">4,8 ★ · Louée 3× · intégrité ✓</small></div></div>
+    <div class="hcard" onclick="openOffer('immo')"><div class="thumb immo">🏠</div><div class="body"><b>Studio meublé · Adawlato</b><small>Agence Dovi · immobilier · 900 m</small><span class="pr">85 000 F<span class="old">95 000 F</span></span><span class="status ok" style="margin-top:5px">En stock</span> <span class="status ink" style="margin-top:5px;font-size:8px">Niv. 4 · Transactable</span><small class="trust">4,8 ★ · Louée 3× · intégrité ✓</small></div></div>
     <div class="hcard" onclick="openOffer('digital')"><div class="thumb digital">⚡</div><div class="body"><b>Cours de maths (en ligne)</b><small>M. Kodjo · digital · <b>origine : Lomé</b></small><span class="pr">5 000 F</span><span class="status ok" style="margin-top:5px">En stock</span> <span class="status ink" style="margin-top:5px;font-size:8px">Niv. 3 · Disponible</span><small class="trust">4,9 ★ · Vendue 30× · intégrité ✓</small></div></div>
-    <div class="hcard" onclick="go('lieu-connaitre')"><div class="thumb unclaimed"></div><div class="body"><b>Épicerie du Port</b><small>Lieu connu · non gérée</small><span class="pr">—</span><span class="status dash" style="margin-top:5px">Niv. 0 · Non revendiquée</span><small class="trust muted">Pas d’offre · rien à évaluer</small></div></div>
+    <div class="hcard" onclick="go('lieu-connaitre')"><div class="thumb unclaimed"></div><div class="body"><b>Épicerie du Port</b><small>Lieu connu · non gérée</small><span class="pr">N/D</span><span class="status dash" style="margin-top:5px">Niv. 0 · Non revendiquée</span><small class="trust muted">Pas d’offre · rien à évaluer</small></div></div>
   </div>
   <div class="sortbar">
     ${[['best', 'Meilleur match'], ['near', 'Plus proche'], ['price', 'Prix le plus bas'], ['disc', 'Remise Omni']].map(([k, l]) =>
       `<button class="sortchip${S.sort === k ? ' active' : ''}" onclick="setSort('${k}')">${l}</button>`).join('')}
   </div>
   <div class="freshbar${S.fresh === 'expired' ? ' expired' : S.fresh === 'stale' ? ' stale' : ''}">
-    <span class="fdot"></span>${S.fresh === 'expired' ? 'Disponibilité expirée (dernière confirmation il y a 26 h) — à re-confirmer' : S.fresh === 'stale' ? 'Disponibilité vieillissante (il y a 6 h) — encore bonne' : 'Disponibilité vérifiée il y a 2 h'}
+    <span class="fdot"></span>${S.fresh === 'expired' ? 'Disponibilité expirée (dernière confirmation il y a 26 h) : à re-confirmer' : S.fresh === 'stale' ? 'Disponibilité vieillissante (il y a 6 h) : encore bonne' : 'Disponibilité vérifiée il y a 2 h'}
   </div>
   <p class="lead">Chaque offre porte un <b>visuel</b>, un <b>avantage Omni</b> et une <b>réputation propre</b> (S-32). Les offres <b>sponsorisées</b> sont marquées et jamais mélangées en silence.</p>
   <div class="btnrow"><button class="btn ghost sm" onclick="go('compare')">Comparer</button><button class="btn sm" onclick="go('bulk')">Dispo groupée</button></div>`;
@@ -563,7 +563,7 @@ SHEETS['state-error'] = () => `
   <div class="handle"></div><div class="eyebrow">Panne réseau</div><h1 style="margin-top:3px">Service momentanément indisponible</h1>
   <div class="empty"><span class="ic">⚠️</span>La carte et les offres n’ont pas pu être chargées.</div>
   <button class="btn" onclick="toast('Nouvelle tentative…');">Réessayer</button>
-  <button class="btn ghost" onclick="toast('Recherche enregistrée — nous vous préviendrons');go('notif-centre')">M’alerter quand ça revient</button>
+  <button class="btn ghost" onclick="toast('Recherche enregistrée · nous vous préviendrons');go('notif-centre')">M’alerter quand ça revient</button>
   <button class="btn ghost sm" onclick="go('recovery')">Reprendre où j’en étais</button>`;
 
 SHEETS.offer = () => `
@@ -580,18 +580,18 @@ SHEETS.offer = () => `
     <div class="kv"><span>Intégrité de l’offre</span><b style="color:var(--accent)">${S.product.integ}</b></div>
     <div class="kv"><span>Réputation de l’offre</span><b>${S.product.rep}</b></div>
     <div class="kv"><span>Cette offre appartient à</span><b>${S.product.seller} · ${S.product.kind === 'particulier' ? 'non vérifiée' : 'vérifiée'}</b></div>
-    <div class="kv"><span>Le lieu</span><b>un point sur la carte — il dit <i>où</i>, jamais <i>à qui</i></b></div>
+    <div class="kv"><span>Le lieu</span><b>un point sur la carte : il dit <i>où</i>, jamais <i>à qui</i></b></div>
   </div>
   <div class="section-kicker">Caractéristiques de l’offre</div>
   <div class="cardbox">
     <div class="kv"><span>Quantité / déplétion</span><b>${S.product.carac.qte} · ${S.product.carac.depletion}</b></div>
-    <div class="kv"><span>Unicité</span><b>${S.product.carac.unique ? 'Pièce unique — disparaît après vente' : 'Offre renouvelable'}</b></div>
+    <div class="kv"><span>Unicité</span><b>${S.product.carac.unique ? 'Pièce unique : disparaît après vente' : 'Offre renouvelable'}</b></div>
     <div class="kv"><span>Position</span><b>${S.product.carac.position}</b></div>
     <div class="kv"><span>Temporalité</span><b>${S.product.carac.temporalite}</b></div>
     <div class="kv"><span>Retrait / livraison</span><b>${S.product.carac.remise}</b></div>
     <div class="kv"><span>État</span><b>${S.product.carac.etat}</b></div>
     <div class="kv"><span>Prix</span><b>${S.product.carac.prix}</b></div>
-    <p class="lead" style="margin-top:6px">Une seule offre, sept caractéristiques — aucun « type » séparé. Le <b>digital</b>, le <b>service</b>, le <b>transport</b> et l'<b>immobilier</b> se décrivent avec ces mêmes champs. Pour une offre <b>immatérielle</b>, l'<b>origine</b> vit dans la <b>position</b> — on sait toujours <i>d'où</i> ça vient.</p>
+    <p class="lead" style="margin-top:6px">Une seule offre, sept caractéristiques, aucun « type » séparé. Le <b>digital</b>, le <b>service</b>, le <b>transport</b> et l'<b>immobilier</b> se décrivent avec ces mêmes champs. Pour une offre <b>immatérielle</b>, l'<b>origine</b> vit dans la <b>position</b> : on sait toujours <i>d'où</i> ça vient.</p>
   </div>
   <div class="section-kicker">Niveau d’existence</div>
   <div class="cardbox">
@@ -606,20 +606,20 @@ SHEETS.offer = () => `
   <button class="btn ghost sm" onclick="go('produit-multi')">Ajouter d’autres produits</button>
   <button class="btn ghost sm" onclick="go('entite-publique')">Voir la page de l’entité</button>
   ${S.product.dist === 'sans déplacement'
-    ? `<div class="kv"><span>Où ça se passe</span><b>Tout se passe en ligne — aucun déplacement</b></div>`
+    ? `<div class="kv"><span>Où ça se passe</span><b>Tout se passe en ligne : aucun déplacement</b></div>`
     : `<button class="btn ghost sm" onclick="go('facility-apex')">Aperçu express du lieu</button>
-  <button class="btn ghost sm" disabled aria-disabled="true" title="Choisissez d’abord cette offre (intention d’achat) pour charger l’itinéraire réel.">Itinéraire vers ce vendeur — après intention</button>`}
+  <button class="btn ghost sm" disabled aria-disabled="true" title="Choisissez d’abord cette offre (intention d’achat) pour charger l’itinéraire réel.">Itinéraire vers ce vendeur · après intention</button>`}
   <button class="btn ghost sm" onclick="go('signal')">Signaler cette offre</button>
-  <p class="lead">Le contact du vendeur <b>et</b> l’itinéraire routier apparaissent <b>après</b> une intention d’achat — jamais avant.</p>`;
+  <p class="lead">Le contact du vendeur <b>et</b> l’itinéraire routier apparaissent <b>après</b> une intention d’achat, jamais avant.</p>`;
 
 SHEETS.avail = () => `
   <div class="handle"></div>
   <div class="eyebrow">Vérification de disponibilité</div>
   <h1 style="margin-top:3px">${S.product.name} · ${S.constraints.qte ? S.constraints.qteMin : 2}</h1>
-  <p class="lead">« Est-ce disponible maintenant ? » — ce n’est pas encore un engagement d’achat.</p>
+  <p class="lead">« Est-ce disponible maintenant ? » : ce n’est pas encore un engagement d’achat.</p>
   <div class="cardbox">
     <div class="kv"><span>Quantité souhaitée</span><b>${S.constraints.qte ? S.constraints.qteMin : 2}</b></div>
-    <div class="kv"><span>Budget max</span><b>${S.constraints.budget ? S.constraints.budgetMax.toLocaleString('fr-FR') + ' ' + S.constraints.budgetCurrency : '—'}</b></div>
+    <div class="kv"><span>Budget max</span><b>${S.constraints.budget ? S.constraints.budgetMax.toLocaleString('fr-FR') + ' ' + S.constraints.budgetCurrency : 'N/D'}</b></div>
     <div class="kv"><span>Retrait / livraison</span><b>Retrait</b></div>
   </div>
   <div class="eyebrow" style="margin-top:11px">Note au vendeur (optionnel)</div>
@@ -642,7 +642,7 @@ SHEETS.reply = () => `
     <div class="kv"><span>Prix</span><b>${S.product.price} / unité</b></div>
     <div class="kv"><span>Message</span><b>Oui, en stock, venez</b></div>
   </div>
-  <button class="btn" onclick="go('intent')">Je veux acheter — intention</button>
+  <button class="btn" onclick="go('intent')">Je veux acheter · intention</button>
   <button class="btn ghost sm" onclick="go('results')">Voir d’autres offres autour</button>`;
 
 SHEETS.intent = () => `
@@ -668,7 +668,7 @@ SHEETS.qr = () => `
   <h1 style="margin-top:3px">Présentez ce code au vendeur</h1>
   <div class="qrcode"></div>
   <div style="text-align:center"><span class="timer">⏱ expire dans 09:42</span></div>
-  <p class="lead">Transmettez ce code au vendeur — <b>au choix</b> :</p>
+  <p class="lead">Transmettez ce code au vendeur, <b>au choix</b> :</p>
   <div class="chips"><span class="chip on">Lui montrer</span><span class="chip" onclick="toast('Partagé vers WhatsApp…')">Partager (WhatsApp/SMS)</span></div>
   <p class="lead">Le vendeur le reçoit <b>chez lui</b> (côté vendeur) et le valide. <b>Rien de tout ça n’est visible ici autrement.</b></p>
   <div class="btnrow"><button class="btn ghost sm" onclick="toast('Nouveau QR émis')">Ré-émettre</button><button class="btn ghost sm" onclick="toast('QR révoqué')">Révoquer</button></div>
@@ -708,7 +708,7 @@ SHEETS.pay = () => `
   <div class="steplabels"><span>Dispo</span><span>Réponse</span><span>Intention</span><span>Scan</span><span>Avis</span></div>
   <div class="eyebrow" style="margin-top:12px">Paiement au vendeur (externe)</div>
   <h1 style="margin-top:3px">Comment payez-vous ?</h1>
-  <p class="lead">Omni n’encaisse pas les biens — il <b>enregistre</b> le moyen utilisé. Aucun retrait à gérer côté entité.</p>
+  <p class="lead">Omni n’encaisse pas les biens : il <b>enregistre</b> le moyen utilisé. Aucun retrait à gérer côté entité.</p>
   <div class="cardbox">
     <div class="kv"><span>Montant</span><b>1 700 F</b></div>
     <div class="kv"><span>À payer à</span><b>${S.product.seller} · 📱 90 12 34 56</b></div>
@@ -748,7 +748,7 @@ SHEETS.rate = () => `
     <span class="chip on" onclick="star(3)">★</span><span class="chip on" onclick="star(4)">★</span>
     <span class="chip" onclick="star(5)">★</span>
   </div>
-  <button class="btn ok" onclick="go('recu',{toast:'Merci — transaction clôturée'})">Envoyer l’avis — clôturer</button>
+  <button class="btn ok" onclick="go('recu',{toast:'Merci · transaction clôturée'})">Envoyer l’avis · clôturer</button>
   <p class="lead">La clôture rend la disponibilité plus fiable pour tous.</p>`;
 
 SHEETS.menu = () => {
@@ -805,14 +805,14 @@ SHEETS.notifications = () => `
   <h1 style="margin-top:3px">Ce qui a bougé</h1>
   <div class="cardbox">
     <div class="kv"><span>${S.product.seller} a répondu à votre demande</span><b>à l’instant</b></div>
-    <div class="kv"><span>Votre code a été validé</span><b>—</b></div>
+    <div class="kv"><span>Votre code a été validé</span><b>N/D</b></div>
     <div class="kv"><span>Nouvelle offre près de vous</span><b>il y a 2 h</b></div>
   </div>`;
 
 SHEETS.wallet = () => {
   const pro = S.role === 'seller'
-    ? { title: 'Entité Pro — 10 $/mois ≈ 5 000 F', lines: ['Offres illimitées (gratuit : 20)', 'Disponibilité automatique', 'Analytics & campagnes sponsorisées', 'Slots d’entités supplémentaires'] }
-    : { title: 'Buyer Pro — 5 $/mois ≈ 2 500 F', lines: ['Bulk 100/mois (gratuit : 3)', 'Favoris illimités + alertes', 'Comparateur jusqu’à 10'] };
+    ? { title: 'Entité Pro · 10 $/mois ≈ 5 000 F', lines: ['Offres illimitées (gratuit : 20)', 'Disponibilité automatique', 'Analytics & campagnes sponsorisées', 'Slots d’entités supplémentaires'] }
+    : { title: 'Buyer Pro · 5 $/mois ≈ 2 500 F', lines: ['Bulk 100/mois (gratuit : 3)', 'Favoris illimités + alertes', 'Comparateur jusqu’à 10'] };
   return `
   <div class="handle"></div><div class="eyebrow">Portefeuille & Plans</div>
   <h1 style="margin-top:3px">Solde : 2 500 F</h1>
@@ -825,8 +825,8 @@ SHEETS.wallet = () => {
     ${pro.lines.map(l => `<div class="kv"><span>${l}</span><b>✓</b></div>`).join('')}
   </div>
   <button class="btn" onclick="toast('Redirection FedaPay…')">Recharger via FedaPay</button>
-  <button class="btn ghost" onclick="toast('Paiement wallet — activation Pro')">Activer Pro</button>
-  <p class="lead">Le portefeuille ne sert qu’aux <b>services Omni</b> — jamais au paiement des biens.</p>`;
+  <button class="btn ghost" onclick="toast('Paiement wallet · activation Pro')">Activer Pro</button>
+  <p class="lead">Le portefeuille ne sert qu’aux <b>services Omni</b>, jamais au paiement des biens.</p>`;
 };
 
 SHEETS.account = () => `
@@ -861,7 +861,7 @@ SHEETS.bulk = () => `
   <div class="cardbox">
     <div class="kv"><span>Rayon</span><b>5 / 10 / 25 / 50 km</b></div>
     <div class="kv"><span>Entités ciblées</span><b>3</b></div>
-    <div class="kv"><span>Coût</span><b>1 crédit (1–100 entités)</b></div>
+    <div class="kv"><span>Coût</span><b>1 crédit (1 à 100 entités)</b></div>
     <div class="kv"><span>Solde</span><b>2 crédits restants</b></div>
   </div>
   <div class="chips"><span class="chip on">Tout cocher</span><span class="chip">Aucune</span></div>
@@ -890,7 +890,7 @@ SHEETS['scan-entity'] = () => `
 SHEETS['entity-from-qr'] = () => `
   <div class="handle"></div>
   <div class="eyebrow">Entité · ${S.product.seller} · commerce · 140 m</div>
-  <h1 style="margin-top:3px">Bienvenue — vous êtes dans ce commerce</h1>
+  <h1 style="margin-top:3px">Bienvenue, vous êtes dans ce commerce</h1>
   <div class="cardbox">
     <div class="kv"><span>Cette entité</span><b>Vérifiée · 12 ventes</b></div>
     <div class="kv"><span>Vos avantages Omni ici</span><b style="color:var(--accent)">−15 % sur ses offres</b></div>
@@ -916,8 +916,8 @@ function setSeuil(key, raw) {
 // Libellé du seuil actif, pour que la fiche LISE la contrainte au lieu de la coder en dur.
 function seuilLabel(key) {
   const c = S.constraints;
-  if (key === 'budget') return c.budget ? ('Budget max ≤ ' + c.budgetMax.toLocaleString('fr-FR') + ' ' + c.budgetCurrency) : 'Budget max — non contraint';
-  if (key === 'qte') return c.qte ? ('Quantité min ≥ ' + c.qteMin + ' unité' + (c.qteMin > 1 ? 's' : '')) : 'Quantité — non contrainte';
+  if (key === 'budget') return c.budget ? ('Budget max ≤ ' + c.budgetMax.toLocaleString('fr-FR') + ' ' + c.budgetCurrency) : 'Budget max · non contraint';
+  if (key === 'qte') return c.qte ? ('Quantité min ≥ ' + c.qteMin + ' unité' + (c.qteMin > 1 ? 's' : '')) : 'Quantité · non contrainte';
   return '';
 }
 function setSearchLevel(lv) { S.searchLevel = lv; render(); }
@@ -932,14 +932,14 @@ function doSearchEntity() {
   S.entity = 'Boutique Kodjo';
   go('entite-publique', { toast: '1 entité trouvée · identité, horaires, ses offres' });
 }
-function doIntent() { S.txn = 'qr_ready'; go('qr', { toast: 'Intention créée — QR émis' }); }
+function doIntent() { S.txn = 'qr_ready'; go('qr', { toast: 'Intention créée · QR émis' }); }
 function star(n) {
   const s = document.querySelectorAll('#stars .chip');
   s.forEach((c, i) => c.className = 'chip' + (i < n ? ' on' : ''));
 }
-function sellerValidate() { S.txn = 'qr_verified'; go('txn-track', { toast: 'Code validé — transaction verrouillée' }); }
-function sellerValidateFromDash() { S.hasEntity = true; S.txn = 'qr_verified'; go('seller-chat', { toast: 'Validé — chat transaction ouvert' }); }
-function createEntity() { S.hasEntity = true; S.entity = 'Boutique Kodjo'; go('seller-dash', { toast: 'Entité créée — vous pouvez publier' }); }
+function sellerValidate() { S.txn = 'qr_verified'; go('txn-track', { toast: 'Code validé · transaction verrouillée' }); }
+function sellerValidateFromDash() { S.hasEntity = true; S.txn = 'qr_verified'; go('seller-chat', { toast: 'Validé · chat transaction ouvert' }); }
+function createEntity() { S.hasEntity = true; S.entity = 'Boutique Kodjo'; go('seller-dash', { toast: 'Entité créée · vous pouvez publier' }); }
 function setEntityKind(k) { S.entityKind = k; render(); }
 // Repères proches : ces noms viennent des TUILES réelles de Lomé (place + poi),
 // pas d'une liste inventée. Chercher un repère sert à se situer vite avant de
@@ -1017,7 +1017,7 @@ SHEETS['seller-entry'] = () => `
   <p class="lead">Sans entité, il n’y a <b>rien à gérer</b> : l’espace se limite à cette entrée. Les outils (offres, transactions, dashboard) s’ouvrent <b>avec l’entité</b>.</p>
   <button class="btn" onclick="go('seller-entity')">Créer mon entité</button>
   <button class="btn ghost sm" onclick="go('seller-claim')">Revendiquer un lieu existant</button>
-  <p class="lead">Le badge de confiance est <b>propre à l’entité</b> — jamais à l’offre.</p>`;
+  <p class="lead">Le badge de confiance est <b>propre à l’entité</b>, jamais à l’offre.</p>`;
 
 SHEETS['seller-entity'] = () => `
   <div class="handle"></div><div class="eyebrow">Étape 1 · votre entité</div>
@@ -1047,7 +1047,7 @@ SHEETS['seller-entity'] = () => `
       <span class="usermarker" style="left:38%;top:52%"></span>
       <span class="vdot ink" id="entitypin" style="left:60%;top:34%;width:16px;height:16px;cursor:grab;touch-action:none"></span>
     </div>
-    <p class="lead" style="margin:8px 0 0">Le pin part de <b>votre position</b> et se <b>déplace librement</b>. ${S.entityKind === 'digital' ? 'Pour une offre <b>immatérielle</b>, la position dit <i>d’où vous parlez</i> — jamais un déplacement à faire.' : 'Vous pouvez le corriger : vous seul savez où se trouve votre lieu. Cherchez un <b>repère proche</b> pour vous situer, puis posez votre point.'}</p>
+    <p class="lead" style="margin:8px 0 0">Le pin part de <b>votre position</b> et se <b>déplace librement</b>. ${S.entityKind === 'digital' ? 'Pour une offre <b>immatérielle</b>, la position dit <i>d’où vous parlez</i>, jamais un déplacement à faire.' : 'Vous pouvez le corriger : vous seul savez où se trouve votre lieu. Cherchez un <b>repère proche</b> pour vous situer, puis posez votre point.'}</p>
   </div>
   <button class="btn" onclick="createEntity()">Créer mon entité</button>
   <p class="lead">Même un particulier crée une entité (S-28). Publier ne requiert <b>pas</b> la vérification (S-31).</p>`;
@@ -1063,10 +1063,10 @@ SHEETS['lieu-connaitre'] = () => `
   </div>
   <div class="cardbox">
     <div class="kv"><span>Ce qu’Omni ne peut PAS dire</span><b class="status warn">Dispo · prix · horaires</b></div>
-    <p class="lead" style="margin:8px 0 0">Tant qu’aucune entité ne le gère, il n’y a <b>rien à interroger</b> — et Omni ne l’inventera pas.</p>
+    <p class="lead" style="margin:8px 0 0">Tant qu’aucune entité ne le gère, il n’y a <b>rien à interroger</b>, et Omni ne l’inventera pas.</p>
   </div>
-  <button class="btn" onclick="go('seller-claim')">C’est mon lieu — le revendiquer</button>
-  <button class="btn ghost" onclick="go('seller-entity',{toast:'Créer une entité — immédiat'})">Créer une entité (pas ce lieu)</button>
+  <button class="btn" onclick="go('seller-claim')">C’est mon lieu · le revendiquer</button>
+  <button class="btn ghost" onclick="go('seller-entity',{toast:'Créer une entité · immédiat'})">Créer une entité (pas ce lieu)</button>
   <div class="cardbox" style="margin-top:10px">
     <div class="kv"><span>Revendiquer</span><b>Preuve + arbitrage opérateur</b></div>
     <div class="kv"><span>Créer</span><b>Immédiat · badge « Non vérifié »</b></div>
@@ -1113,7 +1113,7 @@ SHEETS['seller-validate'] = () => `
     <div class="kv"><span>Avantage appliqué</span><b style="color:var(--accent)">−15 % Omni</b></div>
     <div class="kv"><span>Note</span><b>« je passe dans 20 min »</b></div>
   </div>
-  <button class="btn" onclick="sellerValidateFromDash()">Valider — ouvre le chat de transaction</button>
+  <button class="btn" onclick="sellerValidateFromDash()">Valider · ouvre le chat de transaction</button>
   <p class="lead">Le clic <b>valide en auto</b> (même verrou) et ouvre le <b>chat de cette demande</b>. L’acheteur voit alors « Code validé ».</p>`;
 
 
@@ -1194,7 +1194,7 @@ SHEETS['seller-chat'] = () => `
     <div class="kv"><span>Rendez-vous / temps estimé</span><b>Retrait · ≤ 20 min</b></div>
     <div class="kv"><span>Historique des états</span><b>4 événements</b></div>
   </div>
-  <div class="timer">⏱ le temps relance puis expire — il n’annule jamais</div>
+  <div class="timer">⏱ le temps relance puis expire : il n’annule jamais</div>
   <p class="lead">Chat <b>scopé à la transaction</b>, ouvert <b>au verrou</b> (jamais avant). Il porte les actions réelles (paiement, remise) et l’<b>historique</b>, pas seulement du texte.</p>`;
 
 SHEETS['remise'] = () => `
@@ -1203,7 +1203,7 @@ SHEETS['remise'] = () => `
   <div class="steplabels"><span>QR</span><span>Scan</span><span>Paiement</span><span>Remise</span><span>Avis</span></div>
   <div class="eyebrow" style="margin-top:12px">Remise / livraison</div>
   <h1 style="margin-top:3px">Comment vous recevez ?</h1>
-  <div class="chips"><span class="chip on">Retrait sur place</span><span class="chip" onclick="toast('Livraison — périmètre pilote limité')">Livraison</span></div>
+  <div class="chips"><span class="chip on">Retrait sur place</span><span class="chip" onclick="toast('Livraison · périmètre pilote limité')">Livraison</span></div>
   <div class="cardbox">
     <div class="kv"><span>Qui remet</span><b>Le vendeur</b></div>
     <div class="kv"><span>Qui reçoit</span><b>L’acheteur (en personne)</b></div>
@@ -1220,7 +1220,7 @@ SHEETS['fraicheur'] = () => `
     <div class="kv"><span>Seuil frais / expiré</span><b>4 h frais · 24 h expiré</b></div>
     <div class="kv"><span>Badge affiché</span><b class="status warn">À confirmer</b></div>
   </div>
-  <button class="btn" onclick="go('seller-dash',{toast:'Disponibilité reconfirmée — repassée “En stock”'})">Reconfirmer maintenant</button>
+  <button class="btn" onclick="go('seller-dash',{toast:'Disponibilité reconfirmée · repassée “En stock”'})">Reconfirmer maintenant</button>
   <p class="lead">Le badge de disponibilité <b>vieillit</b> : il est mis à jour par le vendeur (ou automatiquement, entité Pro).</p>`;
 
 SHEETS['entite-publique'] = () => `
@@ -1230,14 +1230,14 @@ SHEETS['entite-publique'] = () => `
     <div class="kv"><span>Badge</span><b class="status ok">Vérifiée · 12 ventes</b></div>
     <div class="kv"><span>Nature</span><b>Commerce · même objet qu’une personne seule</b></div>
     <div class="kv"><span>Adresse</span><b>Lomé · Adawlato · Rue Kamé</b></div>
-    <div class="kv"><span>Horaires</span><b>Lun–Sam 8h–19h</b></div>
+    <div class="kv"><span>Horaires</span><b>Lun. à Sam. 8h-19h</b></div>
     <div class="kv"><span>Catégorie de lieu</span><b>Commerce · fixe</b></div>
   </div>
   <div class="section-kicker">Niveau de l’entité</div>
   <div class="cardbox">
     <div class="stepline"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
     <div class="steplabels"><span>0 Présente</span><span>4 Transactable</span></div>
-    <p class="lead" style="margin-top:6px"><b>Offres vivantes</b> — 3 offres, dont 2 en disponibilité vivante. La confiance porte sur l’<b>entité</b> ; la réputation, sur chaque <b>offre</b>.</p>
+    <p class="lead" style="margin-top:6px"><b>Offres vivantes</b> · 3 offres, dont 2 en disponibilité vivante. La confiance porte sur l’<b>entité</b> ; la réputation, sur chaque <b>offre</b>.</p>
   </div>
   <div class="section-kicker">Ses offres</div>
   <div class="cardbox">
@@ -1246,9 +1246,9 @@ SHEETS['entite-publique'] = () => `
     <div class="kv"><span>Riz 5 kg</span><b>Niv. 2 · 4 200 F</b></div>
   </div>
   <button class="btn" onclick="go('results')">Voir ses 3 offres</button>
-  <button class="btn ghost sm" disabled aria-disabled="true" title="Choisissez une offre de cette entité pour charger l’itinéraire réel.">Itinéraire — après intention d’achat</button>
+  <button class="btn ghost sm" disabled aria-disabled="true" title="Choisissez une offre de cette entité pour charger l’itinéraire réel.">Itinéraire · après intention d’achat</button>
   <button class="btn ghost sm" onclick="toast('Favori ajouté')">Suivre cette entité</button>
-  <p class="lead">La <b>page publique de l’entité</b> rassemble son identité, ses horaires et toutes ses offres — c’est le point d’entrée physique (QR en boutique).</p>`;
+  <p class="lead">La <b>page publique de l’entité</b> rassemble son identité, ses horaires et toutes ses offres : c’est le point d’entrée physique (QR en boutique).</p>`;
 
 SHEETS['entity-empty'] = () => `
   <div class="handle"></div>
@@ -1398,7 +1398,7 @@ SHEETS['op-report'] = () => `
   </div>
   <button class="btn ok" onclick="go('op-queue',{toast:'Dossier transmis à l’admin'})">Transmettre à l’admin</button>
   <button class="btn ghost sm" onclick="go('op-queue',{toast:'Visite à reprogrammer'})">Reprogrammer</button>
-  <p class="lead">Trace <b>horodatée et signée</b> — l’admin verra qui a constaté quoi, quand.</p>`;
+  <p class="lead">Trace <b>horodatée et signée</b> : l’admin verra qui a constaté quoi, quand.</p>`;
 
 SHEETS['op-side'] = () => `
   <div class="handle"></div><div class="eyebrow">Aperçu</div>
@@ -1408,7 +1408,7 @@ SHEETS['op-side'] = () => `
     <div class="kv"><span>Offres publiées</span><b>2</b></div>
     <div class="kv"><span>Sa file de messages</span><b>1 en attente</b></div>
   </div>
-  <p class="lead">L’opérateur peut <b>voir</b> ce que voit une entité pour comprendre un dossier — sans jamais modifier à sa place.</p>
+  <p class="lead">L’opérateur peut <b>voir</b> ce que voit une entité pour comprendre un dossier, sans jamais modifier à sa place.</p>
   <button class="btn ghost" onclick="go('op-side',{toast:'Message de suivi envoyé à l’entité'})">Envoyer un message de suivi</button>`;
 
 /* ---------- ABSENTS comblés 2026-09-23 (audit écrans) ---------- */
@@ -1441,9 +1441,9 @@ SHEETS.room = () => `
   </div>
   <div class="cardbox">
     <div class="kv"><span>Étape</span><b>Clôturée · système</b></div>
-    <div class="kv"><span>Échéance</span><b>— (terminée)</b></div>
+    <div class="kv"><span>Échéance</span><b>N/D (terminée)</b></div>
   </div>
-  <div class="timer">⏱ le temps relance puis expire — il n’annule jamais</div>
+  <div class="timer">⏱ le temps relance puis expire : il n’annule jamais</div>
   <div class="eyebrow" style="margin-top:12px">Conversation de cette transaction</div>
   <div class="chatrow me">Bonjour, je suis en route.</div>
   <div class="chatrow">Parfait, je prépare vos 2 paquets.</div>
@@ -1454,7 +1454,7 @@ SHEETS.room = () => `
     <button class="btn ghost sm" onclick="toast('Reçu enregistré')">Télécharger le reçu</button>
     <button class="btn ghost sm" onclick="go('signal')">Signaler un problème</button>
   </div>
-  <p class="lead">La <b>Room acheteur</b> réunit suivi + chat + reçu au même endroit — symétrique du vendeur (B13).</p>`;
+  <p class="lead">La <b>Room acheteur</b> réunit suivi + chat + reçu au même endroit, symétrique du vendeur (B13).</p>`;
 
 SHEETS['seller-entity-fiche'] = () => `
   <div class="handle"></div><div class="eyebrow">Entité · fiche</div>
@@ -1463,7 +1463,7 @@ SHEETS['seller-entity-fiche'] = () => `
     <div class="kv"><span>Nom</span><b>Boutique Kodjo</b></div>
     <div class="kv"><span>Type</span><b>Commerce · fixe</b></div>
     <div class="kv"><span>Adresse</span><b>Lomé · Adawlato · Rue Kamé</b></div>
-    <div class="kv"><span>Horaires</span><b>Lun–Sam 8h–19h</b></div>
+    <div class="kv"><span>Horaires</span><b>Lun. à Sam. 8h-19h</b></div>
     <div class="kv"><span>Contact</span><b>90 12 34 56 · WhatsApp 90 12 34 56</b></div>
     <div class="kv"><span>Badge</span><b class="status dash">Non vérifié</b></div>
   </div>
@@ -1537,7 +1537,7 @@ SHEETS['seller-automation'] = () => `
     <div class="kv"><span>Confirmation de fraîcheur auto</span><b>OFF · Pro</b></div>
   </div>
   <button class="btn" onclick="toast('Disponibilité automatique activée (Pro)')">Activer la dispo automatique</button>
-  <p class="lead">La disponibilité automatique répond au nom de l’entité — jamais l’acheteur à sa place.</p>`;
+  <p class="lead">La disponibilité automatique répond au nom de l’entité, jamais l’acheteur à sa place.</p>`;
 
 SHEETS['admin-signal'] = () => `
   <div class="handle"></div><div class="eyebrow">Signal de demande</div>
@@ -1547,17 +1547,17 @@ SHEETS['admin-signal'] = () => `
     <div class="kv"><span>« cours de maths » · Bè</span><b>21 recherches · 1 résultat</b></div>
     <div class="kv"><span>« pièces moto Yamaha »</span><b>17 recherches · 0 résultat</b></div>
   </div>
-  <p class="lead">Sert à <b>recruter l’offre manquante</b> et à guider les entités — jamais une vente de données.</p>
+  <p class="lead">Sert à <b>recruter l’offre manquante</b> et à guider les entités, jamais une vente de données.</p>
   <button class="btn ghost" onclick="toast('Objectif d’acquisition créé')">En faire un objectif d’acquisition</button>`;
 
 /* ---------- PARTIELS comblés 2026-09-23 (audit) ---------- */
 SHEETS.home = () => `
   <div class="handle"></div>
-  <div class="sheet-head"><div><div class="eyebrow">Accueil · carte</div><h1>Omni — voir avant de bouger</h1></div><span class="status gray">206 offres</span></div>
+  <div class="sheet-head"><div><div class="eyebrow">Accueil · carte</div><h1>Omni · voir avant de bouger</h1></div><span class="status gray">206 offres</span></div>
   <div class="chips" style="margin-top:8px">
     <span class="chip on" onclick="go('search')">Rechercher</span>
     <span class="chip" onclick="go('scan-entity')">Scanner un QR</span>
-    <span class="chip soon" onclick="toast('Transport — bientôt')">Transport</span>
+    <span class="chip soon" onclick="toast('Transport · bientôt')">Transport</span>
   </div>
   <div class="cardbox">
     <div class="kv"><span>Autour de vous (≤ 1 km)</span><b>8 offres · 3 entités</b></div>
@@ -1575,12 +1575,12 @@ SHEETS['facility-apex'] = () => `
     <div class="kv"><span>Offres</span><b>3 · dès 850 F <span class="status ok">−15 %</span></b></div>
   </div>
   <button class="btn" onclick="go('entite-publique')">Ouvrir la page de l’entité</button>
-  <button class="btn ghost sm" disabled aria-disabled="true" title="Choisissez une offre de ce lieu pour charger l’itinéraire réel.">Itinéraire — après intention d’achat</button>
+  <button class="btn ghost sm" disabled aria-disabled="true" title="Choisissez une offre de ce lieu pour charger l’itinéraire réel.">Itinéraire · après intention d’achat</button>
   <p class="lead">Cliquer un pin ouvre cet <b>aperçu</b> ; la page complète est à un tap.</p>`;
 
 SHEETS.recu = () => `
   <div class="handle"></div><div class="eyebrow">Transaction terminée</div>
-  <h1 style="margin-top:3px">Remise effectuée — merci</h1>
+  <h1 style="margin-top:3px">Remise effectuée. Merci.</h1>
   <div class="cardbox">
     <div class="kv"><span>Reçu</span><b>OMNI-A12-…</b></div>
     <div class="kv"><span>Objet</span><b>${S.product.name} × 2</b></div>
@@ -1593,7 +1593,7 @@ SHEETS.recu = () => `
     <button class="btn ghost sm" onclick="toast('Partagé')">Partager</button>
   </div>
   <button class="btn" onclick="go('rate')">Laisser un avis</button>
-  <p class="lead">Le reçu est <b>retrouvable dans l’historique</b> — il porte la transaction gelée (S-26).</p>`;
+  <p class="lead">Le reçu est <b>retrouvable dans l’historique</b> : il porte la transaction gelée (S-26).</p>`;
 
 SHEETS['seller-offer-edit'] = () => `
   <div class="handle"></div><div class="eyebrow">Modifier une offre</div>
@@ -1608,7 +1608,7 @@ SHEETS['seller-offer-edit'] = () => `
   </div>
   <button class="btn" onclick="go('seller-offers',{toast:'Offre mise à jour'})">Enregistrer</button>
   <button class="btn ghost sm" onclick="go('seller-offers',{toast:'Offre archivée'})">Archiver l’offre</button>
-  <p class="lead">Modifier une offre <b>existante</b> — l’intégrité est recalculée automatiquement (S-32).</p>`;
+  <p class="lead">Modifier une offre <b>existante</b> : l’intégrité est recalculée automatiquement (S-32).</p>`;
 
 SHEETS['seller-txn'] = () => `
   <div class="handle"></div><div class="sheet-head"><div><div class="eyebrow">Transactions vendeur</div><h1>Toutes les transactions</h1></div><span class="status gray">6</span></div>
@@ -1632,7 +1632,7 @@ SHEETS['seller-pay-confirm'] = () => `
     <div class="kv"><span>Reçu Omni</span><b class="status warn">À confirmer par vous</b></div>
   </div>
   <button class="btn ok" onclick="go('seller-txn',{toast:'Paiement confirmé'})">Confirmer avoir reçu</button>
-  <button class="btn ghost sm" onclick="toast('Montant non reçu — litige noté')">Je n’ai pas reçu</button>
+  <button class="btn ghost sm" onclick="toast('Montant non reçu · litige noté')">Je n’ai pas reçu</button>
   <p class="lead">Omni <b>n’encaisse pas</b> : le vendeur <b>confirme</b> la réception hors Omni. C’est cette confirmation qui fait avancer la transaction.</p>`;
 
 SHEETS['seller-fulfil'] = () => `
@@ -1643,8 +1643,8 @@ SHEETS['seller-fulfil'] = () => `
     <div class="kv"><span>Mode</span><b>Retrait sur place</b></div>
     <div class="kv"><span>Preuve</span><b>L’acheteur confirmera la réception</b></div>
   </div>
-  <button class="btn" onclick="go('seller-txn',{toast:'Marqué remis — en attente de l’acheteur'})">Marquer remis</button>
-  <p class="lead">Le vendeur <b>remet</b> ; l’acheteur <b>confirme la réception</b> — c’est ce double geste qui clôture.</p>`;
+  <button class="btn" onclick="go('seller-txn',{toast:'Marqué remis · en attente de l’acheteur'})">Marquer remis</button>
+  <p class="lead">Le vendeur <b>remet</b> ; l’acheteur <b>confirme la réception</b> : c’est ce double geste qui clôture.</p>`;
 
 SHEETS['seller-account'] = () => `
   <div class="handle"></div><div class="eyebrow">Compte vendeur</div>
@@ -1699,7 +1699,7 @@ SHEETS.recovery = () => `
   </div>
   <button class="btn" onclick="go('txn-track')">Reprendre ma transaction</button>
   <button class="btn ghost sm" onclick="go('search')">Revenir à ma recherche</button>
-  <p class="lead">Après une panne : <b>rien n’est perdu</b> — panier, recherche et transaction se reprennent.</p>`;
+  <p class="lead">Après une panne : <b>rien n’est perdu</b> : panier, recherche et transaction se reprennent.</p>`;
 
 /* ---------- render ---------- */
 function render() {

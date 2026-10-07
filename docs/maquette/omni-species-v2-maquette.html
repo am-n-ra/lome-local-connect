@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Omni — Species V2 (maquette complète du flow)</title>
+<title>Omni · Species V2 (maquette complète du flow)</title>
 <style>
   /* Tokens 1:1 depuis src/trunk/ui-v13.css / docs/design.md (langage réel de l'app) */
   :root{
@@ -136,10 +136,10 @@
 </head>
 <body>
 <div class="board">
-  <h1>Omni — Species V2 : le flow complet dans le langage réel de l'app</h1>
-  <p class="sub">Direction visuelle = celle de l'app Omni actuelle (V13) : dock <b>navpill</b> sombre, <b>rolepill</b> en haut, sheets ancrés en bas, palette monochrome, accent <code>#2E8B6F</code> réservé à « En stock / Vérifié ». Icônes SVG ajoutées. <b>Toutes les étapes du flow Seed sont représentées</b> — dont la <b>disponibilité AVANT l'intention d'achat</b>.</p>
+  <h1>Omni · Species V2 : le flow complet dans le langage réel de l'app</h1>
+  <p class="sub">Direction visuelle = celle de l'app Omni actuelle (V13) : dock <b>navpill</b> sombre, <b>rolepill</b> en haut, sheets ancrés en bas, palette monochrome, accent <code>#2E8B6F</code> réservé à « En stock / Vérifié ». Icônes SVG ajoutées. <b>Toutes les étapes du flow Seed sont représentées</b>, dont la <b>disponibilité AVANT l'intention d'achat</b>.</p>
 
-  <h2>Étapes 1–3 · Découverte → Résultats (des OFFRES) → Fiche d'offre</h2>
+  <h2>Étapes 1 à 3 · Découverte → Résultats (des OFFRES) → Fiche d'offre</h2>
   <p class="hint">Le résultat affiche des offres (par commerce ou particulier), pas des « facilités ». La carte est filtrable ; le « maintenant » est honnête.</p>
   <div class="stage-row">
 
@@ -186,9 +186,9 @@
           <div class="hgrid">
             <div class="hcard"><div class="thumb">🍝<span class="vmark"></span><span class="promo">−15 % Omni</span></div><div class="body"><b>Spaghetti 500 g</b><small>Boutique Kodjo · commerce · 140 m</small><span class="pr">850 F<span class="old">1 000 F</span></span><span class="status ok" style="margin-top:5px">En stock</span></div></div>
             <div class="hcard"><div class="thumb person">💻</div><div class="body"><b>Ordinateur Dell</b><small>Awa T. · particulier · 380 m</small><span class="pr">45 000 F<span class="old">50 000 F</span></span><span class="status dash" style="margin-top:5px">À confirmer</span></div></div>
-            <div class="hcard"><div class="thumb unclaimed"></div><div class="body"><b>Épicerie du Port</b><small>Lieu connu · non gérée</small><span class="pr">—</span><span class="status dash" style="margin-top:5px">Non revendiquée</span></div></div>
+            <div class="hcard"><div class="thumb unclaimed"></div><div class="body"><b>Épicerie du Port</b><small>Lieu connu · non gérée</small><span class="pr">N/D</span><span class="status dash" style="margin-top:5px">Non revendiquée</span></div></div>
           </div>
-          <p class="lead" style="margin-top:8px">Chaque offre porte un <b>visuel</b> et un <b>avantage promotionnel</b> (remise Omni) — obligation pour publier.</p>
+          <p class="lead" style="margin-top:8px">Chaque offre porte un <b>visuel</b> et un <b>avantage promotionnel</b> (remise Omni), obligation pour publier.</p>
           <div class="btnrow"><button class="btn ghost sm">Comparer</button><button class="btn sm">Dispo groupée</button></div>
         </div>
         <div class="navpill">
@@ -221,18 +221,18 @@
           </div>
           <button class="btn">Demander la disponibilité</button>
           <button class="btn ghost sm">Itinéraire vers le vendeur</button>
-          <p class="lead">Le contact du vendeur apparaît <b>après</b> une intention d'achat — jamais avant.</p>
+          <p class="lead">Le contact du vendeur apparaît <b>après</b> une intention d'achat, jamais avant.</p>
         </div>
         <div class="navpill">
           <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
           <button class="center active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h3v3h-3zM20 20h.01"/></svg></button>
           <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
         </div>
-      </div><h5>3 · Fiche d'offre — dispo AVANT intention</h5></div>
+      </div><h5>3 · Fiche d'offre · dispo AVANT intention</h5></div>
     </div>
   </div>
 
-  <h2>Étapes 4–6 · Disponibilité (avant intention) → Réponse → Intention d'achat</h2>
+  <h2>Étapes 4 à 6 · Disponibilité (avant intention) → Réponse → Intention d'achat</h2>
   <p class="hint"><b>La dispo précède l'intention</b> : c'est le cœur. L'acheteur demande « est-ce disponible maintenant ? », le vendeur (ou l'auto si Pro) répond, puis seulement il y a intention.</p>
   <div class="stage-row">
 
@@ -244,7 +244,7 @@
           <div class="handle"></div>
           <div class="eyebrow">Vérification de disponibilité</div>
           <h1 style="margin-top:3px">Pâtes spaghetti · 2 paquets</h1>
-          <p class="lead">« Est-ce disponible maintenant ? » — ce n'est pas encore un engagement d'achat.</p>
+          <p class="lead">« Est-ce disponible maintenant ? » : ce n'est pas encore un engagement d'achat.</p>
           <div class="cardbox">
             <div class="kv"><span>Quantité souhaitée</span><b>2</b></div>
             <div class="kv"><span>Budget max</span><b>2 000 F</b></div>
@@ -275,7 +275,7 @@
             <div class="kv"><span>Prix</span><b>850 F / unité</b></div>
             <div class="kv"><span>Message</span><b>Oui, en stock, venez</b></div>
           </div>
-          <button class="btn">Je veux acheter — intention</button>
+          <button class="btn">Je veux acheter · intention</button>
           <button class="btn ghost sm">Voir d'autres offres autour</button>
         </div>
         <div class="navpill">
@@ -314,8 +314,8 @@
     </div>
   </div>
 
-  <h2>Étapes 7–9 · QR (émis à l'intention) → Scan vendeur (verrou) → Paiement enregistré → Avis & stock</h2>
-  <p class="hint">Le <b>QR est émis dans le même geste que l'intention</b> (annexe B). Le <b>scan vendeur verrouille</b> la transaction (jamais « annulée » après). Omni <b>n'encaisse pas</b> : il demande et <b>enregistre</b> le moyen (mobile money / espèces / carte) — <b>aucun retrait</b> à gérer côté entité. La clôture écrit l'événement de stock.</p>
+  <h2>Étapes 7 à 9 · QR (émis à l'intention) → Scan vendeur (verrou) → Paiement enregistré → Avis & stock</h2>
+  <p class="hint">Le <b>QR est émis dans le même geste que l'intention</b> (annexe B). Le <b>scan vendeur verrouille</b> la transaction (jamais « annulée » après). Omni <b>n'encaisse pas</b> : il demande et <b>enregistre</b> le moyen (mobile money / espèces / carte), <b>aucun retrait</b> à gérer côté entité. La clôture écrit l'événement de stock.</p>
   <div class="stage-row">
 
     <div class="stagecell">
@@ -330,7 +330,7 @@
           <h1 style="margin-top:3px">Présentez ce code au vendeur</h1>
           <div class="qrcode"></div>
           <div style="text-align:center"><span class="timer">⏱ expire dans 09:42</span></div>
-          <p class="lead">Transmettez ce code au vendeur — <b>au choix</b> :</p>
+          <p class="lead">Transmettez ce code au vendeur, <b>au choix</b> :</p>
           <div class="chips"><span class="chip on">Lui montrer</span><span class="chip">Partager (WhatsApp/SMS)</span></div>
           <p class="lead" style="margin-top:8px">Le vendeur le reçoit <b>chez lui</b> (côté vendeur) et le valide. <b>Rien de tout ça n'est visible ici autrement.</b></p>
         </div>
@@ -375,7 +375,7 @@
           <div class="steplabels"><span>Dispo</span><span>Réponse</span><span>Intention</span><span>Paiement</span><span>Avis</span></div>
           <div class="eyebrow" style="margin-top:12px">Paiement au vendeur (externe)</div>
           <h1 style="margin-top:3px">Comment payez-vous ?</h1>
-          <p class="lead">Omni n'encaisse pas les biens — il <b>enregistre</b> le moyen utilisé. Aucun retrait à gérer côté entité.</p>
+          <p class="lead">Omni n'encaisse pas les biens : il <b>enregistre</b> le moyen utilisé. Aucun retrait à gérer côté entité.</p>
           <div class="cardbox">
             <div class="kv"><span>Montant</span><b>1 700 F</b></div>
             <div class="kv"><span>À payer à</span><b>Boutique Kodjo · 📱 90 12 34 56</b></div>
@@ -407,7 +407,7 @@
           </div>
           <div class="eyebrow" style="margin-top:12px">Votre avis</div>
           <div class="chips"><span class="chip on">★</span><span class="chip on">★</span><span class="chip on">★</span><span class="chip on">★</span><span class="chip">★</span></div>
-          <button class="btn ok">Envoyer l'avis — clôturer</button>
+          <button class="btn ok">Envoyer l'avis · clôturer</button>
           <p class="lead">La clôture rend la disponibilité plus fiable pour tous.</p>
         </div>
         <div class="navpill">
@@ -433,7 +433,7 @@
           <p class="lead">Sans entité, il n'y a <b>rien à gérer</b> : l'espace se limite à cette entrée. Les outils (offres, transactions, dashboard) s'ouvrent <b>avec l'entité</b>.</p>
           <button class="btn">Créer mon entité</button>
           <button class="btn ghost sm">Revendiquer un lieu existant</button>
-          <p class="lead">Le badge de confiance est <b>propre à l'entité</b> — jamais à l'offre.</p>
+          <p class="lead">Le badge de confiance est <b>propre à l'entité</b>, jamais à l'offre.</p>
         </div>
         <div class="navpill">
           <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
@@ -499,7 +499,7 @@
   </div>
 
   <h2>Acquisition · Scan in-store (le monde physique entre dans Omni)</h2>
-  <p class="hint">Un client <b>déjà en boutique</b> — qui n'a donc pas eu besoin de chercher — scanne le <b>QR public de l'entité</b> : la transaction passe par Omni et il obtient la <b>remise</b>. C'est le moteur d'acquisition : la boutique devient un point d'entrée Omni.</p>
+  <p class="hint">Un client <b>déjà en boutique</b>, qui n'a donc pas eu besoin de chercher, scanne le <b>QR public de l'entité</b> : la transaction passe par Omni et il obtient la <b>remise</b>. C'est le moteur d'acquisition : la boutique devient un point d'entrée Omni.</p>
   <div class="stage-row">
     <div class="stagecell">
       <div class="phone"><div class="cap">● ● ●</div><div class="screen">
@@ -528,7 +528,7 @@
         <div class="sheet" style="height:430px">
           <div class="handle"></div>
           <div class="eyebrow">Entité · Boutique Kodjo · commerce · 140 m</div>
-          <h1 style="margin-top:3px">Bienvenue — vous êtes dans ce commerce</h1>
+          <h1 style="margin-top:3px">Bienvenue, vous êtes dans ce commerce</h1>
           <div class="cardbox">
             <div class="kv"><span>Cette entité</span><b>Vérifiée · 12 ventes</b></div>
             <div class="kv"><span>Vos avantages Omni ici</span><b style="color:var(--accent)">−15 % sur ses offres</b></div>
@@ -588,7 +588,7 @@
             <div class="kv"><span>Avantage appliqué</span><b style="color:var(--accent)">−15 % Omni</b></div>
             <div class="kv"><span>Note</span><b>« je passe dans 20 min »</b></div>
           </div>
-          <button class="btn">Valider — ouvre le chat de transaction</button>
+          <button class="btn">Valider · ouvre le chat de transaction</button>
           <p class="lead">Le clic <b>valide en auto</b> (même verrou) et <b>ouvre le chat de transaction de cette demande précise</b>. L'acheteur voit alors « Code validé ».</p>
         </div>
         <div class="navpill">
@@ -612,7 +612,7 @@
             <div class="kv"><span>Ordinateur · Awa T.</span><b>À confirmer</b></div>
           </div>
           <button class="btn">Ouvrir la transaction</button>
-          <p class="lead">Section <b>dédiée</b> côté acheteur : la dispo devenue intention, puis <b>« Code validé »</b> dès le verrou vendeur — la transaction continue. <b>Aucun dashboard vendeur ici.</b></p>
+          <p class="lead">Section <b>dédiée</b> côté acheteur : la dispo devenue intention, puis <b>« Code validé »</b> dès le verrou vendeur : la transaction continue. <b>Aucun dashboard vendeur ici.</b></p>
         </div>
         <div class="navpill">
           <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
