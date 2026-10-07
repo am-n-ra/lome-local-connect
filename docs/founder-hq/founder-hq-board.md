@@ -1,6 +1,6 @@
 # Founder HQ Board — Omni
 
-**As of:** **2026-09-27 (UTC)** — **PORTE COURANTE = ROOT (ouverte)** — Species V2 **CLOSE `founder-confirmed` 2026-09-25** · **`R-G` LIVRÉE** (première caractéristique d'offre **vivante** : la pièce unique est une présence, `3753c95`) · **`R-H` LIVRÉE** (2ᵉ caractéristique vivante : la négociation — « négocier, c'est chercher moins cher ») — **604/604 tests**.
+**As of:** **2026-10-07 (UTC)** — **PORTE COURANTE = TRUNK (ouverte, `ROOT_CLOSED_TRUNK_OPEN`)** — Root **CLOS `founder-confirmed` 2026-09-29** · Species V2 **CLOSE `founder-confirmed` 2026-09-25** · tranches Trunk livrées : série `DS-1…DS-14` (conformité dock/recherche/menus, `1da8c3f`) puis **`X2` automatisation vendeur** (`3d19a50`, prod `index-IZJxtU8O.js` === local) — **843/843 tests**. *(En-tête corrigé 2026-10-07 : il portait encore « ROOT (ouverte) » alors que l'état de référence `current-state.md` porte `ROOT_CLOSED_TRUNK_OPEN` depuis 2026-10-02 — dérive de mémoire, corps de la board déjà correct.)*
 
 ## MESURE FRAÎCHE (2026-09-27, après `R-H`) — la même plainte, une mesure plus juste
 
