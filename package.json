@@ -34,7 +34,8 @@
     "check:dock-search": "node scripts/check-dock-search.mjs",
     "proof:ui10-skeleton": "node scripts/prove-ui10-skeleton.mjs",
     "proof:ds3": "node scripts/prove-ds3-dock-sort.mjs",
-    "proof:s3a-declared-phone": "tsx scripts/prove-s3a-declared-phone.mjs"
+    "proof:s3a-declared-phone": "tsx scripts/prove-s3a-declared-phone.mjs",
+    "proof:web-push": "node scripts/prove-web-push.mjs"
   },
   "dependencies": {
     "@neondatabase/auth": "^0.5.0-beta",
