@@ -1075,6 +1075,10 @@ export async function getNotificationInbox(input: { token: string }): Promise<Ap
   return parse<NotificationInboxResult>(response);
 }
 
+export async function getWebPushKey(): Promise<ApiResult<{ publicKey: string | null; configured: boolean }>> {
+  const response = await fetchWithRecovery('/api/v2/notifications/push-key', { headers: { Accept: 'application/json' } });
+  return parse<{ publicKey: string | null; configured: boolean }>(response);
+}
 export async function getWebPushStatus(input: { token: string }): Promise<ApiResult<{ active: number }>> {
   const response = await fetchWithRecovery('/api/v2/notifications/push?status=1', {
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },

@@ -62,4 +62,23 @@ describe('Phase C — shell PWA installable et dégradé honnête', () => {
     expect(app).toContain("data-sheet=\"install\"");
     expect(app).toContain("Installer Omni");
   });
+
+  // Le consentement Web Push doit rester câblé côté client ET côté serveur : la classe
+  // « construite mais jamais branchée » a déjà laissé `subscribeWebPush` à 0 appelant.
+  it('le consentement Web Push reste câblé (client + route VAPID)', () => {
+    const app = readFileSync(new URL('./TrunkAppV13.tsx', import.meta.url), 'utf8');
+    expect(app).toContain('pushSupportFor');
+    expect(app).toContain('createPushSubscription');
+    expect(app).toContain('enablePush');
+    const server = readFileSync(new URL('../server/http.ts', import.meta.url), 'utf8');
+    expect(server).toContain("'/api/v2/notifications/push-key'");
+    expect(server).toContain('drainWebPushBestEffort');
+  });
+
+  it('le bandeau d’installation proactif reste câblé (pas seulement le menu)', () => {
+    const app = readFileSync(new URL('./TrunkAppV13.tsx', import.meta.url), 'utf8');
+    expect(app).toContain('shouldShowInstallBanner');
+    expect(app).toContain('installbanner');
+    expect(app).toContain('dismissInstallBanner');
+  });
 });

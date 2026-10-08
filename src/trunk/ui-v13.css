@@ -319,3 +319,19 @@ body{background:#dadad7;padding:0}
 .omni-qr{display:inline-flex;background:#fff;border:1px solid var(--ink-faint);border-radius:12px;padding:8px;line-height:0}
 .omni-qr svg{display:block}
 
+/* Heartwood S2 — bandeau d'installation proactif. Omni est ouvert dans un navigateur :
+   on propose l'installation sans attendre le menu. Placé sous le rolepill (z17) pour ne
+   jamais le recouvrir, au-dessus des sheets (z≤50 mais ici contenu de carte, z12).
+   Monochrome ; l'accent `#2e8b6f` est réservé à `.vmark`/`.status.ok`, le bouton est un
+   `.btn.ok` assumé (action d'installation, pas un signal de confiance). */
+.installbanner{position:absolute;z-index:12;top:calc(var(--safe-top, 14px) + 46px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:8px 10px 8px 12px;border-radius:16px;background:rgba(255,255,255,.94);border:1px solid var(--line);backdrop-filter:blur(12px);box-shadow:var(--sh-md);max-width:calc(100% - 28px)}
+.installbanner .ib-icon{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:10px;background:var(--panel);color:var(--ink);flex:none}
+.installbanner .ib-body{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.installbanner .ib-body b{font-size:11px;font-weight:800;color:var(--ink)}
+.installbanner .ib-body small{font-size:8.5px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.installbanner .btn.ok.sm{width:auto;min-height:26px;flex:none}
+.installbanner .ib-x{display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:999px;color:var(--ink-soft);flex:none}
+.installbanner .ib-x:active{background:var(--panel)}
+@media (max-width:420px){.installbanner .ib-body small{display:none}}
+@media (min-width:1040px){.installbanner{left:calc(64px + (100% - 64px) / 2)}}
+

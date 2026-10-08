@@ -2330,6 +2330,72 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       `);
       return { active: Number((rows as Record<string, unknown>[])[0]?.active ?? 0) };
     },
+    // Web Push — la file que personne ne dépilait. Un événement vise un compte ; on
+    // ramasse TOUS ses appareils vivants pour livrer une fois par compte.
+    async listPendingPushDeliveries(input: { limit: number }): Promise<Array<{ deliveryId: string; attemptCount: number; payload: Record<string, unknown>; targets: Array<{ endpoint: string; p256dh: string; auth: string }> }>> {
+      const rows = await retryDatabase(() => sql`
+        with pending as (
+          select d.id as delivery_id, d.attempt_count, e.recipient_account_id, e.payload
+          from v2_notification_deliveries d
+          join v2_notification_events e on e.id = d.event_id
+          where d.channel = 'web_push'
+            and d.state in ('queued', 'retrying')
+            and (d.next_attempt_at is null or d.next_attempt_at <= now())
+          order by d.created_at
+          limit ${input.limit}
+        )
+        select p.delivery_id, p.attempt_count, p.payload,
+          coalesce(
+            json_agg(json_build_object('endpoint', s.endpoint, 'p256dh', s.p256dh, 'auth', s.auth))
+              filter (where s.id is not null), '[]'::json
+          ) as targets
+        from pending p
+        left join v2_web_push_subscriptions s
+          on s.account_id = p.recipient_account_id
+         and s.permission_state = 'granted'
+         and s.revoked_at is null
+        group by p.delivery_id, p.attempt_count, p.payload
+      `);
+      return (rows as Record<string, unknown>[]).map((row) => ({
+        deliveryId: String(row.delivery_id),
+        attemptCount: Number(row.attempt_count ?? 0),
+        payload: (row.payload ?? {}) as Record<string, unknown>,
+        targets: Array.isArray(row.targets) ? (row.targets as Array<{ endpoint: string; p256dh: string; auth: string }>) : [],
+      }));
+    },
+    async markPushDeliveryDelivered(input: { deliveryId: string; providerReference: string }): Promise<void> {
+      await retryDatabase(() => sql`
+        update v2_notification_deliveries
+        set state = 'delivered', delivered_at = now(), provider_reference = ${input.providerReference}
+        where id = ${input.deliveryId}
+      `);
+    },
+    async markPushDeliveryRetry(input: { deliveryId: string; attemptCount: number; nextAttemptAt: string; errorClass: string }): Promise<void> {
+      await retryDatabase(() => sql`
+        update v2_notification_deliveries
+        set state = 'retrying', attempt_count = ${input.attemptCount}, next_attempt_at = ${input.nextAttemptAt}::timestamptz, last_error_class = ${input.errorClass}
+        where id = ${input.deliveryId}
+      `);
+    },
+    async markPushDeliveryExhausted(input: { deliveryId: string; errorClass: string }): Promise<void> {
+      await retryDatabase(() => sql`
+        update v2_notification_deliveries
+        set state = 'exhausted', attempt_count = attempt_count + 1, last_error_class = ${input.errorClass}
+        where id = ${input.deliveryId}
+      `);
+    },
+    // Un endpoint 404/410 n'existe plus : on révoque l'abonnement pour ne plus le viser.
+    async revokePushEndpoints(input: { endpoints: string[] }): Promise<number> {
+      if (input.endpoints.length === 0) return 0;
+      const rows = await retryDatabase(() => sql`
+        update v2_web_push_subscriptions
+        set permission_state = 'revoked', revoked_at = coalesce(revoked_at, now())
+        where endpoint = any(${input.endpoints}::text[])
+          and permission_state = 'granted'
+        returning endpoint
+      `);
+      return (rows as Record<string, unknown>[]).length;
+    },
     async listPublicFacilities(bounds?: [number, number, number, number], query?: string, category?: string, constraints?: { budgetMaxMinor?: number | null; budgetCurrency?: string | null; budgetRatePerUsdMinor?: number | null; quantiteMin?: number | null; rayonKm?: number | null; operationalState?: 'ouvert' | null }): Promise<PublicFacility[]> {
       return retryDatabase(async () => {
         const [west, south, east, north] = bounds ?? [-180, -90, 180, 90];

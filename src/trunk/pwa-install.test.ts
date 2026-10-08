@@ -5,6 +5,7 @@ import {
   installStateFor,
   installStepsFor,
   shouldOfferInstall,
+  shouldShowInstallBanner,
 } from './pwa-install';
 
 describe('couche « ajouter à l’écran d’accueil »', () => {
@@ -53,5 +54,13 @@ describe('couche « ajouter à l’écran d’accueil »', () => {
   it('le guide Android parle de « Installer l’application »', () => {
     const text = installStepsFor('android').map((s) => `${s.title} ${s.body}`).join(' | ');
     expect(text).toMatch(/Installer l’application|Ajouter à l’écran/);
+  });
+
+  it('le bandeau s’affiche tant que l’app n’est pas installée, et respecte un refus', () => {
+    expect(shouldShowInstallBanner('installable', false)).toBe(true);
+    expect(shouldShowInstallBanner('manual-guide', false)).toBe(true);
+    expect(shouldShowInstallBanner('installable', true)).toBe(false); // refus mémorisé
+    expect(shouldShowInstallBanner('installed', false)).toBe(false); // déjà une app
+    expect(shouldShowInstallBanner('unsupported', false)).toBe(false); // pas de PWA ici
   });
 });

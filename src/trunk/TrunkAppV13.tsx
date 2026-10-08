@@ -17,6 +17,7 @@ import {
   listMyTeamInvites, acceptTeamInvite,
   searchPublicEntities, getPublicEntity, createOfferReport,
   listVisitQueue, claimVisit, submitVisitReport, reprogramVisit, uploadVisitEvidence,
+  getWebPushKey, getWebPushStatus, subscribeWebPush, revokeWebPush,
 } from './api';
 import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
 import { Skeleton, SkeletonDetail } from './Skeleton';
@@ -34,7 +35,8 @@ import { TransactionReceiptV13 } from './TransactionReceiptV13';
 import { NotificationCenterV13 } from './NotificationCenterV13';
 import { RecoveryCartRow, RecoverySearchRow, RecoveryTxnsRow } from './RecoveryV13';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
-import { detectInstallPlatform, installStateFor, installStepsFor, isStandalone, shouldOfferInstall, type InstallStep } from './pwa-install';
+import { detectInstallPlatform, installStateFor, installStepsFor, isStandalone, shouldOfferInstall, shouldShowInstallBanner, type InstallStep } from './pwa-install';
+import { createPushSubscription, pushSupportFor, type PushSupport } from './push-subscribe';
 import { useViewportInsets } from '../hooks/use-viewport-insets';
 import { TrunkMap } from './TrunkMap';
 import { AdminV13 } from './AdminV13';
@@ -222,6 +224,10 @@ export function TrunkAppV13() {
   const deferredInstallRef = useRef<{ prompt: () => Promise<void> } | null>(null);
   const [installPlatform] = useState(() => detectInstallPlatform(typeof navigator !== 'undefined' ? navigator.userAgent : ''));
   const [installReady, setInstallReady] = useState<string | null>(null);
+  // Bandeau proactif tant qu'Omni est ouvert dans un navigateur (refus mémorisé).
+  const [installBannerDismissed, setInstallBannerDismissed] = useState(() => {
+    try { return localStorage.getItem('omni-install-dismissed') === '1'; } catch { return false; }
+  });
   const [installState, setInstallState] = useState(() => installStateFor(
     detectInstallPlatform(typeof navigator !== 'undefined' ? navigator.userAgent : ''),
     typeof window !== 'undefined' ? (window.matchMedia?.('(display-mode: standalone)').matches ?? false) : false,
@@ -251,12 +257,26 @@ export function TrunkAppV13() {
   }, []);
 
   const openInstall = useCallback(() => { setInstallReady(null); setSheet('install'); }, []);
+  const dismissInstallBanner = useCallback(() => {
+    setInstallBannerDismissed(true);
+    try { localStorage.setItem('omni-install-dismissed', '1'); } catch { /* stockage indisponible */ }
+  }, []);
 
   const runInstall = useCallback(async () => {
     const prompt = deferredInstallRef.current;
     if (!prompt) { setInstallReady('Ce navigateur ne propose pas de bouton : suivez le guide ci-dessous.'); return; }
-    try { await prompt.prompt(); } catch { setInstallReady('L’installation a été interrompue. Réessayez quand vous voulez.'); }
-  }, []);
+    // Un `beforeinstallprompt` ne se déclenche qu'UNE fois : une fois consommé (accepté
+    // ou écarté), on libère la référence plutôt que de garder un bouton mort. Si le
+    // navigateur le re-propose, `onPrompt` le recapturera.
+    deferredInstallRef.current = null;
+    try {
+      await prompt.prompt();
+      setInstallReady('Si l’invite du navigateur n’apparaît pas, suivez le guide ci-dessous.');
+    } catch {
+      setInstallReady('L’installation a été interrompue. Réessayez quand vous voulez.');
+    }
+    setInstallState(installStateFor(installPlatform, false, false));
+  }, [installPlatform]);
 
   const [accountRoles, setAccountRoles] = useState<string[]>([]);const [ownedFacilityIds, setOwnedFacilityIds] = useState<string[]>([]);const [phoneDeclared, setPhoneDeclared] = useState<string | null>(null);const [phoneDraft, setPhoneDraft] = useState('');const [phoneBusy, setPhoneBusy] = useState(false);const [phoneMsg, setPhoneMsg] = useState<string | null>(null);const [sellerCatalogue, setSellerCatalogue] = useState<SellerCatalogueResult | null>(null);const [sellerQueue, setSellerQueue] = useState<SellerAvailabilityRequest[]>([]);const [sellerWorkspaceState, setSellerWorkspaceState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');const [sellerAvailable, setSellerAvailable] = useState(false);const [adminTools, setAdminTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);
   // Entrée vendeur directe dans le formulaire de création (depuis la fiche d'une
@@ -268,6 +288,72 @@ export function TrunkAppV13() {
   // RT-D1: the itinerary endpoint needs an identity when the routing provider is
   // billed (Mapbox). Fetched once per session and refreshed on sign-in below.
   const [authToken, setAuthToken] = useState<string | null>(null);
+  // Web Push — consentement (jamais avant l'installation sur iOS). L'état est mesuré,
+  // jamais supposé : support réel, permission navigateur, clé VAPID, abonnements actifs.
+  const [pushSupport, setPushSupport] = useState<PushSupport>('unsupported');
+  const [pushActive, setPushActive] = useState(0);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushMsg, setPushMsg] = useState<string | null>(null);
+
+  const refreshPush = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    const publicKeyResult = await getWebPushKey().catch(() => null);
+    const publicKey = publicKeyResult?.ok ? publicKeyResult.data?.publicKey ?? null : null;
+    const permission = typeof Notification !== 'undefined' ? Notification.permission : ('unsupported' as const);
+    const support = pushSupportFor({
+      hasServiceWorker: 'serviceWorker' in navigator,
+      hasPushManager: typeof window.PushManager !== 'undefined',
+      isIos: installPlatform === 'ios-safari',
+      isInstalled: installState === 'installed',
+      permission,
+      vapidConfigured: Boolean(publicKey),
+    });
+    setPushSupport(support);
+    if (authToken && support === 'supported') {
+      const status = await getWebPushStatus({ token: authToken }).catch(() => null);
+      setPushActive(status?.ok ? status.data?.active ?? 0 : 0);
+    }
+  }, [authToken, installPlatform, installState]);
+
+  useEffect(() => { void refreshPush(); }, [refreshPush]);
+
+  const enablePush = useCallback(async () => {
+    if (!authToken) return;
+    setPushBusy(true); setPushMsg(null);
+    try {
+      const keyResult = await getWebPushKey();
+      const publicKey = keyResult.ok ? keyResult.data?.publicKey ?? null : null;
+      if (!publicKey) { setPushMsg('Les notifications ne sont pas encore configurées sur ce serveur.'); return; }
+      const subscription = await createPushSubscription(publicKey, {
+        registerServiceWorker: () => navigator.serviceWorker.ready,
+        permission: () => Notification.requestPermission(),
+      });
+      if (!subscription) { setPushMsg('Vous avez refusé la permission : aucun appareil ne sera notifié. Vos transactions restent dans l’Inbox.'); await refreshPush(); return; }
+      const result = await subscribeWebPush({ subscription, token: authToken });
+      if (result.ok) { setPushMsg('Notifications activées sur cet appareil.'); await refreshPush(); }
+      else setPushMsg('L’activation a échoué. Réessayez plus tard.');
+    } catch {
+      setPushMsg('Ce navigateur n’a pas pu s’abonner aux notifications.');
+    } finally { setPushBusy(false); }
+  }, [authToken, refreshPush]);
+
+  const disablePush = useCallback(async () => {
+    if (!authToken) return;
+    setPushBusy(true); setPushMsg(null);
+    try {
+      const registration = await navigator.serviceWorker.ready.catch(() => null);
+      const subscription = await registration?.pushManager.getSubscription().catch(() => null);
+      if (subscription) {
+        await revokeWebPush({ endpoint: subscription.endpoint, token: authToken });
+        await subscription.unsubscribe().catch(() => undefined);
+      }
+      setPushMsg('Notifications désactivées sur cet appareil.');
+      await refreshPush();
+    } catch {
+      setPushMsg('La désactivation a échoué. Réessayez plus tard.');
+    } finally { setPushBusy(false); }
+  }, [authToken, refreshPush]);
+
   const [resultsFollowId, setResultsFollowId] = useState<string | null>(null);
   const resultsScrollFrame = useRef<number | null>(null);
   const resultsFollowKeyCounter = useRef(0);
@@ -928,6 +1014,14 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       setNotifsError(caught instanceof Error ? caught.message : 'Vos notifications ne peuvent pas être chargées pour le moment.');
     }
   }, [requireAuth]);
+
+  // Tap d’une notification Web Push (?notifs=1) : ouvrir le centre de notifications,
+  // jamais recharger l’app sur la carte. La lecture de la query est sans état.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('notifs') !== '1') return;
+    window.history.replaceState(null, '', window.location.pathname);
+    if (sessionUser) void openNotifs();
+  }, [sessionUser, openNotifs]);
 
   const openNotification = useCallback(async (notification: NotificationSummary, target: NotificationTarget) => {
     const token = await requireAuth();
@@ -2007,6 +2101,20 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           ))}
         </div>
       </div>
+      {/* Proactif : tant qu'Omni est ouvert dans un navigateur, on propose l'installation
+          (préalable honnête du Web Push, surtout sur iOS). Le prompt réel ne peut venir
+          que de `beforeinstallprompt` capturé, donc d'un geste : le bandeau OU le menu. */}
+      {shouldShowInstallBanner(installState, installBannerDismissed) && (
+        <div className="installbanner" role="region" aria-label="Installer Omni">
+          <span className="ib-icon" aria-hidden="true"><Download size={16} /></span>
+          <div className="ib-body">
+            <b>Installer Omni</b>
+            <small>{installPlatform === 'ios-safari' ? 'Ajoutez Omni à votre écran d’accueil' : 'Ouvrez Omni comme une application'}</small>
+          </div>
+          <button className="btn ok sm" type="button" onClick={() => { if (installState === 'installable') { void runInstall(); } else { openInstall(); } }}>Installer</button>
+          <button className="ib-x" type="button" aria-label="Ne plus proposer" onClick={dismissInstallBanner}><X size={14} /></button>
+        </div>
+      )}
       {/* DOCK-DUP — no key here. A role-dependent key (`key={role}`) made React leak the
           previous dock node on every role/sheet change, stacking identical `.navpill`
           siblings (2 then 3, same rect, duplicate a11y landmarks). A stable dock just
@@ -2743,6 +2851,30 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           <div className="cardbox" style={{ marginTop: 8 }}>
             <div className="kv"><span>Wallet</span><b>{walletState === 'idle' && wallet ? formatMoney(wallet.balanceMinor ?? 0, wallet.currency ?? userCurrency.currency) : 'N/D'}</b></div>
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" onClick={() => setSheet('wallet')}>Recharger le wallet</button>
+          </div>
+          <div className="cardbox" style={{ marginTop: 8 }}>
+            <div className="kv"><span>Notifications</span><b>{pushActive > 0 ? `activées · ${pushActive} appareil${pushActive > 1 ? 's' : ''}` : 'désactivées'}</b></div>
+            {pushSupport === 'supported' && (
+              pushActive > 0
+                ? <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" disabled={pushBusy} onClick={() => void disablePush()}>{pushBusy ? '…' : 'Désactiver cet appareil'}</button>
+                : <button className="btn ok sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" disabled={pushBusy} onClick={() => void enablePush()}>{pushBusy ? '…' : 'Activer les notifications'}</button>
+            )}
+            {pushSupport === 'needs-install' && (
+              <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" onClick={openInstall}>Voir le guide d’installation</button>
+            )}
+            {pushSupport === 'permission-denied' && (
+              <p className="tiny muted" style={{ marginTop: 4 }}>La permission a été refusée dans ce navigateur. Réactivez-la dans les réglages du site pour recevoir les alertes. L’Inbox garde tout de toute façon.</p>
+            )}
+            {pushSupport === 'not-configured' && (
+              <p className="tiny muted" style={{ marginTop: 4 }}>Les notifications ne sont pas encore configurées sur ce serveur. L’Inbox garde tout de toute façon.</p>
+            )}
+            {pushSupport === 'unsupported' && (
+              <p className="tiny muted" style={{ marginTop: 4 }}>Ce navigateur ne prend pas en charge les notifications. L’Inbox garde tout.</p>
+            )}
+            {pushSupport === 'supported' && pushActive === 0 && (
+              <p className="tiny muted" style={{ marginTop: 4 }}>Recevez l’alerte quand c’est votre tour d’agir sur une transaction.</p>
+            )}
+            {pushMsg && <p className="tiny muted" role="status" style={{ marginTop: 6 }}>{pushMsg}</p>}
           </div>
           <div className="cardbox" style={{ marginTop: 8 }}>
             <div className="kv"><span>Plan</span><b>{sellerAvailable ? 'Vendeur Gratuit' : 'Acheteur Gratuit'}</b></div>

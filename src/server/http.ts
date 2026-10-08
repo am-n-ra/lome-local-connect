@@ -2,6 +2,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getAuthUserId } from './auth-context';
 import { routingGate } from './routing-gate';
 import { recordRouteRequest, pruneRouteRequests, routeQuotaExceeded } from './route-quota';
+import { deliverPendingPush } from './web-push';
+import { isWebPushConfigured, sendWebPush, vapidConfig } from './web-push-provider';
 import { AvailabilityPolicyError, AvailabilityResponsePolicyError, BuyerSearchPolicyError, createTrunkRepository, ExternalPaymentMethod, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SellerCataloguePolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration } from './evidence-contract';
 import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, handleVisitEvidenceUpload, readPrivateEvidence } from './evidence-storage';
@@ -34,6 +36,29 @@ const errorBody = (correlationId: string, code: string, message: string, retryab
   correlationId,
   error: { code, message, retryable },
 });
+
+/**
+ * Dépile la file Web Push, en mieux-effort : une notification qui échoue ne doit
+ * JAMAIS faire échouer la transition de transaction qui l'a déclenchée. Quand VAPID
+ * n'est pas configuré, la file reste telle quelle — honnête, pas de fausse livraison.
+ * Le cron quotidien reste le filet de sécurité.
+ */
+async function drainWebPushBestEffort(repository: ReturnType<typeof createTrunkRepository>): Promise<void> {
+  const config = vapidConfig();
+  if (!config) return;
+  try {
+    await deliverPendingPush({
+      listPending: (limit) => repository.listPendingPushDeliveries({ limit }),
+      send: (target, payload) => sendWebPush(config, target, payload),
+      markDelivered: (deliveryId, providerReference) => repository.markPushDeliveryDelivered({ deliveryId, providerReference }),
+      markRetry: (deliveryId, attemptCount, nextAttemptAt, errorClass) => repository.markPushDeliveryRetry({ deliveryId, attemptCount, nextAttemptAt: nextAttemptAt.toISOString(), errorClass }),
+      markExhausted: (deliveryId, errorClass) => repository.markPushDeliveryExhausted({ deliveryId, errorClass }),
+      revokeEndpoints: (endpoints) => repository.revokePushEndpoints({ endpoints }).then(() => undefined),
+    }, { limit: 25 });
+  } catch {
+    /* best-effort : le cron rattrapera */
+  }
+}
 
 export class ApiInputError extends Error {
   constructor(message: string) {
@@ -1744,6 +1769,9 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         correlationId,
         now: new Date().toISOString(),
       });
+      // FF-7 : la transition vient de mettre la contrepartie en file (web_push 'queued').
+      // On la dépile maintenant, en mieux-effort : jamais bloquant pour l'acquittement.
+      await drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -1770,6 +1798,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         correlationId,
         now: new Date().toISOString(),
       });
+      await drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -2405,6 +2434,9 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       // le cron : chaque consultation des transactions en cours expire les intentions
       // échues avant le verrou. Idempotent ; un échec ne casse jamais la lecture.
       void repository.sweepExpiredIntents({ now: new Date().toISOString(), correlationId }).catch(() => undefined);
+      // Filet Web Push : si un drain opportuniste n'a pas eu lieu (serverless), la
+      // consultation des transactions en cours rattrape les livraisons en attente.
+      void drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -2696,7 +2728,16 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       // RT-D1: drop itinerary-usage rows past the longest quota window. Runs on
       // the existing schedule; a failure here must not fail the intent sweep.
       await pruneRouteRequests().catch(() => undefined);
+      // Web Push : filet de sécurité des drains opportunistes (serverless = freeze).
+      await drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    // VAPID public key — la clé publique n'est pas un secret, elle est faite pour le
+    // client (elle s'abonne avec). La privée ne quitte jamais le serveur.
+    if (req.method === 'GET' && pathname === '/api/v2/notifications/push-key') {
+      const publicKey = vapidConfig()?.publicKey ?? null;
+      json(res, 200, { ok: true, correlationId, data: { publicKey, configured: isWebPushConfigured() } });
       return true;
     }
     const availabilityCancelMatch = pathname.match(/^\/api\/v2\/buyer\/availability-requests\/([0-9a-f-]{36})\/cancel$/i);

@@ -79,6 +79,121 @@ async function routeQuotaExceeded(input) {
   return null;
 }
 
+// src/server/web-push.ts
+var MAX_PUSH_ATTEMPTS = 5;
+function classifyPushOutcome(statusCode) {
+  if (typeof statusCode !== "number") return "retry";
+  if (statusCode >= 200 && statusCode < 300) return "delivered";
+  if (statusCode === 404 || statusCode === 410) return "revoke";
+  if (statusCode === 429 || statusCode >= 500) return "retry";
+  return "exhausted";
+}
+function nextAttemptDelayMs(attemptCount) {
+  return Math.min(30 * 6e4, 2 ** Math.max(0, attemptCount) * 3e4);
+}
+function pushMessageFor(payload) {
+  const state = typeof payload.state === "string" ? payload.state : "";
+  const from = typeof payload.from === "string" ? payload.from : "";
+  const titles = {
+    qr_verified: "Omni \xB7 transaction",
+    payment_declared: "Omni \xB7 paiement",
+    payment_confirmed: "Omni \xB7 paiement confirm\xE9",
+    fulfilled: "Omni \xB7 remise",
+    received: "Omni \xB7 r\xE9ception",
+    rated: "Omni \xB7 avis",
+    closed: "Omni \xB7 transaction termin\xE9e"
+  };
+  const bodies = {
+    qr_verified: "Le vendeur a scann\xE9 votre QR. \xC0 vous de d\xE9clarer le paiement.",
+    payment_declared: "L\u2019acheteur a d\xE9clar\xE9 le paiement. Confirmez-le pour continuer.",
+    payment_confirmed: "Paiement confirm\xE9. La remise peut avoir lieu.",
+    fulfilled: "La remise a \xE9t\xE9 confirm\xE9e. Confirmez la r\xE9ception.",
+    received: "R\xE9ception confirm\xE9e. Laissez un avis pour cl\xF4turer.",
+    rated: "Un avis a \xE9t\xE9 laiss\xE9 sur cette transaction.",
+    closed: "La transaction est termin\xE9e."
+  };
+  return {
+    title: titles[state] || "Omni",
+    body: bodies[state] || (state ? `Nouvelle \xE9tape : ${state}.` : "Vous avez une nouvelle \xE9tape de transaction."),
+    // Cible du tap : l'Inbox, jamais un rechargement nu. Le service worker rouvre ou
+    // met au premier plan l'app, puis cette query ouvre le centre de notifications.
+    url: "/?notifs=1"
+  };
+}
+async function deliverPendingPush(deps, options = {}) {
+  const limit = options.limit ?? 25;
+  const now = options.now ?? /* @__PURE__ */ new Date();
+  const pending = await deps.listPending(limit);
+  const summary = { delivered: 0, retried: 0, revoked: 0, exhausted: 0, scanned: pending.length };
+  const deadEndpoints = [];
+  for (const delivery of pending) {
+    const message = pushMessageFor(delivery.payload);
+    const body = JSON.stringify(message);
+    let anyDelivered = false;
+    let sawRetry = false;
+    let sawRevoke = false;
+    let firstError = "";
+    for (const target of delivery.targets) {
+      let result;
+      try {
+        result = await deps.send(target, body);
+      } catch (error) {
+        result = { ok: false, statusCode: void 0, errorClass: error instanceof Error ? error.name : "SendError" };
+      }
+      const outcome = result.ok ? "delivered" : classifyPushOutcome(result.statusCode);
+      const errorClass = result.errorClass || (result.statusCode ? `HTTP_${result.statusCode}` : "NO_STATUS");
+      if (outcome === "delivered") anyDelivered = true;
+      else if (outcome === "revoke") {
+        sawRevoke = true;
+        deadEndpoints.push(target.endpoint);
+      } else if (outcome === "retry") sawRetry = true;
+      if (outcome !== "delivered" && !firstError) firstError = errorClass;
+    }
+    if (anyDelivered) {
+      await deps.markDelivered(delivery.deliveryId, `web-push:${delivery.deliveryId}`);
+      summary.delivered += 1;
+    } else if (sawRetry && delivery.attemptCount + 1 < MAX_PUSH_ATTEMPTS) {
+      const nextAttemptAt = new Date(now.getTime() + nextAttemptDelayMs(delivery.attemptCount + 1));
+      await deps.markRetry(delivery.deliveryId, delivery.attemptCount + 1, nextAttemptAt, firstError || "NETWORK");
+      summary.retried += 1;
+    } else if (sawRevoke) {
+      await deps.markExhausted(delivery.deliveryId, "ENDPOINT_GONE");
+      summary.revoked += 1;
+    } else {
+      await deps.markExhausted(delivery.deliveryId, firstError || "EXHAUSTED");
+      summary.exhausted += 1;
+    }
+  }
+  if (deadEndpoints.length > 0) await deps.revokeEndpoints(deadEndpoints);
+  return summary;
+}
+
+// src/server/web-push-provider.ts
+import webpush from "web-push";
+function vapidConfig(env = process.env) {
+  const publicKey = env.VAPID_PUBLIC_KEY?.trim();
+  const privateKey = env.VAPID_PRIVATE_KEY?.trim();
+  if (!publicKey || !privateKey) return null;
+  return { publicKey, privateKey, subject: env.VAPID_SUBJECT?.trim() || "mailto:hello@omni.tg" };
+}
+function isWebPushConfigured(env = process.env) {
+  return vapidConfig(env) !== null;
+}
+async function sendWebPush(config, target, payload) {
+  webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
+  try {
+    const response = await webpush.sendNotification(
+      { endpoint: target.endpoint, keys: { p256dh: target.p256dh, auth: target.auth } },
+      payload,
+      { TTL: 60 * 60 * 24 }
+    );
+    return { ok: true, statusCode: response.statusCode };
+  } catch (error) {
+    const statusCode = error.statusCode;
+    return { ok: false, statusCode, errorClass: error instanceof Error ? error.name : "WebPushError" };
+  }
+}
+
 // src/server/trunk-repository.ts
 import { neon as neon2 } from "@neondatabase/serverless";
 import { createHash, randomBytes } from "node:crypto";
@@ -2224,6 +2339,72 @@ function createTrunkRepository(sql = database()) {
           and s.revoked_at is null
       `);
       return { active: Number(rows[0]?.active ?? 0) };
+    },
+    // Web Push — la file que personne ne dépilait. Un événement vise un compte ; on
+    // ramasse TOUS ses appareils vivants pour livrer une fois par compte.
+    async listPendingPushDeliveries(input) {
+      const rows = await retryDatabase(() => sql`
+        with pending as (
+          select d.id as delivery_id, d.attempt_count, e.recipient_account_id, e.payload
+          from v2_notification_deliveries d
+          join v2_notification_events e on e.id = d.event_id
+          where d.channel = 'web_push'
+            and d.state in ('queued', 'retrying')
+            and (d.next_attempt_at is null or d.next_attempt_at <= now())
+          order by d.created_at
+          limit ${input.limit}
+        )
+        select p.delivery_id, p.attempt_count, p.payload,
+          coalesce(
+            json_agg(json_build_object('endpoint', s.endpoint, 'p256dh', s.p256dh, 'auth', s.auth))
+              filter (where s.id is not null), '[]'::json
+          ) as targets
+        from pending p
+        left join v2_web_push_subscriptions s
+          on s.account_id = p.recipient_account_id
+         and s.permission_state = 'granted'
+         and s.revoked_at is null
+        group by p.delivery_id, p.attempt_count, p.payload
+      `);
+      return rows.map((row) => ({
+        deliveryId: String(row.delivery_id),
+        attemptCount: Number(row.attempt_count ?? 0),
+        payload: row.payload ?? {},
+        targets: Array.isArray(row.targets) ? row.targets : []
+      }));
+    },
+    async markPushDeliveryDelivered(input) {
+      await retryDatabase(() => sql`
+        update v2_notification_deliveries
+        set state = 'delivered', delivered_at = now(), provider_reference = ${input.providerReference}
+        where id = ${input.deliveryId}
+      `);
+    },
+    async markPushDeliveryRetry(input) {
+      await retryDatabase(() => sql`
+        update v2_notification_deliveries
+        set state = 'retrying', attempt_count = ${input.attemptCount}, next_attempt_at = ${input.nextAttemptAt}::timestamptz, last_error_class = ${input.errorClass}
+        where id = ${input.deliveryId}
+      `);
+    },
+    async markPushDeliveryExhausted(input) {
+      await retryDatabase(() => sql`
+        update v2_notification_deliveries
+        set state = 'exhausted', attempt_count = attempt_count + 1, last_error_class = ${input.errorClass}
+        where id = ${input.deliveryId}
+      `);
+    },
+    // Un endpoint 404/410 n'existe plus : on révoque l'abonnement pour ne plus le viser.
+    async revokePushEndpoints(input) {
+      if (input.endpoints.length === 0) return 0;
+      const rows = await retryDatabase(() => sql`
+        update v2_web_push_subscriptions
+        set permission_state = 'revoked', revoked_at = coalesce(revoked_at, now())
+        where endpoint = any(${input.endpoints}::text[])
+          and permission_state = 'granted'
+        returning endpoint
+      `);
+      return rows.length;
     },
     async listPublicFacilities(bounds, query, category, constraints) {
       return retryDatabase(async () => {
@@ -7776,6 +7957,21 @@ var errorBody = (correlationId, code, message, retryable = false) => ({
   correlationId,
   error: { code, message, retryable }
 });
+async function drainWebPushBestEffort(repository) {
+  const config = vapidConfig();
+  if (!config) return;
+  try {
+    await deliverPendingPush({
+      listPending: (limit) => repository.listPendingPushDeliveries({ limit }),
+      send: (target, payload) => sendWebPush(config, target, payload),
+      markDelivered: (deliveryId, providerReference) => repository.markPushDeliveryDelivered({ deliveryId, providerReference }),
+      markRetry: (deliveryId, attemptCount, nextAttemptAt, errorClass) => repository.markPushDeliveryRetry({ deliveryId, attemptCount, nextAttemptAt: nextAttemptAt.toISOString(), errorClass }),
+      markExhausted: (deliveryId, errorClass) => repository.markPushDeliveryExhausted({ deliveryId, errorClass }),
+      revokeEndpoints: (endpoints) => repository.revokePushEndpoints({ endpoints }).then(() => void 0)
+    }, { limit: 25 });
+  } catch {
+  }
+}
 var ApiInputError = class extends Error {
   constructor(message) {
     super(message);
@@ -9318,6 +9514,7 @@ async function handleApi(req, res, pathname, url) {
         correlationId,
         now: (/* @__PURE__ */ new Date()).toISOString()
       });
+      await drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -9344,6 +9541,7 @@ async function handleApi(req, res, pathname, url) {
         correlationId,
         now: (/* @__PURE__ */ new Date()).toISOString()
       });
+      await drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -9967,6 +10165,7 @@ async function handleApi(req, res, pathname, url) {
       }
       const result = await repository.listOpenTransactions({ authUserId });
       void repository.sweepExpiredIntents({ now: (/* @__PURE__ */ new Date()).toISOString(), correlationId }).catch(() => void 0);
+      void drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -10250,7 +10449,13 @@ async function handleApi(req, res, pathname, url) {
       }
       const result = await repository.sweepExpiredIntents({ now: (/* @__PURE__ */ new Date()).toISOString(), correlationId });
       await pruneRouteRequests().catch(() => void 0);
+      await drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "GET" && pathname === "/api/v2/notifications/push-key") {
+      const publicKey = vapidConfig()?.publicKey ?? null;
+      json(res, 200, { ok: true, correlationId, data: { publicKey, configured: isWebPushConfigured() } });
       return true;
     }
     const availabilityCancelMatch = pathname.match(/^\/api\/v2\/buyer\/availability-requests\/([0-9a-f-]{36})\/cancel$/i);

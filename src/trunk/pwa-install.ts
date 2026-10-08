@@ -77,3 +77,14 @@ export function installStepsFor(platform: InstallPlatform): InstallStep[] {
 export function shouldOfferInstall(state: InstallState): boolean {
   return state === 'installable' || state === 'manual-guide';
 }
+
+/**
+ * Bandeau proactif : tant qu'Omni est ouvert DANS UN NAVIGATEUR, on propose
+ * l'installation sans attendre que l'utilisateur trouve le menu. Le `beforeinstallprompt`
+ * capturé est un vrai bouton (`installable`) ; sur iOS Safari il n'existe pas et on
+ * guide. Une app déjà installée ne redemande jamais, et un refus explicite est respecté
+ * (`dismissed`) pour ne pas harceler.
+ */
+export function shouldShowInstallBanner(state: InstallState, dismissed: boolean): boolean {
+  return shouldOfferInstall(state) && !dismissed;
+}

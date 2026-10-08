@@ -21,9 +21,6 @@ function walk(dir: string, out: string[] = []): string[] {
 // Endettements ASSUMÉS et documentés, hors périmètre tant qu'une décision fondateur ne
 // les ouvre pas. Toute autre entrée fait ÉCHOUER le garde (sinon la classe se re-crée).
 const KNOWN_DORMANT: Record<string, string> = {
-  subscribeWebPush: 'Web Push — docs/push-operations.md : partial / configuration-gated (VAPID + provider non configurés)',
-  getWebPushStatus: 'Web Push — même dette déclarée',
-  revokeWebPush: 'Web Push — même dette déclarée',
   getOperatorRuns: 'surface opérateur sans UI (le terrain arrive en dernier)',
   importPublicFacility: 'outil d’import admin sans UI (l’import se fait par script serveur)',
   importPublicFacilityBatch: 'outil d’import admin sans UI (l’import se fait par script serveur)',
