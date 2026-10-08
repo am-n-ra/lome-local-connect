@@ -182,3 +182,23 @@ proactif** propose l'installation **sans passer par le menu**.
 - **`vercel` et `gh` absents du sandbox** : je n'ai ni jeton Vercel ni CLI `vercel` ; l'armement a été fait
   par le fondateur dans le dashboard. La clé privée n'a **jamais** touché le dépôt (0 occurrence vérifiée).
 - `getOperatorRuns` : sans UI — à ouvrir au terrain ou à retirer.
+
+## HP-1 + HP-2 (Heartwood hardening, 2026-10-07, déployé T-07d ✅)
+
+- **`HP-1` — le bruit carte noté ci-dessus est traité à la racine.** Les frames **internes** de
+  MapLibre (`_calcMatrices` rendu, `unprojectScreenPoint` pointeur) lèvent **synchronement** sur une
+  matrice dégénérée et **remontent au `window.onerror`**, échappant à `map.on('error')` → l'erreur se
+  répète à **chaque frame** (le flood). Filet `window` **étroit** (`isTransformMatrixError`) : re-ancre
+  (`healTransform`) + `preventDefault`, **sans avaler** une vraie erreur (lecture nulle générique,
+  `r.on2`, `Failed to fetch`, `Invalid LngLat` valide). Preuve **A/B** navigateur
+  (`npm run proof:map-transform-heal` : PROD FAIL sans filet → local PASS), garde source falsifié.
+- **`HP-2` — un lancer de rendu ne laisse plus une page blanche.** L'app avait l'écran « Reprendre où
+  j'en étais » mais **aucune frontière React** : une exception de rendu (même classe `r.on2`) démontait
+  tout l'arbre → page blanche, reprise **inatteignable**. Livré `AppErrorBoundary` (Recharger/Réessayer,
+  « rien n'est perdu ») monté dans `main.tsx` + filet `unhandledrejection`. Preuves : jsdom réel,
+  câblage falsifié, navigateur **A/B** (`npm run proof:error-boundary`).
+- **Déploiement** : prod `index-B5BW3kjI.js` === build local **et** entrée GitHub `76d9f82` (Production)
+  → **T-07d ✅**. Preuves navigateur **rejouées sur prod** : PASS.
+- **994/994** tests, `tsc` 0, 5 gardes vertes. **Résidu** : `getOperatorRuns` + 4 autres clients sans UI
+  (`importPublicFacility[Batch]`, `getSellerActivationQueue`, `getBuyerProRenewalStatus`) — couches
+  orphelines à ouvrir au terrain ou retirer ; décision fondateur.
