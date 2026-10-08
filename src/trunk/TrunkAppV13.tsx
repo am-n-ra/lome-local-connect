@@ -1620,7 +1620,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   }, [requireAuth, rechargeAmount, sessionUser]);
 
   const startClaim = useCallback(async (facility: PublicFacility) => {
-    const token = await requireAuth();
+    // Même classe AUTH-RESUME : sans session, on perdait la facilité visée. On la
+    // mémorise pour rouvrir sa fiche (d'où le parcours de revendication repart).
+    const token = await requireAuth({ kind: 'facility', returnTo: 'facility', facilityId: facility.id, facilityName: facility.name });
     if (!token) return;
     setClaimState('loading'); setClaimError(''); setClaimResult(null); setClaimEvidence([]); setClaimUploadState('idle'); setClaimSubmitState('idle'); setClaimActionState('idle');
     try {

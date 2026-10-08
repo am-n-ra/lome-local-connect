@@ -75,4 +75,12 @@ describe('AUTH-RESUME — une action gardée est reprise après connexion', () =
     expect(APP).toContain("requireAuth({ kind: 'facility', returnTo: 'facility', facilityId: selectedFacility.id, facilityName: selectedFacility.name })");
     expect(APP).toMatch(/case 'facility':[\s\S]*?await handlePinSelect\(\{ id: resume\.facilityId \}\);[\s\S]*?return;/);
   });
+
+  // 3ᵉ instance de la classe : revendiquer une facilité sans session perdait la
+  // facilité visée (le brouillon de revendication ne pouvait pas repartir).
+  it('revendiquer une facilité reprend la fiche visée', () => {
+    const start = APP.indexOf('const startClaim = useCallback');
+    const body = APP.slice(start, APP.indexOf('const handleTileTap', start));
+    expect(body).toContain("requireAuth({ kind: 'facility', returnTo: 'facility', facilityId: facility.id, facilityName: facility.name })");
+  });
 });
