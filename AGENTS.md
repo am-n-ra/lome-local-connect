@@ -1168,3 +1168,35 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 - **Preuves** : probe **PASS** (1 dock à chaque étape) sur le build corrigé, **FAIL exit 1** sur le build buggé (`menu=2 role-seller=2 role-buyer=3`). Suite **926/926** (103 fichiers, +3), `tsc` 0, gardes boundary/state/live-surface/dead-css/docs vertes.
 - **Leçon à ne pas réapprendre** : *une `key` sur un **enfant unique** ne sert à rien tant qu'elle est stable, et **casse** dès qu'elle change — React remonte au lieu de réconcilier, et le nœud précédent reste. Une clé qui varie est un signal « remonte ce sous-arbre » ; sur un conteneur persistant (dock, scène, layout), c'est une fuite DOM. Vérifier par le **compte de nœuds DOM**, pas par l'apparence (les jumeaux sont superposés au pixel près, donc invisibles à l'œil).*
 
+
+## HO-OMNI-37 (2026-10-08, commits `1adba8e`→`ca7bbf2`) — AUTH-RESUME **et son audit de classe**
+
+- **Signal fondateur :** un bug de reprise après connexion (« Comparer » sans session → après login, on
+  tombait sur le **menu**). Puis la bonne question : **« si ça a pu passer inaperçu, il doit y en avoir
+  d'autres »** → auditer la **classe**, pas l'instance.
+- **Racine :** `requireAuth()` ouvrait l'écran de connexion **sans mémoriser** l'action ; `gateRequest()`
+  (le seul à mémoriser) n'était câblé que sur `BuyerFlowV13`. → **39** autres actions gardées perdaient
+  l'intention. Corrigé par `requireAuth(resume?)` + `resumePendingAction(authenticated)` (chemin unique
+  connexion **et** onboarding).
+- **Classe A — destinations exposées** (atteignables sans session) : home / wallet / saved / tour /
+  notifs / recovery (+ compare / bulk). Preuve prod sur 2 destinations : `compare` **et** `saved` avant →
+  `menu`, après → reprise.
+- **Classe B — capacité construite mais jamais câblée (le motif « gateRequest ») :** **8** fonctions
+  d'API client exportées sans appelant produit. **Web Push** (`subscribeWebPush`/`getWebPushStatus`/
+  `revokeWebPush`) : `pushManager` = **0** dans le bundle → aucune notification ne peut atteindre un
+  appareil (FF-7) ; `docs/push-operations.md` le déclare `partial / configuration-gated` (dette
+  **assumée**, sertie dans le garde). `getOperatorRuns` = surface opérateur sans UI (terrain = en
+  dernier). `importPublicFacility*` = outil admin sans UI. 2 doublons d'API. Garde
+  `src/trunk/client-api-surface.test.ts` (allow-list documentée + « pas de dette fantôme »).
+- **Classe C — taps avalés :** aucun `onClick={() => {}}` ; chips non-actives = `aria-disabled` +
+  « bientôt ».
+- **Leçon de méthode (à ne pas réapprendre)** : *un défaut qui a survécu est une **classe**, pas un cas.
+  Auditer la classe à trois niveaux : (1) **toutes les instances du même motif** dans le code (grep +
+  classer chaque site — destination vs inline) ; (2) la **capacité construite mais non câblée** (exporter
+  ≠ brancher ; vérifier l'appel **produit**, puis l'**occurrence dans le bundle servi** — leçon `on2`) ;
+  (3) les **handlers qui avalent le tap**. Chaque niveau mérite un **garde falsifiable** — sinon la classe
+  se recrée à la tranche suivante.*
+- **État :** **945/945**, tsc, 6 gardes ; prod `index-D5oO48nJ.js` = local (T-07d ✅). Receipt
+  `docs/founder-hq/handoff-receipt-HO-OMNI-37.md`. **Porte Heartwood.** Décisions ouvertes : ouvrir/
+  retirer **Web Push** et la **surface opérateur runs** ; puis **terrain** (en dernier).
+
