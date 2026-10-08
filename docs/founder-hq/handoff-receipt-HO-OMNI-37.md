@@ -166,11 +166,19 @@ proactif** propose l'installation **sans passer par le menu**.
   → la reprise rouvre la fiche. **A/B prod** : avant → `menu`, après → `facility`. Reste = mutations/loads
   (`sendBulk`, `cancel`, favori, refresh) : aucune destination à reprendre. **Leçon : un audit de classe doit
   être REJOUÉ — un seul passage ne suffit pas.**
-- **Poser les clés VAPID** (`a631724`) : le **runbook** `docs/push-operations.md` a été **corrigé** — il
-  nommait `VITE_VAPID_PUBLIC_KEY`/`PUSH_PROVIDER`, **inexistantes** (0 occurrence) ; il décrit désormais la
-  seule config réelle (`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT`), la séquence d'armement et la
-  **vérification par comportement** (`push-key` `configured:false → true`). Garde `push-operations-docs.test.ts`
-  (falsifié). **Action fondateur (hors sandbox)** : `npx web-push generate-vapid-keys` → poser les 3 variables
-  en **Production** Vercel → **redéployer** → vérifier `GET /api/v2/notifications/push-key` → preuve
-  authentifiée (abonnement → livraison → notification → tap Inbox → révocation).
+- **VAPID ARMÉ ET PROUVÉ (2026-10-07)** : les clés sont posées en **Production** Vercel
+  (`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT`, sujet `mailto:contact@sparkafrika.online`).
+  L'armement est **vérifié par le comportement** : `GET /api/v2/notifications/push-key` →
+  `configured:true`, clé `B…` (avant : `configured:false`). Le runbook `docs/push-operations.md` avait été
+  corrigé (il nommait `VITE_VAPID_PUBLIC_KEY`/`PUSH_PROVIDER`, **inexistantes**) ; garde
+  `push-operations-docs.test.ts` (falsifié). **Preuve serveur de bout en bout en prod**
+  (`npm run proof:web-push`, harnais neuf `scripts/prove-web-push.mjs`) : T1 arming `configured:true` ;
+  T2 abonnement authentifié → `status active:1` ; T3 révocation → `status active:0` ; T4 aucune erreur
+  dans la fenêtre push. **Runs vérifiés 3/3 PASS.** La tranche passe de `partial/configuration-gated` à
+  **`verified` côté serveur**. **Reste = `manual` appareil** : une notification *native* rendue par un vrai
+  endpoint FCM/APNs — non revendiquée (appareil requis). **Bruit carte PRÉ-EXISTANT** noté et compté à part,
+  jamais masqué : `_calcMatrices` / `Invalid LngLat (0, NaN)` (MapLibre, transitions recherche/comparateur),
+  indépendant du push (bundle `index-CbqTWzli.js` inchangé).
+- **`vercel` et `gh` absents du sandbox** : je n'ai ni jeton Vercel ni CLI `vercel` ; l'armement a été fait
+  par le fondateur dans le dashboard. La clé privée n'a **jamais** touché le dépôt (0 occurrence vérifiée).
 - `getOperatorRuns` : sans UI — à ouvrir au terrain ou à retirer.

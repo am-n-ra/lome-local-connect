@@ -69,14 +69,30 @@ Failure semantics (why a delivery ends where it does): `2xx → delivered`;
 backoff (5 attempts); everything else → `exhausted`. The drain only writes these outcomes; it
 never fails the transaction that triggered it.
 
-## Current Omni state — 2026-10-07
+## Current Omni state — 2026-10-07 (armé et prouvé)
 
 Both migrations are applied on the canonical branch. The sender, consent card, service-worker
 handlers, push-key route and drain are all wired and unit/bundle-verified
 (`web_push` deliveries + `VAPID_PUBLIC_KEY` present in the serverless bundle; `0` VAPID leakage in
-the client bundle). **No VAPID values are configured**, so `push-key` returns `configured:false`
-and no real device is subscribed — the delivery queue is legitimately empty.
+the client bundle).
 
-Push is therefore **`partial / configuration-gated`**: the only remaining step is the founder
-arming sequence above, then the authenticated proof. Until then, transaction turns stay visible
-in the Inbox (in-app), which is the honest fallback.
+**VAPID is now armed in Production** (`VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT`) and
+the arming is **verified by behaviour**, not by a hash: `GET /api/v2/notifications/push-key` returns
+`configured:true` with a `B…` public key. The authenticated server chain is proved end-to-end against
+production by `npm run proof:web-push`:
+
+- **T1** push-key armed (`configured:true`, key `B…`) — the arming itself.
+- **T2** authenticated subscribe → account-scoped `status active:1`.
+- **T3** authenticated revoke → `status active:0`.
+- **T4** no page error inside the push window (setup-phase map noise is counted and reported, never
+  hidden — see below).
+
+Push is therefore **`verified` on the server side** (arming + consent round-trip). The remaining item
+is **`manual`** and device-only: a *native* notification rendered by a real FCM/APNs endpoint — not
+claimed here, it needs a device-class browser and a real push service.
+
+Known, pre-existing, unrelated noise: an intermittent MapLibre camera error
+(`_calcMatrices` / `Invalid LngLat (0, NaN)` at `unprojectScreenPoint`) fires during the
+search/compare camera transitions. It is independent of Web Push (the shipped `index-CbqTWzli.js`
+bundle is unchanged; the push-window slice counts it separately) and is tracked here rather than
+suppressed, so it cannot mask a real push regression.
