@@ -49,4 +49,17 @@ describe('Phase C — shell PWA installable et dégradé honnête', () => {
   it('le dock tactile tient 44px', () => {
     expect(css).toContain('.navpill button{width:44px;height:44px;');
   });
+
+  // Heartwood — le préalable du Web Push sur iOS est l'installation à l'écran
+  // d'accueil ; la couche doit rester câblée (menu + feuille), pas redevenir un
+  // fichier orphelin comme `gateRequest` l'a été.
+  it('la couche « ajouter à l’écran d’accueil » reste câblée dans l’app', () => {
+    const app = readFileSync(new URL('./TrunkAppV13.tsx', import.meta.url), 'utf8');
+    expect(app).toContain("beforeinstallprompt");
+    expect(app).toContain("appinstalled");
+    expect(app).toContain("openInstall");
+    expect(app).toContain("shouldOfferInstall(installState)");
+    expect(app).toContain("data-sheet=\"install\"");
+    expect(app).toContain("Installer Omni");
+  });
 });

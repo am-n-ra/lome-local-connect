@@ -1,7 +1,7 @@
 import { FormEvent, type ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, Banknote, Bell, BellOff, Building2, CheckCircle2, ChevronRight, Clock3,
-  Compass, History, Home, Inbox, LogOut, MapPin, Menu, Navigation, PackageSearch, QrCode, RefreshCw, ScanLine, Search, ShieldCheck,
+  Compass, Download, History, Home, Inbox, LogOut, MapPin, Menu, Navigation, PackageSearch, Plus, QrCode, RefreshCw, ScanLine, Search, Share, ShieldCheck,
   Store,
   Star, Trash2, User, Wallet, X,
 } from 'lucide-react';
@@ -34,6 +34,7 @@ import { TransactionReceiptV13 } from './TransactionReceiptV13';
 import { NotificationCenterV13 } from './NotificationCenterV13';
 import { RecoveryCartRow, RecoverySearchRow, RecoveryTxnsRow } from './RecoveryV13';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
+import { detectInstallPlatform, installStateFor, installStepsFor, isStandalone, shouldOfferInstall, type InstallStep } from './pwa-install';
 import { useViewportInsets } from '../hooks/use-viewport-insets';
 import { TrunkMap } from './TrunkMap';
 import { AdminV13 } from './AdminV13';
@@ -64,7 +65,7 @@ import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
 import { normalizeTogoPhone, phoneDeclarationLabel, whatsappDeclareLink } from '../domain/phone';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal' | 'tour' | 'freshness' |   'op-side' | 'verification' | 'room';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal' | 'tour' | 'freshness' |   'op-side' | 'verification' | 'room' | 'install';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -216,8 +217,47 @@ export function TrunkAppV13() {
   // S1b: which public QR the 'qr' sheet targets — the historic facility one, or the in-store entity one.
   const [qrTarget, setQrTarget] = useState<'facility' | 'entity'>('facility');
   const [sheet, setSheet] = useState<Sheet>('none');
+  // Couche « ajouter à l'écran d'accueil » : l'état est dit honnêtement (bouton Android
+  // quand le prompt est capturé, guide sinon, rien si déjà installé).
+  const deferredInstallRef = useRef<{ prompt: () => Promise<void> } | null>(null);
+  const [installPlatform] = useState(() => detectInstallPlatform(typeof navigator !== 'undefined' ? navigator.userAgent : ''));
+  const [installReady, setInstallReady] = useState<string | null>(null);
+  const [installState, setInstallState] = useState(() => installStateFor(
+    detectInstallPlatform(typeof navigator !== 'undefined' ? navigator.userAgent : ''),
+    typeof window !== 'undefined' ? (window.matchMedia?.('(display-mode: standalone)').matches ?? false) : false,
+    false,
+  ));
   const [role, setRole] = useState<Role>('buyer');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const platform = detectInstallPlatform(navigator.userAgent);
+    const standalone = isStandalone(
+      window.matchMedia?.('(display-mode: standalone)').matches ?? false,
+      (navigator as { standalone?: boolean }).standalone,
+    );
+    let deferred: { prompt: () => Promise<void> } | null = null;
+    const sync = () => setInstallState(installStateFor(platform, standalone, Boolean(deferred)));
+    const onPrompt = (event: Event) => { event.preventDefault(); deferred = event as unknown as { prompt: () => Promise<void> }; deferredInstallRef.current = deferred; sync(); };
+    const onInstalled = () => { deferred = null; deferredInstallRef.current = null; setInstallState('installed'); };
+    sync();
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onPrompt);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
+  }, []);
+
+  const openInstall = useCallback(() => { setInstallReady(null); setSheet('install'); }, []);
+
+  const runInstall = useCallback(async () => {
+    const prompt = deferredInstallRef.current;
+    if (!prompt) { setInstallReady('Ce navigateur ne propose pas de bouton : suivez le guide ci-dessous.'); return; }
+    try { await prompt.prompt(); } catch { setInstallReady('L’installation a été interrompue. Réessayez quand vous voulez.'); }
+  }, []);
+
   const [accountRoles, setAccountRoles] = useState<string[]>([]);const [ownedFacilityIds, setOwnedFacilityIds] = useState<string[]>([]);const [phoneDeclared, setPhoneDeclared] = useState<string | null>(null);const [phoneDraft, setPhoneDraft] = useState('');const [phoneBusy, setPhoneBusy] = useState(false);const [phoneMsg, setPhoneMsg] = useState<string | null>(null);const [sellerCatalogue, setSellerCatalogue] = useState<SellerCatalogueResult | null>(null);const [sellerQueue, setSellerQueue] = useState<SellerAvailabilityRequest[]>([]);const [sellerWorkspaceState, setSellerWorkspaceState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');const [sellerAvailable, setSellerAvailable] = useState(false);const [adminTools, setAdminTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);
   // Entrée vendeur directe dans le formulaire de création (depuis la fiche d'une
   // facilité « pas sur la carte »). Consommée une fois, pour ne pas rouvrir le
@@ -381,7 +421,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
   // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
 
-  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'recovery', 'signal', 'tour', 'op-side', 'seller', 'seller-reply', 'freshness', 'verification', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity', 'room']), []);
+  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'recovery', 'signal', 'tour', 'op-side', 'seller', 'seller-reply', 'freshness', 'verification', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity', 'room', 'install']), []);
   const isJourney = journeySheets.has(sheet);
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width:1040px)');
@@ -1750,7 +1790,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       if (sheet === 'receipt') { setSheet('home'); return; }
       if (sheet === 'notifs') { setSheet('menu'); return; }
       if (sheet === 'recovery') { setSheet('home'); return; }
-      if (sheet === 'account' || sheet === 'wallet' || sheet === 'plans' || sheet === 'saved' || sheet === 'auth' || sheet === 'onboard') { setSheet('menu'); return; }
+      if (sheet === 'account' || sheet === 'wallet' || sheet === 'plans' || sheet === 'saved' || sheet === 'auth' || sheet === 'onboard' || sheet === 'install') { setSheet('menu'); return; }
       if (sheet === 'products' || sheet === 'stockevent' || sheet === 'offers' || sheet === 'company' || sheet === 'seller-reply' || sheet === 'freshness' || sheet === 'verification') { setSheet('seller'); return; }
       if (sheet === 'op-side') { setOpSideVisitId(null); setSheet('tour'); return; }
       setSheet('none');
@@ -2601,6 +2641,10 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             {!sessionUser && (
               <button className="btn" type="button" onClick={() => setSheet('auth')}><User size={16} /> Créer un compte / se connecter</button>
             )}
+            {/* Installable avant toute session : c'est le préalable du Web Push sur iOS. */}
+            {shouldOfferInstall(installState) && (
+              <button className="menuitem" type="button" onClick={openInstall}><span className="mi"><Download size={15} /></span><span><b>Installer Omni</b><small>{installPlatform === 'ios-safari' ? 'guide pour iPhone / iPad' : 'comme une application'}</small></span></button>
+            )}
             {sessionUser && (
               <>
                 {role === 'buyer' && (
@@ -2705,6 +2749,47 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" onClick={() => setSheet('plans')}>Voir les plans</button>
           </div>
           <button className="btn ghost" style={{ marginTop: 10, width: '100%' }} type="button" onClick={() => { void authClient.signOut(); setSessionUser(null); setSheet('search'); }}><LogOut size={15} /> Déconnexion</button>
+        </section>
+      )}
+      {sheet === 'install' && (
+        <section className="sheet h-mid" data-sheet="install" role="dialog" aria-modal="false" aria-label="Ajouter Omni à l’écran d’accueil" onKeyDown={trapDrawerFocus}>
+          <div className="handle" />
+          <div className="sheet-head">
+            <div><div className="eyebrow">Ajouter à l’écran d’accueil</div><h1>Omni comme une application.</h1></div>
+            <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
+          </div>
+          <div className="cardbox">
+            <p className="sub" style={{ margin: 0 }}>
+              Installez Omni pour l’ouvrir en plein écran, sans la barre du navigateur.
+              {installPlatform === 'ios-safari'
+                ? ' Sur iPhone et iPad, c’est aussi la seule façon de recevoir les notifications de vos transactions.'
+                : ' C’est aussi le prérequis pour recevoir les notifications de vos transactions.'}
+            </p>
+          </div>
+          {installState === 'installable' && (
+            <button className="btn ok" style={{ marginTop: 10, width: '100%' }} type="button" onClick={() => void runInstall()}><Download size={15} /> Installer Omni</button>
+          )}
+          {installReady && <p className="sub" role="status" style={{ marginTop: 8 }}>{installReady}</p>}
+          <div className="cardbox" style={{ marginTop: 8 }}>
+            <div className="label">{installPlatform === 'ios-safari' ? 'Sur iPhone / iPad (Safari)' : installPlatform === 'android' ? 'Sur Android (Chrome)' : 'Sur ordinateur'}</div>
+            {installStepsFor(installPlatform).map((step: InstallStep, index: number) => {
+              const Icon = step.icon === 'share' ? Share : step.icon === 'add' ? Plus : step.icon === 'confirm' ? CheckCircle2 : Menu;
+              return (
+                <div key={step.title} className="row" style={{ gap: 10, alignItems: 'flex-start', marginTop: index === 0 ? 6 : 10 }}>
+                  <span className="mi" style={{ flex: 'none', width: 26, height: 26, borderRadius: 999, display: 'grid', placeItems: 'center' }} aria-hidden="true"><Icon size={14} /></span>
+                  <div>
+                    <b>{index + 1}. {step.title}</b>
+                    <br />
+                    <span className="tiny muted">{step.body}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="tiny muted" style={{ marginTop: 8 }}>
+            Une fois installée, ouvrez Omni depuis l’icône : vous pourrez alors activer les notifications
+            depuis vos réglages. Rien ne vous est imposé : l’Inbox garde tout, même sans notification.
+          </p>
         </section>
       )}
       {sheet === 'home' && (
