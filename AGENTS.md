@@ -1222,3 +1222,30 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
   serveur déjà en place, mais il manque **le sender** (personne ne dépile `web_push='queued'`) **et** le
   **chemin d'installation** — sur iOS, une **contrainte de plateforme**, pas un oubli de config.
 
+## FF-7 Web Push (tranche 2) + bandeau d'installation + audit de classe AUTH-RESUME (2026-10-07, `2e70f08`→`eae87f2`, en prod)
+
+- **Décision fondateur** : on **ouvre** Web Push (pas de retrait). Sender serveur + consentement client
+  construits : `src/server/web-push.ts` (`PendingPushDelivery` = un événement → compte → **N appareils** ;
+  drain best-effort `delivered/retried/revoked/exhausted/skipped`, jamais fatal à la transaction),
+  `web-push-provider.ts` (isole le paquet `web-push`), `trunk-repository.ts` (`listWebPushSubscriptionStatus`,
+  `revokeWebPush`), `http.ts` (drain au changement d'état + notation, `GET /api/v2/notifications/push-key`,
+  drain opportuniste + cron). Client : `src/trunk/push-subscribe.ts` + carte de consentement (iOS guidé
+  derrière l'installation). **Le tap ouvre l'Inbox** (`pushMessageFor().url='/?notifs=1'` + effet au montage),
+  **jamais un rechargement nu**. **VAPID non configuré** → la route répond honnêtement
+  `{configured:false, publicKey:null}` (patron `MAPBOX_ACCESS_TOKEN`).
+- **Bandeau d'installation proactif** (demande fondateur) : `shouldShowInstallBanner(state, dismissed)` pur ;
+  `beforeinstallprompt` capturé → **vrai bouton** (`.prompt()`), sinon guide ; refus mémorisé
+  (`localStorage 'omni-install-dismissed'`) ; **jamais** si déjà installé. `runInstall` libère la réf après
+  consommation. Monochrome, sous le rolepill.
+- **Audit de CLASSE AUTH-RESUME (Q2 fondateur) — 3 instances trouvées, pas 1.** La classe = *une action
+  gardée qui ouvre une destination APRÈS le gate appelle `requireAuth()` NU → après connexion, destination
+  perdue*. Instance 1 (compare, déjà corrigée) : **2ᵉ = « Demander la disponibilité » multi-produits depuis
+  une fiche** (`selectedFacility` perdu, `requireAuth()` nu) et **3ᵉ = « Revendiquer une facilité »**
+  (`startClaim`, facilité perdue). Corrigées en déclarant `kind: 'facility'` → la reprise rouvre la fiche.
+  **A/B prod décisif** : avant → `menu` ; après → `facility` (`scripts/probe-auth-resume.mjs` étape 5).
+  Reste = mutations/loads (sendBulk, cancel, favorite, refresh) : rien à reprendre, classification correcte.
+- **Preuves** : **978/978 tests**, tsc clean, 7 gardes OK ; probe auth-resume **8/8 PASS** sur prod ;
+  probe PWA install **11/11 PASS** sur prod ; **T-07d ✅** à chaque push (hash prod === local **et** entrée
+  de déploiement GitHub). Leçon : un audit de classe doit être **rejoué** — la 1ʳᵉ passe avait raté 2 des 3
+  instances du même défaut.
+

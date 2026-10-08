@@ -159,6 +159,12 @@ proactif** propose l'installation **sans passer par le menu**.
 ## Reste (Heartwood)
 
 - **Décision fondateur** : prochain item de fermeture **ou** ouverture terrain (`TT-1`/`TT-2`/Gate 7).
-- **AUTH-RESUME class audit** (`Q2`) : balayage systématique demandé, **en attente**.
+- **AUTH-RESUME class audit** (`Q2`) : **REJOUÉ** — la 1ʳᵉ passe avait raté **2 des 3** instances.
+  Trouvées et corrigées (`8fc8088`, `eae87f2`, en prod) : (2ᵉ) « Demander la disponibilité » multi-produits
+  depuis une fiche et (3ᵉ) « Revendiquer une facilité » (`startClaim`) appelaient `requireAuth()` NU →
+  après connexion, destination **et** sélection vendeur perdues. Toutes déclarent désormais `kind: 'facility'`
+  → la reprise rouvre la fiche. **A/B prod** : avant → `menu`, après → `facility`. Reste = mutations/loads
+  (`sendBulk`, `cancel`, favori, refresh) : aucune destination à reprendre. **Leçon : un audit de classe doit
+  être REJOUÉ — un seul passage ne suffit pas.**
 - **Poser les clés VAPID** dans Vercel (`web-push generate-vapid-keys`) puis preuve de bout en bout.
 - `getOperatorRuns` : sans UI — à ouvrir au terrain ou à retirer.
