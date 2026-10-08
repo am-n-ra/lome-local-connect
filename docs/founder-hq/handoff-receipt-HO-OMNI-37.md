@@ -119,3 +119,46 @@ permission avant l’installation (dans un onglet Safari, l’invite n’appara�
 - Observé (déjà connu, non traité ici) : le bundle prod journalise des erreurs MapLibre
   (`Cannot read properties of null (reading '0')`, `Invalid LngLat`) sans `pageerror` bloquant — bruit
   worker de tuiles, à traiter séparément si le fondateur le souhaite.
+
+## FF-7 Web Push — TRANCHE 2 LIVRÉE (2026-10-07, commit `2e70f08`, en prod)
+
+Décision appliquée : on **ouvre** Web Push (au lieu de le retirer). La couche d'installation (tranche 1)
+était le préalable ; le sender + consentement sont désormais construits et **prouvés en prod**.
+
+- **Serveur** : `src/server/web-push.ts` (modèle `PendingPushDelivery` = un événement → compte → **N
+  appareils** ; drain best-effort avec issues `delivered/retried/revoked/exhausted/skipped`, jamais
+  fatal à la transaction) ; `src/server/web-push-provider.ts` isole le paquet `web-push` ;
+  `trunk-repository.ts` expose `listWebPushSubscriptionStatus` + `revokeWebPush` ; `http.ts` draine au
+  **changement d'état** et à la **notation**, sert `GET /api/v2/notifications/push-key`, draine
+  opportunistement à la lecture des transactions + cron.
+- **Client** : `src/trunk/push-subscribe.ts` (détection de support, base64url→`Uint8Array`, subscribe/
+  revoke) + carte de consentement dans `TrunkAppV13` (iOS **guidé derrière l'installation**).
+- **Le tap ouvre l'Inbox, jamais un rechargement nu** : `pushMessageFor().url = '/?notifs=1'`, et un effet
+  au montage dans `TrunkAppV13` ouvre le centre de notifications.
+- **VAPID** : `0` fuite dans le bundle client ; la route répond honnêtement `{configured:false,
+  publicKey:null}` tant que les clés VAPID ne sont pas posées dans Vercel (patron `MAPBOX_ACCESS_TOKEN`).
+
+## Bandeau d'installation proactif (demande fondateur, dans le même commit)
+
+« Tant que c'est dans le navigateur, on peut utiliser le prompt navigateur » → livré : un **bandeau
+proactif** propose l'installation **sans passer par le menu**.
+- `shouldShowInstallBanner(state, dismissed)` pur. `beforeinstallprompt` capturé → **vrai bouton**
+  (`.prompt()`) ; iOS → guide ; refus **mémorisé** (localStorage) ; **jamais** si déjà installé.
+- `runInstall` libère la référence après consommation (un `beforeinstallprompt` ne se déclenche qu'**une
+  fois** → pas de bouton mort). Monochrome, sous le rolepill (z12 < z17).
+
+## Preuves (2026-10-07)
+
+- **975/975 tests**, `tsc` clean, **7 gardes OK**.
+- **SQL du drain et du revoke exécuté sur la canonique** `br-dawn-hill-am5amy22` (compile + sémantique ;
+  file et abonnements vides — l'envoi réel attend un abonnement navigateur réel).
+- **0 fuite VAPID** dans `dist/assets/*.js`. **Probe navigateur `scripts/probe-pwa-install.mjs` 11/11
+  PASS**, rejoué **sur prod**. **T-07d ✅** : prod `index-Df5xmrUu.js` === build local **et** déploiement
+  GitHub pour `2e70f08`.
+
+## Reste (Heartwood)
+
+- **Décision fondateur** : prochain item de fermeture **ou** ouverture terrain (`TT-1`/`TT-2`/Gate 7).
+- **AUTH-RESUME class audit** (`Q2`) : balayage systématique demandé, **en attente**.
+- **Poser les clés VAPID** dans Vercel (`web-push generate-vapid-keys`) puis preuve de bout en bout.
+- `getOperatorRuns` : sans UI — à ouvrir au terrain ou à retirer.
