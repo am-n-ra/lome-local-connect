@@ -65,10 +65,37 @@ reprenaient rien.
   GitHub `1adba8e Production`.
 - **940/940 tests**, `tsc` clean, gardes `boundary/live-surface/dead-css/docs/state/coherence` vertes.
 
+## Audit de CLASSE (question fondateur : « si ça a pu passer inaperçu, il y en a d'autres »)
+
+Défaut signalé = instance d'une **classe**. Audit des classes sœurs, mesuré :
+
+- **Classe A — action gardée qui perd sa destination** : **corrigée pour TOUTES les destinations**
+  atteignables sans session (home / wallet / saved / tour / notifs / recovery + compare / bulk).
+  Preuve prod sur **2** destinations (`compare` + `saved`) : avant → `menu`, après → reprise.
+- **Classe B — capacité construite mais jamais câblée** (le motif `gateRequest`) : **8** fonctions
+  d'API client exportées sans appelant produit, toutes **classées et gardées** :
+  - Web Push (`subscribeWebPush`/`getWebPushStatus`/`revokeWebPush`) = **`partial /
+    configuration-gated`**, déclarée honnêtement dans `docs/push-operations.md` (pas une surprise) ;
+  - `importPublicFacility`/`importPublicFacilityBatch` = outil d'import admin **sans UI** (l'import se
+    fait par script serveur) ;
+  - `getOperatorRuns` = **surface opérateur sans UI** (le terrain est en dernier par séquencement) ;
+  - `getSellerActivationQueue`, `getBuyerProRenewalStatus` = **doublons** d'API (l'UI utilise la variante
+    admin/buyer).
+  Nouveau garde `src/trunk/client-api-surface.test.ts` : **échoue** si une fonction d'API exportée n'a
+  aucun appelant produit et n'est pas dans l'allow-list documentée. **Falsifié** (retirer
+  `getOperatorRuns` → échec).
+- **Classe C — handlers qui avalent le tap** : **aucun** `onClick={() => {}}` ; les chips non-encore
+  actives sont `aria-disabled` + étiquetées « bientôt ».
+
 ## Reste
 
 - **Décision fondateur** : prochain item Heartwood **ou** ouverture du terrain (`TT-1`/`TT-2`/Gate 7) —
   le terrain reste **en dernier** par séquencement.
+- **Dette assumée, à décider** : **Web Push** est câblé serveur mais **aucun abonnement navigateur**
+  (`subscribeWebPush`/`pushManager` = **0** dans le bundle) → les notifications de transaction (FF-7) et
+  le trophée de bonus ne peuvent **pas** atteindre un appareil aujourd'hui. `docs/push-operations.md` le
+  dit `partial / configuration-gated` (VAPID + provider non configurés). À ouvrir **ou** à retirer.
+- **Surface opérateur `getOperatorRuns`** : construite, sans UI — à ouvrir au terrain ou à retirer.
 - Observé (déjà connu, non traité ici) : le bundle prod journalise des erreurs MapLibre
   (`Cannot read properties of null (reading '0')`, `Invalid LngLat`) sans `pageerror` bloquant — bruit
   worker de tuiles, à traiter séparément si le fondateur le souhaite.
