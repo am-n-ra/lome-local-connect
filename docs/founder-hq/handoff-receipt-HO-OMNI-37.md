@@ -87,10 +87,30 @@ Défaut signalé = instance d'une **classe**. Audit des classes sœurs, mesuré 
 - **Classe C — handlers qui avalent le tap** : **aucun** `onClick={() => {}}` ; les chips non-encore
   actives sont `aria-disabled` + étiquetées « bientôt ».
 
+## Install (A2HS) — le préalable honnête du Web Push (tranche 1, `10d0523`, en prod)
+
+Décision fondateur : au lieu de retirer Web Push, **prompter les Android** et **guider l’installation
+sur iOS**. Vérifié (Apple + Mozilla, 2025) : iOS Safari **ne supporte ni `beforeinstallprompt` ni le push
+hors écran d’accueil** (16.4+) → on ne peut pas prompter sur iOS, on **guide**. Jamais demander la
+permission avant l’installation (dans un onglet Safari, l’invite n’apparaît pas → « l’app a l’air cassée »).
+
+- `src/trunk/pwa-install.ts` : détection plateforme (iOS/Android/desktop), état honnête
+  (`installed` / `installable` / `manual-guide` / `unsupported`), étapes illustrées par plateforme
+  (iPhone : Partager → « Sur l’écran d’accueil » → Ajouter ; Android : ⋮ → « Installer l’application »).
+  **La vidéo/animation viendra se poser sur ces étapes** — le socle est prêt.
+- `TrunkAppV13` : capture `beforeinstallprompt`/`appinstalled`, feuille `install`, **entrée de menu AVANT
+  session** (on installe avant de créer un compte). Rien n’est montré si déjà installé.
+- Garde `pwa-shell-guard` : la couche **reste câblée** (pas un orphelin façon `gateRequest`).
+- **Preuve navigateur** `scripts/probe-pwa-install.mjs` **6/6 PASS en prod** (desktop + iPhone simulé).
+
 ## Reste
 
 - **Décision fondateur** : prochain item Heartwood **ou** ouverture du terrain (`TT-1`/`TT-2`/Gate 7) —
   le terrain reste **en dernier** par séquencement.
+- **Tranche 2 (à décider)** : le **sender Web Push** + l'UI de consentement (permission demandée
+  **depuis l'app installée**, jamais avant) + VAPID + preuve de bout en bout. Gratuit (services de push
+  des navigateurs = 0 $) ; iOS 16.4+ **uniquement installé**. La couche d'installation (tranche 1) est
+  le préalable.
 - **Dette assumée, à décider** : **Web Push** est câblé serveur mais **aucun abonnement navigateur**
   (`subscribeWebPush`/`pushManager` = **0** dans le bundle) → les notifications de transaction (FF-7) et
   le trophée de bonus ne peuvent **pas** atteindre un appareil aujourd'hui. `docs/push-operations.md` le
