@@ -66,4 +66,13 @@ describe('AUTH-RESUME — une action gardée est reprise après connexion', () =
     expect(APP).toMatch(/case 'compare': await openCompare\(\); return;/);
     expect(APP).toMatch(/case 'bulk': await openBulk\(\); return;/);
   });
+
+  // Classe AUTH-RESUME, 2ᵉ instance trouvée par l'audit de classe (Q2 fondateur) :
+  // « Demander la disponibilité » sur 2+ produits depuis une fiche appelait un
+  // `requireAuth()` NU → après connexion, l'acheteur retombait au menu, sa sélection
+  // de vendeur perdue (le panier sessionStorage survivait, la fiche non).
+  it('la demande multi-produits depuis une fiche reprend la fiche (jamais le menu)', () => {
+    expect(APP).toContain("requireAuth({ kind: 'facility', returnTo: 'facility', facilityId: selectedFacility.id, facilityName: selectedFacility.name })");
+    expect(APP).toMatch(/case 'facility':[\s\S]*?await handlePinSelect\(\{ id: resume\.facilityId \}\);[\s\S]*?return;/);
+  });
 });

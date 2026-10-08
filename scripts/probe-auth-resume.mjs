@@ -82,6 +82,51 @@ if (w === 'saved') pass('apres connexion, les Recherches sauvegardees sont REPRI
 else fail(`apres connexion, la destination n'est pas reprise (${w})`);
 await browser2.close();
 
+// 5) Classe AUTH-RESUME, 2ᵉ instance (audit Q2) : « Demander la disponibilité » sur 2+
+//    produits depuis une fiche doit REPRENDRE la fiche après connexion (pas le menu),
+//    la sélection vendeur restant intacte.
+const browser3 = await chromium.launch();
+const p3 = await browser3.newPage({ viewport: { width: 1280, height: 900 } });
+await p3.goto(URL, { waitUntil: 'load' }); await p3.waitForTimeout(5000);
+await p3.evaluate(() => { [...document.querySelectorAll('.navpill button')].find((x) => /Recherche/.test(x.querySelector('.sr-only')?.textContent || ''))?.click(); });
+await p3.waitForFunction(() => !!document.querySelector('input[aria-label="Recherche"]'), null, { timeout: 8000 }).catch(() => {});
+await p3.evaluate(() => { const i = document.querySelector('input[aria-label="Recherche"]'); i.focus(); i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); });
+// « box » remonte le vendeur démo (3 produits) — un vendeur à plusieurs offres.
+await p3.keyboard.type('box', { delay: 20 }); await p3.keyboard.press('Enter');
+await p3.waitForFunction(() => document.querySelectorAll('#hgrid .hcard').length > 0, null, { timeout: 20000 }).catch(() => {});
+await p3.waitForTimeout(2500);
+const opened = await p3.evaluate(() => document.querySelectorAll('#hgrid .hcard').length);
+await p3.evaluate(() => { document.querySelector('#hgrid .hcard')?.click(); });
+await p3.waitForTimeout(2500);
+const picked = await p3.evaluate(() => {
+  const pitems = [...document.querySelectorAll('[data-sheet="facility"] .pitem')];
+  if (pitems.length < 2) return 0;
+  pitems[0].click(); pitems[1].click();
+  return 2;
+});
+await p3.waitForTimeout(600);
+if (opened > 0 && picked === 2) {
+  const clicked = await p3.evaluate(() => {
+    const btn = [...document.querySelectorAll('[data-sheet="facility"] .selbar button')].find((b) => /Demander la disponibilit/i.test(b.textContent || ''));
+    if (!btn) return 'not-found';
+    btn.click(); return 'clicked';
+  });
+  await p3.waitForTimeout(2500);
+  const onAuth = await p3.$('#v13-email');
+  if (clicked === 'clicked' && onAuth) pass('Demander la disponibilite (multi) sans session ouvre la connexion');
+  else fail(`Demander la disponibilite : ${clicked}, auth=${Boolean(onAuth)}`);
+  await p3.fill('#v13-email', EMAIL); await p3.fill('#v13-password', PASSWORD);
+  await p3.evaluate(() => document.querySelector('#v13-email')?.closest('form')?.requestSubmit?.());
+  await p3.waitForFunction(() => ['facility', 'menu', 'onboard'].includes(document.querySelector('.omni-v13-stage')?.getAttribute('data-sheet') || ''), null, { timeout: 15000 }).catch(() => {});
+  await p3.waitForTimeout(5000);
+  const f3 = await p3.evaluate(() => document.querySelector('.omni-v13-stage')?.getAttribute('data-sheet'));
+  if (f3 === 'facility') pass('apres connexion, la FICHE vendeur est REPRISE (selection intacte)');
+  else fail(`apres connexion, la fiche n'est pas reprise (${f3})`);
+} else {
+  fail(`impossible de preparer le cas fiche (cards=${opened}, picked=${picked})`);
+}
+await browser3.close();
+
 if (errors.length > 0) fail(`page errors: ${errors.join(' | ')}`);
 else pass('no page errors');
 

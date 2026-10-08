@@ -753,7 +753,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     return () => window.clearTimeout(t);
   }, [revealPending, sheet]);
 
-  const handlePinSelect = useCallback(async (facility: PublicFacility) => {
+  const handlePinSelect = useCallback(async (facility: Pick<PublicFacility, 'id'>) => {
     setSelectedId(facility.id);
     setSelectedFacility(null);
     // Défilement contextuel bidirectionnel (v1.3 §4.4): un tap marker pendant
@@ -1456,11 +1456,16 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       case 'tour': await openTour(); return;
       case 'notifs': await openNotifs(); return;
       case 'recovery': await openRecovery(); return;
+      case 'facility':
+        // Rouvre la fiche du vendeur : le panier multi-produits (sessionStorage) est intact,
+        // l'acheteur retrouve sa sélection et peut relancer la demande de disponibilité.
+        await handlePinSelect({ id: resume.facilityId });
+        return;
       case 'search': setSheet('search'); return;
       case 'seller': setSheet('seller'); return;
       default: setSheet('none');
     }
-  }, [pendingAction, startFlow, openCompare, openBulk, openHome, openWallet, openSaved, openTour, openNotifs, openRecovery]);
+  }, [pendingAction, startFlow, openCompare, openBulk, openHome, openWallet, openSaved, openTour, openNotifs, openRecovery, handlePinSelect]);
 
   const openDossier = useCallback((visit: FieldVisit) => {
     setSelVisitId(visit.id);
@@ -2614,7 +2619,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                       startFlow({ id: selectedFacility.id, name: selectedFacility.name, latitude: selectedFacility.latitude, longitude: selectedFacility.longitude }, { id: picked[0].id, name: picked[0].name, priceKind: picked[0].priceKind ?? null, listedPriceMinor: picked[0].prixReduit ?? null });
                     } else {
                       void (async () => {
-                        const token = await requireAuth();
+                        const token = await requireAuth({ kind: 'facility', returnTo: 'facility', facilityId: selectedFacility.id, facilityName: selectedFacility.name });
                         if (!token) return;
                         setBulkResults(null); setBulkErrors(null); setSheet('bulk');
                         setBulkOrigin('fiche');
@@ -2667,7 +2672,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           {selectedEntity.offers.map((offer) => {
             const carac = offerCharacteristics(offer);
             return (
-              <div className="pitem" key={offer.id} role="button" tabIndex={0} style={{ cursor: 'pointer' }} onClick={() => { setSheet('facility'); setSelectedId(offer.facilityId); void handlePinSelect({ id: offer.facilityId, name: selectedEntity.name, category: selectedEntity.category ?? '', address: selectedEntity.address, latitude: selectedEntity.latitude ?? 0, longitude: selectedEntity.longitude ?? 0, trust: selectedEntity.trust, plan: 'free', productCount: selectedEntity.offerCount }); }}>
+              <div className="pitem" key={offer.id} role="button" tabIndex={0} style={{ cursor: 'pointer' }} onClick={() => { setSheet('facility'); setSelectedId(offer.facilityId); void handlePinSelect({ id: offer.facilityId }); }}>
                 <span className="chk" aria-hidden="true" />
                 <span className="pthumb" />
                 <span><b>{offer.name}</b><small>{offer.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small>{carac.length > 0 && <small style={{ display: 'block', marginTop: 2 }}>{carac.map((c) => c.value).join(' · ')}</small>}</span>

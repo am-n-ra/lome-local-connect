@@ -38,6 +38,12 @@ describe('PendingAction resume contract', () => {
     }
   });
 
+  it('reprend la fiche vendeur (demande multi-produits), panier conservé', () => {
+    const action: PendingAction = { kind: 'facility', returnTo: 'facility', facilityId: 'f-9', facilityName: 'Épicerie Chez Afi' };
+    expect(pendingActionResume(action)).toEqual({ sheet: 'facility', facilityId: 'f-9', facilityName: 'Épicerie Chez Afi' });
+    expect(describePendingAction(action)).toBe('Cette facilité');
+  });
+
   it('orders products so in-stock items lead', () => {
     const items = [
       { id: 'a', name: 'Riz', stockLoueOmni: 0 },

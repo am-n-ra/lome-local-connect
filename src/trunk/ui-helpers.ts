@@ -81,7 +81,10 @@ export type PendingAction =
   | { kind: 'saved'; returnTo: 'saved' }
   | { kind: 'tour'; returnTo: 'tour' }
   | { kind: 'notifs'; returnTo: 'notifs' }
-  | { kind: 'recovery'; returnTo: 'recovery' };
+  | { kind: 'recovery'; returnTo: 'recovery' }
+  // Demande de disponibilité multi-produits depuis une fiche : le panier (sessionStorage)
+  // survit, mais la fiche et la position étaient perdues → on rouvre la fiche après connexion.
+  | { kind: 'facility'; returnTo: 'facility'; facilityId: string; facilityName: string };
 
 export function describePendingAction(action: PendingAction | null): string {
   switch (action?.kind) {
@@ -96,6 +99,7 @@ export function describePendingAction(action: PendingAction | null): string {
     case 'tour': return 'Tournée';
     case 'notifs': return 'Notifications';
     case 'recovery': return 'Reprise';
+    case 'facility': return 'Cette facilité';
     default: return '';
   }
 }
@@ -112,6 +116,7 @@ export type PendingResume =
   | { sheet: 'tour' }
   | { sheet: 'notifs' }
   | { sheet: 'recovery' }
+  | { sheet: 'facility'; facilityId: string; facilityName: string }
   | { sheet: 'none' };
 
 export function pendingActionResume(action: PendingAction | null): PendingResume {
@@ -129,6 +134,7 @@ export function pendingActionResume(action: PendingAction | null): PendingResume
   if (action?.kind === 'tour') return { sheet: 'tour' };
   if (action?.kind === 'notifs') return { sheet: 'notifs' };
   if (action?.kind === 'recovery') return { sheet: 'recovery' };
+  if (action?.kind === 'facility') return { sheet: 'facility', facilityId: action.facilityId, facilityName: action.facilityName };
  return { sheet: 'none' };
 }
 
