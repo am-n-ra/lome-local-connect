@@ -6,6 +6,8 @@ describe('PendingAction resume contract', () => {
     expect(describePendingAction({ kind: 'intent', returnTo: 'flow', facilityId: 'f-1', facilityName: 'Ferme omni', productId: 'p-1', productName: 'Pagne', quantity: 2 })).toBe('Secure checkout');
     expect(describePendingAction({ kind: 'seller-entry', returnTo: 'seller-entry' })).toBe('Seller space');
     expect(describePendingAction({ kind: 'search', returnTo: 'search' })).toBe('Search');
+    expect(describePendingAction({ kind: 'compare', returnTo: 'compare' })).toBe('Comparaison');
+    expect(describePendingAction({ kind: 'bulk', returnTo: 'bulk' })).toBe('Disponibilité groupée');
     expect(describePendingAction(null)).toBe('');
   });
 
@@ -14,6 +16,11 @@ describe('PendingAction resume contract', () => {
     expect(pendingActionResume({ kind: 'seller-entry', returnTo: 'seller-entry' })).toEqual({ sheet: 'seller' });
     expect(pendingActionResume({ kind: 'search', returnTo: 'search' })).toEqual({ sheet: 'search' });
     expect(pendingActionResume(null)).toEqual({ sheet: 'none' });
+  });
+
+  it('reprend les actions gardées comparer / dispo groupée (Heartwood)', () => {
+    expect(pendingActionResume({ kind: 'compare', returnTo: 'compare' })).toEqual({ sheet: 'compare' });
+    expect(pendingActionResume({ kind: 'bulk', returnTo: 'bulk' })).toEqual({ sheet: 'bulk' });
   });
 
   it('orders products so in-stock items lead', () => {

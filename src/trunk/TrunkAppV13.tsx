@@ -661,12 +661,14 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     setSheet('qr'); await handlePinSelect(detail);
   }, [facilities, handlePinSelect]);
 
-  const requireAuth = useCallback(async (): Promise<string | null> => {
+  // Heartwood : une action gardée doit dire QUI elle est, pour être REPRISE après connexion.
+  // Sans `resume`, l'acheteur retombait sur le menu et devait tout recommencer.
+  const requireAuth = useCallback(async (resume?: PendingAction): Promise<string | null> => {
     try {
       const token = await getAuthToken();
-      if (!token) { setSheet('auth'); return null; }
+      if (!token) { if (resume) setPendingAction(resume); setSheet('auth'); return null; }
       return token;
-    } catch { setSheet('auth'); return null; }
+    } catch { if (resume) setPendingAction(resume); setSheet('auth'); return null; }
   }, []);
 
   const gateRequest = useCallback((action: PendingAction): boolean => {
@@ -686,7 +688,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     setBulkFacilities(results.length > 0 ? results : null);
     if (results.length === 0) { setBulkErrors('Aucune facilité en résultat. Lancez d\'abord une recherche.'); return; }
     setBulkLoading(true);
-    const token = await requireAuth();
+    const token = await requireAuth({ kind: 'bulk', returnTo: 'bulk' });
     if (!token) { setBulkLoading(false); return; }
     try {
       setBulkSelection(Object.fromEntries(results.map((facility) => [facility.id, true])));
@@ -774,7 +776,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     const facilities = compareResults.length > 0 ? compareResults : results;
     setCompareResults(facilities);
     if (facilities.length === 0) return;
-    const token = await requireAuth();
+    const token = await requireAuth({ kind: 'compare', returnTo: 'compare' });
     if (!token) return;
     if (!buyerProStatus) {
       const status = await getBuyerProStatus({ token });
@@ -936,6 +938,29 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     setFlowProduct(product);
     setSheet('flow');
   }, []);
+
+  // Heartwood : reprend l'action mémorisée AVANT la connexion. Une intention d'achat exige
+  // l'onboarding complet ; les autres actions gardées (comparer, dispo groupée) reprennent
+  // immédiatement quand une session réelle existe déjà.
+  const resumePendingAction = useCallback(async () => {
+    const action = pendingAction;
+    setPendingAction(null);
+    if (!action) { setSheet('none'); return; }
+    if (!sessionUser) { setSheet('onboard'); return; }
+    const resume = pendingActionResume(action);
+    switch (resume.sheet) {
+      case 'flow':
+        setSheet('facility');
+        startFlow({ id: resume.facilityId, name: resume.facilityName }, { id: resume.productId, name: resume.productName });
+        return;
+      case 'compare': await openCompare(); return;
+      case 'bulk': await openBulk(); return;
+      case 'search': setSheet('search'); return;
+      case 'seller': setSheet('seller'); return;
+      default: setSheet('none');
+    }
+  }, [pendingAction, sessionUser, startFlow, openCompare, openBulk]);
+
 
   const refreshCreditSummary = useCallback(async () => {
     const token = await requireAuth();
@@ -2550,16 +2575,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               void loadBuyerProStatus();
             }
           }}
-          onClose={() => { setPendingAction(null); setSheet('menu'); }} onComplete={() => {
-          const act = pendingAction;
-          const resume = pendingActionResume(act);
-          setPendingAction(null);
-          if (resume.sheet === 'flow') {
-            startFlow({ id: resume.facilityId, name: resume.facilityName }, { id: resume.productId, name: resume.productName });
-          } else {
-            setSheet(resume.sheet);
-          }
-        }} />
+          onClose={() => { setPendingAction(null); setSheet('menu'); }} onComplete={() => { void resumePendingAction(); }} />
       )}
       {sheet === 'flow' && flowFacility && flowProduct && (
         <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => { setPendingResumeTxnId(null); setSheet('facility'); }} resumeTxnId={pendingResumeTxnId} onGate={gateRequest} onRoute={(longitude: number, latitude: number, name: string) => { setRouteTarget({ longitude, latitude, name }); setSheet('none'); }} walletBalanceMinor={wallet?.balanceMinor ?? null} />
@@ -3338,7 +3354,12 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               if (user) setSessionUser(user);
               // RT-D1: unlock a gated itinerary right after signing in.
               setAuthToken(await getAuthToken());
-              if (pendingAction) { setSheet('onboard'); } else { setSheet("menu"); }
+              if (pendingAction) {
+                // Heartwood : l'utilisateur connecté reprend son action en cours, sans onboarding.
+                await resumePendingAction();
+              } else {
+                setSheet("menu");
+              }
             } catch {
               setError("Connexion impossible - vérifiez vos identifiants.");
             }

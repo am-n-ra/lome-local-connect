@@ -73,13 +73,17 @@ export function savedSearchConstraintSummary(search: SavedSearch): string {
 export type PendingAction =
   | { kind: 'intent'; returnTo: 'flow'; facilityId: string; facilityName: string; productId: string; productName: string; quantity: number }
   | { kind: 'seller-entry'; returnTo: 'seller-entry' }
-  | { kind: 'search'; returnTo: 'search' };
+  | { kind: 'search'; returnTo: 'search' }
+  | { kind: 'compare'; returnTo: 'compare' }
+  | { kind: 'bulk'; returnTo: 'bulk' };
 
 export function describePendingAction(action: PendingAction | null): string {
   switch (action?.kind) {
     case 'intent': return 'Secure checkout';
     case 'seller-entry': return 'Seller space';
     case 'search': return 'Search';
+    case 'compare': return 'Comparaison';
+    case 'bulk': return 'Disponibilité groupée';
     default: return '';
   }
 }
@@ -88,6 +92,8 @@ export type PendingResume =
   | { sheet: 'flow'; facilityId: string; facilityName: string; productId: string; productName: string }
   | { sheet: 'search' }
   | { sheet: 'seller' }
+  | { sheet: 'compare' }
+  | { sheet: 'bulk' }
   | { sheet: 'none' };
 
 export function pendingActionResume(action: PendingAction | null): PendingResume {
@@ -97,6 +103,8 @@ export function pendingActionResume(action: PendingAction | null): PendingResume
   }
   if (action?.kind === 'search') return { sheet: 'search' };
   if (action?.kind === 'seller-entry') return { sheet: 'seller' };
+  if (action?.kind === 'compare') return { sheet: 'compare' };
+  if (action?.kind === 'bulk') return { sheet: 'bulk' };
  return { sheet: 'none' };
 }
 
