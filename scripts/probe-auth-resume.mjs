@@ -60,25 +60,26 @@ const cmp = await page.evaluate(() => {
 if (cmp.rows > 0 && cmp.chips === 4) pass(`la comparaison est vivante (${cmp.rows} lignes, ${cmp.chips} tris)`);
 else fail(`la comparaison reprise est vide (rows=${cmp.rows}, chips=${cmp.chips})`);
 
-// 4) The SAME class, a different destination: Wallet from the menu must also resume.
+// 4) The SAME class, a different destination: "Recherches sauvegardées" from the
+//    search sheet must also resume (that link is reachable logged-out).
 const browser2 = await chromium.launch();
 const p2 = await browser2.newPage({ viewport: { width: 1280, height: 900 } });
 await p2.goto(URL, { waitUntil: 'load' }); await p2.waitForTimeout(5000);
-await p2.evaluate(() => { [...document.querySelectorAll('.navpill button')].find((x) => /Menu/.test(x.querySelector('.sr-only')?.textContent || ''))?.click(); });
+await p2.evaluate(() => { [...document.querySelectorAll('.navpill button')].find((x) => /Recherche/.test(x.querySelector('.sr-only')?.textContent || ''))?.click(); });
 await p2.waitForTimeout(1500);
-const openedMenu = await p2.evaluate(() => document.querySelector('.omni-v13-stage')?.getAttribute('data-sheet'));
-if (openedMenu !== 'menu') fail(`le menu ne s'ouvre pas (${openedMenu})`);
-await p2.evaluate(() => { const b = [...document.querySelectorAll('[data-sheet="menu"] .menuitem')].find((x) => /Portefeuille/.test(x.textContent || '')); if (b) b.click(); });
+const openedSearch = await p2.evaluate(() => document.querySelector('.omni-v13-stage')?.getAttribute('data-sheet'));
+if (openedSearch !== 'search') fail(`la recherche ne s'ouvre pas (${openedSearch})`);
+await p2.evaluate(() => { [...document.querySelectorAll('[data-sheet="search"] button, [data-sheet="search"] .linkbtn')].find((x) => /Recherches sauvegard/i.test(x.textContent || ''))?.click(); });
 await p2.waitForTimeout(2500);
-if (await p2.$('#v13-email')) pass('Wallet sans session ouvre l\'ecran de connexion');
-else fail('Wallet sans session n\'a pas ouvert l\'ecran de connexion');
+if (await p2.$('#v13-email')) pass('Recherches sauvegardees sans session ouvre l\'ecran de connexion');
+else fail('Recherches sauvegardees n\'a pas ouvert la connexion');
 await p2.fill('#v13-email', EMAIL); await p2.fill('#v13-password', PASSWORD);
 await p2.evaluate(() => document.querySelector('#v13-email')?.closest('form')?.requestSubmit?.());
-await p2.waitForFunction(() => ['wallet', 'menu', 'onboard'].includes(document.querySelector('.omni-v13-stage')?.getAttribute('data-sheet') || ''), null, { timeout: 15000 }).catch(() => {});
+await p2.waitForFunction(() => ['saved', 'menu', 'onboard'].includes(document.querySelector('.omni-v13-stage')?.getAttribute('data-sheet') || ''), null, { timeout: 15000 }).catch(() => {});
 await p2.waitForTimeout(5000);
 const w = await p2.evaluate(() => document.querySelector('.omni-v13-stage')?.getAttribute('data-sheet'));
-if (w === 'wallet') pass('apres connexion, le Wallet est REPRIS (feuille wallet)');
-else fail(`apres connexion, le Wallet n'est pas repris (${w})`);
+if (w === 'saved') pass('apres connexion, les Recherches sauvegardees sont REPRISES');
+else fail(`apres connexion, la destination n'est pas reprise (${w})`);
 await browser2.close();
 
 if (errors.length > 0) fail(`page errors: ${errors.join(' | ')}`);
