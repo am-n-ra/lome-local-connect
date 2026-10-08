@@ -55,22 +55,24 @@ frontière de mot**. Une seule correction sert les deux plaintes.
 | Suite complète | **104 fichiers / 933 tests** (+7) ; `tsc` clean |
 | Gardes | `boundary`/`live-surface`/`dead-css`/`docs`/`state`/`coherence`/`maquette`/`species-t12` — **toutes vertes** |
 
-## État de déploiement — **NON POUSSÉ (T-07d non franchi)**
+## État de déploiement — **DÉPLOYÉ (T-07d ✅)**
 
-- Commit `4d90275` **local, ahead-1** sur `omni-v2-rebuild`. Bundles client **et** serverless régénérés
-  **dans le même commit** (leçon `9c3f5d8` : `api/v2/*.js` sont des artefacts suivis par git).
-- **Blocage poussée** : `GITHUB_TOKEN` renvoie **401** (testé plusieurs fois, y compris espacé de 30 s ;
-  `gh auth status` : « token is invalid »). L'URL de remote a été remise à jour avec le jeton courant,
-  sans effet. **Action fondateur requise** : rafraîchir le secret `GITHUB_TOKEN`.
-- **Interdiction de prétendre au déploiement** tant que prod n'est pas prouvée `===` build local
-  (`index-qinnJ_Sk.js`, sha256) **et** que GitHub `deployments` porte une entrée pour `4d90275`.
+- Commits **poussés** sur `omni-v2-rebuild` : `4d90275` (fix), `2dd5dda` (receipt), `b048f96` (ordre du
+  probe). Bundles client **et** serverless régénérés **dans le même commit** (leçon `9c3f5d8`).
+- **Blocage poussée levé** : `GITHUB_TOKEN` rafraîchi par le fondateur (401 → 200) ; `git push` FF-safe.
+  Les 401 restaient dus à un **jeton expiré** (classe récurrente déjà notée).
+- **T-07d prouvé** : prod sert `assets/index-qinnJ_Sk.js` **byte-identique** au build local (sha256
+  `ac371eae…3d62aaa` des **deux côtés**) ; GitHub `deployments` porte une entrée **Production** pour
+  `2dd5dda` (⊇ `4d90275`).
+- **Preuve comportementale prod** (`scripts/probe-search-fix.mjs` contre `omni.sparkafrika.online`) :
+  **PASS** — `pain`→5 lignes 0 faux positif, `marche`→« Marché », entité `boulangerie` résolue,
+  entité `mrs`→indice de lieu + route vers l'offre, 0 page error. (Sur prod **avant** : FAIL 3 =
+  reproduction mot pour mot des deux plaintes.)
 
 ## Décision demandée au fondateur
 
-1. **Rafraîchir `GITHUB_TOKEN`** pour débloquer la poussée (puis re-prouver T-07d : hash prod + entrée
-   de déploiement).
-2. **Prochaine slice Heartwood** : reste-t-il un item de fermeture, ou applique-t-on la décision
-   « terrain en dernier » ? HQ n'ouvre **rien** avant le verdict.
+1. **Prochaine slice Heartwood** : reste-t-il un item de fermeture, ou applique-t-on la décision
+   « terrain en dernier » (`TT-1`/`TT-2`/Gate 7) ? HQ n'ouvre **rien** avant le verdict.
 
 > **Note de méthode :** livrer une tranche **ne clôt pas** une porte. Ce receipt est un paquet de
 > preuves ; le verdict reste au fondateur.
