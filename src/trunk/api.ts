@@ -1,4 +1,5 @@
 import { upload as uploadPrivateBlob } from '@vercel/blob/client';
+import { raceWithTimeout } from './request-timeout';
 import type { AccountCapabilitiesResult, AdCampaignCreateResult, AdCampaignListResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, ClaimByOsmRefInput, ClaimByOsmRefResult, CreateSellerFacilityResult, CreateTeamResult, FacilityOperationalState, FacilityType, MyTeamInvite, RoleManagementAccount, RoleManagementResult, TeamInviteResult, TeamListResult, TeamMemberResult, TeamInviteAcceptResult, FacilityZoneAssignment, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, CancelAvailabilityRequestResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, PublicEntity, PublicEntityDetail, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PublicStats, RoutingResult, PurchaseIntentResult, QrTokenIssueResult, QrRevocationResult, QrVerificationResult, DemandSignalsResult, OfferReportMotif, OfferReportCreateResult, OfferReportListResult, OfferReportOutcome, OfferReportDecisionResult, AcquisitionObjectiveListResult, AcquisitionObjectiveCreateResult, AcquisitionObjectiveState, FieldVisitSubjectType, FieldVisitCreateResult, FieldVisitListResult, FieldVisitClaimResult, FieldVisitState, VisitReportSubmitResult, OperatorEntitySideResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, SellerVerification, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
@@ -10,10 +11,12 @@ async function parse<T>(response: Response): Promise<ApiResult<T>> {
 }
 
 async function fetchWithRecovery(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  let response = await fetch(input, init);
+  // HP-3 : borner l'attente pour qu'un réseau mobile qui ne répond jamais produise une erreur
+  // honnête (et libère l'écran) au lieu d'un « Chargement… » sans fin.
+  let response = await raceWithTimeout(fetch(input, init));
   if (response.status >= 500) {
     await new Promise((resolve) => window.setTimeout(resolve, 650));
-    response = await fetch(input, init);
+    response = await raceWithTimeout(fetch(input, init));
   }
   return response;
 }

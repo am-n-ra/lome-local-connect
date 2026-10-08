@@ -609,3 +609,27 @@ describe('field visit client contract (TF-6)', () => {
     );
   });
 });
+
+// HP-3 — un réseau mobile qui ne répond jamais ne doit pas pendre l'écran.
+describe('HP-3 — le délai borne réellement les requêtes', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('un fetch qui pend lève une erreur de délai honnête au lieu d’attendre sans fin', async () => {
+    vi.useFakeTimers();
+    // fetch qui ne se règle jamais (réseau mort) — comme une route qui ne répond pas.
+    const hanging = new Promise<Response>(() => {});
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(hanging);
+
+    const call = listPublicFacilities(undefined, 'boulangerie');
+    const assertion = expect(call).rejects.toThrow(/réseau/i);
+    await vi.advanceTimersByTimeAsync(15000);
+    await assertion;
+    vi.useRealTimers();
+  });
+
+  it('une réponse normale n’est pas retardée par le délai', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    const result = await listPublicFacilities(undefined, 'riz');
+    expect(result.ok).toBe(true);
+  });
+});
