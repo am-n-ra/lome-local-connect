@@ -14,6 +14,7 @@ import { routeReasonLabel } from './route-reason-label';
 import type { PinDimMode } from './map-pins';
 import { createFallbackMapSurface, type FallbackMapSurface, type FallbackSurfaceFacility } from './fallback-map-surface';
 import { bottomPaddingFor, cameraIsReadable, globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, isFiniteCameraCenter, isFiniteCameraZoom, projectionForZoom, safeEaseTo, safeFlyTo } from './map-camera';
+import { isTransformMatrixError } from './map-transform-error';
 import { arrivalTargetFor, boundsOfPoints, computeSearchFlight, DEFAULT_ARRIVAL_TARGET, labelForZoom, pointsForResultFraming, type RevealPoint } from './map-reveal';
 import { isUsableViewportBounds } from './viewport-bounds';
 import { pickFrenchVoice, speakRoute, stopRouteVoice, voiceCapability } from './route-voice';
@@ -569,6 +570,19 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
         setBasemap('raster');
       }
     });
+    // MapLibre's OWN frames (`_calcMatrices` render, `unprojectScreenPoint` pointer) throw
+    // SYNCHRONOUSLY on a degenerate transform — not from our guarded handlers — and rethrow
+    // to `window.onerror`, escaping the map's `error` event above. They then repeat EVERY
+    // frame: the observed flood. Recognising the transform signature lets us re-anchor the
+    // camera (same heal) and `preventDefault()` to stop the default per-frame console log,
+    // WITHOUT swallowing any error that is not this exact class.
+    const handleWindowError = (event: ErrorEvent) => {
+      const text = `${event.message ?? ''}\n${(event.error as Error | undefined)?.stack ?? ''}`;
+      if (!isTransformMatrixError(text)) return;
+      healTransform();
+      event.preventDefault();
+    };
+    window.addEventListener('error', handleWindowError, true);
 
     const syncCameraPadding = () => {
       // Coquille V13: les sheets sont rendus conditionnellement — le `.sheet` monté
@@ -1133,6 +1147,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
       observer.disconnect();
       surfaceObserver.disconnect();
       window.removeEventListener('resize', handleWindowResize);
+      window.removeEventListener('error', handleWindowError, true);
       canvasContainer.removeEventListener('mouseenter', handleCanvasEnter);
       canvasContainer.removeEventListener('mouseleave', handleCanvasLeave);
       window.removeEventListener('pointermove', handleWindowMove, true);

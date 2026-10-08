@@ -89,3 +89,31 @@ describe('MAP-TRANSFORM — la projection ne change que sur une carte posée et 
     expect(source).not.toContain('let globeProjection = true');
   });
 });
+
+/**
+ * MAP-TRANSFORM-ERROR (Heartwood HP-1) — les frames MapLibre (`_calcMatrices` rendu,
+ * `unprojectScreenPoint` pointeur) lèvent SYNCHRONEMENT sur une matrice dégénérée et
+ * remontent au `window.onerror`, échappant au `map.on('error')`. Sans un catch window
+ * qui les reconnaît, l'erreur se répète à CHAQUE frame (le flood observé). Le catch doit
+ * (a) reconnaître la classe, (b) re-ancrer la caméra, (c) empêcher le log par défaut,
+ * et (d) être retiré au démontage. Le prédicat lui-même est testé dans
+ * map-transform-error.test.ts (dont le cas « n'avale pas une erreur générique »).
+ */
+describe('MAP-TRANSFORM-ERROR — le flood MapLibre est reconnu, soigné et coupé', () => {
+  it('TrunkMap importe le prédicat de transform error', () => {
+    expect(source).toContain("import { isTransformMatrixError } from './map-transform-error'");
+  });
+
+  it('un listener window « error » en capture soigne et coupe le flood', () => {
+    const idx = lines.findIndex((line) => line.includes("window.addEventListener('error', handleWindowError"));
+    expect(idx).toBeGreaterThan(-1);
+    const body = lines.slice(idx - 8, idx + 1).join('\n');
+    expect(body).toContain('isTransformMatrixError');
+    expect(body).toContain('healTransform()');
+    expect(body).toContain('preventDefault()');
+  });
+
+  it('le listener est retiré au démontage (pas de fuite)', () => {
+    expect(source).toContain("window.removeEventListener('error', handleWindowError, true)");
+  });
+});
