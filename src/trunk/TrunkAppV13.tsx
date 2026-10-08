@@ -197,6 +197,10 @@ export function TrunkAppV13() {
   // R-E (S-11): two levels of one index. 'offer' (default) or 'entity' (find an offerer by identity).
   const [searchLevel, setSearchLevel] = useState<'offer' | 'entity'>('offer');
   const [entityResults, setEntityResults] = useState<PublicEntity[]>([]);
+  // S-11/SEARCH-04 : un nom peut désigner un LIEU connu mais non revendiqué (S-05), pas une
+  // entité. Le niveau entité ne s'arrête pas à « introuvable » : il dit qu'un lieu existe et
+  // renvoie au niveau offre, où ces lieux sont cherchables (E-6). `null` = rien trouvé.
+  const [entityPlaceHint, setEntityPlaceHint] = useState<{ count: number; sample: string[] } | null>(null);
   const [entityLoading, setEntityLoading] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState<PublicEntityDetail | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -1779,15 +1783,27 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     void runSearch(query, currentSearchOptions());
   };
 
-  /** R-E (S-11) — level ENTITY: find an offerer by identity, then open its public page. */
+  /** R-E (S-11) — level ENTITY: find an offerer by identity, then open its public page.
+   *  SEARCH-04 : si aucune entité ne correspond, un LIEU connu (non revendiqué) peut exister
+   *  pour ce nom (S-05). On le dit, et on renvoie au niveau offre — jamais « introuvable » sec. */
   const runEntitySearch = useCallback(async (raw: string) => {
     setEntityLoading(true);
+    setEntityPlaceHint(null);
     setSheet('results');
     try {
       const result = await searchPublicEntities(raw);
       if (result.ok) {
-        setEntityResults(result.data ?? []);
+        const entities = result.data ?? [];
+        setEntityResults(entities);
         setError('');
+        if (entities.length === 0 && raw.trim()) {
+          // The entities level found nothing — ask the OFFER level whether a known place
+          // carries the name. Read-only, same public corpus (E-1: two levels, one index).
+          const places = await listPublicFacilities(undefined, raw.trim());
+          if (places.ok && places.data && places.data.length > 0) {
+            setEntityPlaceHint({ count: places.data.length, sample: places.data.slice(0, 3).map((f) => f.name) });
+          }
+        }
       } else {
         setEntityResults([]);
         setError(result.error?.message ?? 'La recherche d’entité a échoué.');
@@ -2066,12 +2082,20 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               </div>
               <p className="lead" style={{ marginTop: 4 }}>Le niveau <b>entité</b> cherche un <b>offreur</b>. Les contraintes d’offre (distance, budget, quantité) ne s’appliquent pas ici.</p>
               {entityLoading && <Skeleton variant="pitem" count={3} />}
-              {!entityLoading && entityResults.length === 0 && (
+              {!entityLoading && entityResults.length === 0 && (entityPlaceHint ? (
+                <div className="cardbox">
+                  <p className="sub">Aucune <b>entité</b> ne porte ce nom, mais <b>{entityPlaceHint.count} {entityPlaceHint.count > 1 ? 'lieux connus correspondent' : 'lieu connu correspond'}</b> : {entityPlaceHint.sample.join(', ')}{entityPlaceHint.count > entityPlaceHint.sample.length ? '…' : ''}.</p>
+                  <p className="tiny muted">Ces lieux existent sur la carte sans être revendiqués (aucune entité à leur tête, S-05). Le niveau <b>entité</b> cherche un offreur ; pour ces lieux, cherchez une <b>offre</b>.</p>
+                  <button className="btn sm" style={{ marginTop: 9 }} type="button" onClick={() => { setSearchLevel('offer'); void runSearch(query, currentSearchOptions()); }}>Chercher ce nom parmi les offres</button>
+                  <button className="btn ghost sm" style={{ marginTop: 6 }} type="button" onClick={() => { setSearchLevel('offer'); setSheet('search'); }}>Chercher une autre offre</button>
+                </div>
+              ) : (
                 <div className="cardbox">
                   <p className="sub">Aucune entité ne correspond à ce nom.</p>
+                  <p className="tiny muted">Une entité est un <b>offreur</b> (organisation ou personne) qui a revendiqué sa présence. Un lieu non revendiqué n’a pas d’entité, cherchez-le donc dans les offres.</p>
                   <button className="btn ghost sm" style={{ marginTop: 9 }} type="button" onClick={() => { setSearchLevel('offer'); setSheet('search'); }}>Chercher une offre</button>
                 </div>
-              )}
+              ))}
               <div className="hgrid">
                 {entityResults.map((entity) => (
                   <button key={entity.id} type="button" className="hcard" onClick={() => void openEntity(entity.id)}>

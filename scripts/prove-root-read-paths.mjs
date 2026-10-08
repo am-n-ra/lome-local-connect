@@ -88,6 +88,51 @@ if (anyFacilityId) {
 await check('searchPublicEntities (discovery)', () => repository.searchPublicEntities());
 await check('searchPublicEntities + query', () => repository.searchPublicEntities('boulangerie'));
 
+// SEARCH-03 (2026-10-07): the literal `ilike '%q%'` matcher was both accent-sensitive
+// and substring-based. Two founder-visible defects followed: an accented name was
+// unreachable without the accent, and `pain` matched `painter`/`paints`/`copain`. These
+// assertions fail on the old predicate and pass on the word-boundary + folded one.
+await (async () => {
+  ran += 1;
+  try {
+    const pain = await repository.listPublicFacilities(undefined, 'pain');
+    const names = pain.map((f) => f.name);
+    const falsePositives = names.filter((n) =>
+      /Albert Decor|American Paints|Copain|Peinture|Bourguignon|Decor\b/i.test(n));
+    const keepsPain = names.some((n) => /pain/i.test(n));
+    if (falsePositives.length > 0) {
+      failures += 1;
+      console.log(`FAIL search word-boundary :: 'pain' still matches non-pain places: ${falsePositives.slice(0, 5).join(', ')}`);
+    } else if (!keepsPain) {
+      failures += 1;
+      console.log(`FAIL search word-boundary :: 'pain' lost the real bakery matches (${names.length} rows)`);
+    } else {
+      console.log(`PASS search word-boundary :: 'pain' -> ${names.length} rows, 0 substring false-positives`);
+    }
+  } catch (error) {
+    failures += 1;
+    console.log(`FAIL search word-boundary :: ${error instanceof Error ? error.message : String(error)}`);
+  }
+})();
+
+await (async () => {
+  ran += 1;
+  try {
+    // Accent-insensitivity: 'marche' (no accent) must reach "Marché d'Adawlato".
+    const rows = await repository.listPublicFacilities(undefined, 'marche');
+    const hit = rows.some((f) => /March/i.test(f.name));
+    if (!hit) {
+      failures += 1;
+      console.log(`FAIL search accent-fold :: 'marche' did not reach an accented "Marché" name (${rows.length} rows)`);
+    } else {
+      console.log(`PASS search accent-fold :: 'marche' reached "Marché" (${rows.length} rows)`);
+    }
+  } catch (error) {
+    failures += 1;
+    console.log(`FAIL search accent-fold :: ${error instanceof Error ? error.message : String(error)}`);
+  }
+})();
+
 const anyEntityId = await sql`select id from v2_entities limit 1`;
 const entityId = anyEntityId[0]?.id ? String(anyEntityId[0].id) : null;
 if (entityId) {

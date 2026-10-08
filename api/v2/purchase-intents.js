@@ -461,6 +461,21 @@ function database() {
   return neon2(url);
 }
 var PUBLIC_TRUST_STATES = /* @__PURE__ */ new Set(["unclaimed", "unconfirmed", "confirmed"]);
+var ACCENT_FOLD_FROM = "\xE0\xE2\xE4\xE1\xE3\xE5\xE7\xE8\xE9\xEA\xEB\xEC\xED\xEE\xEF\xF1\xF2\xF3\xF4\xF5\xF6\xF9\xFA\xFB\xFC\xFD\xFF\xC0\xC2\xC4\xC1\xC3\xC5\xC7\xC8\xC9\xCA\xCB\xCC\xCD\xCE\xCF\xD1\xD2\xD3\xD4\xD5\xD6\xD9\xDA\xDB\xDC\xDD";
+var ACCENT_FOLD_TO = "aaaaaaceeeeiiiinooooouuuuyyAAAAAACEEEEIIIINOOOOOUUUUY";
+function foldAccents(input) {
+  let out = "";
+  for (const ch of input.toLowerCase()) {
+    const i = ACCENT_FOLD_FROM.indexOf(ch);
+    out += i >= 0 ? ACCENT_FOLD_TO[i] : ch;
+  }
+  return out;
+}
+function buildWordBoundaryPattern(raw) {
+  const tokens = foldAccents(raw).split(/[^a-z0-9]+/).filter((t) => t.length > 0);
+  if (tokens.length === 0) return null;
+  return tokens.map((t) => `(?<![a-z0-9])${t}[sx]?(?![a-z0-9])`).join(".*");
+}
 var PUBLIC_FACILITIES_WINDOW_LIMIT = 2e3;
 var toEntity = (row) => ({
   id: String(row.id),
@@ -2214,6 +2229,7 @@ function createTrunkRepository(sql = database()) {
       return retryDatabase(async () => {
         const [west, south, east, north] = bounds ?? [-180, -90, 180, 90];
         const queryText = query?.trim() ?? "";
+        const namePattern = buildWordBoundaryPattern(queryText);
         const categoryText = category?.trim() ?? "";
         const budgetMaxMinor = constraints?.budgetMaxMinor ?? null;
         const budgetCurrency = (constraints?.budgetCurrency?.trim() || "XOF").toUpperCase();
@@ -2306,14 +2322,13 @@ function createTrunkRepository(sql = database()) {
                and camp.starts_at <= now() and camp.ends_at > now()
           where f.longitude between ${west} and ${east}
             and f.latitude between ${south} and ${north}
-            and (${queryText} = ''
-              or f.name ilike '%' || ${queryText} || '%'
-              or coalesce(f.category, '') ilike '%' || ${queryText} || '%'
+            and (${namePattern}::text is null
+              or translate(lower(coalesce(f.name, '') || ' ' || coalesce(f.category, '')), ${ACCENT_FOLD_FROM}, ${ACCENT_FOLD_TO}) ~ ${namePattern}
               or exists (
                 select 1 from v2_products matched
                 where matched.facility_id = f.id
                   and matched.publication_state = 'published'
-                  and (matched.name ilike '%' || ${queryText} || '%' or coalesce(matched.category, '') ilike '%' || ${queryText} || '%')
+                  and translate(lower(coalesce(matched.name, '') || ' ' || coalesce(matched.category, '')), ${ACCENT_FOLD_FROM}, ${ACCENT_FOLD_TO}) ~ ${namePattern}
               ))
             and (${categoryText} = '' or coalesce(f.category, '') = ${categoryText})
             ${quantiteMin === null ? sql`` : sql`and exists (
@@ -2461,6 +2476,7 @@ function createTrunkRepository(sql = database()) {
      */
     async searchPublicEntities(query) {
       const queryText = query?.trim() ?? "";
+      const namePattern = buildWordBoundaryPattern(queryText);
       const rows = await retryDatabase(() => sql`
         select
           e.id,
@@ -2486,7 +2502,8 @@ function createTrunkRepository(sql = database()) {
         left join v2_products p
           on p.entity_id = e.id and p.publication_state = 'published'
         where e.trust_state in ('unconfirmed', 'confirmed', 'certified')
-          and (${queryText} = '' or e.display_name ilike '%' || ${queryText} || '%')
+          and (${namePattern}::text is null
+            or translate(lower(coalesce(e.display_name, '')), ${ACCENT_FOLD_FROM}, ${ACCENT_FOLD_TO}) ~ ${namePattern})
         group by e.id, e.display_name, e.kind, e.trust_state, f.category, f.address, f.latitude, f.longitude
         order by e.trust_state = 'certified' desc, count(p.id) desc, e.display_name
         limit 100

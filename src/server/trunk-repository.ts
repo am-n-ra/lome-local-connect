@@ -27,6 +27,55 @@ function database(): ReturnType<typeof neon> {
 
 const PUBLIC_TRUST_STATES = new Set<PublicFacility['trust']>(['unclaimed', 'unconfirmed', 'confirmed']);
 
+// SEARCH-03 (2026-10-07) : le matcher de recherche. Une recherche tapée par un humain
+// doit tolérer l'accent (`marche` → « Marché ») et exiger le MOT ENTIER, pas la
+// sous-chaîne. `ilike '%pain%'` remontait `painter`/`paint`/`copain` quand on cherchait
+// « pain » — un faux positif mesuré en prod (29 résultats pour 5 vrais). On plie donc les
+// accents (translate) puis on exige chaque mot de la requête comme mot entier, pluriel
+// s/x toléré. Les jetons proviennent d'un split sur `[^a-z0-9]+` : seuls `[a-z0-9]`
+// survivent, donc AUCUN métacaractère regex n'atteint le motif (pas d'injection).
+// Les accents d'ENTRÉE sont pliés côté SQL pour une seule source de vérité.
+const ACCENT_FOLD_FROM = 'àâäáãåçèéêëìíîïñòóôõöùúûüýÿÀÂÄÁÃÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ';
+const ACCENT_FOLD_TO = 'aaaaaaceeeeiiiinooooouuuuyyAAAAAACEEEEIIIINOOOOOUUUUY';
+
+/** Fold accents with the SAME map as the SQL `translate` side (one source of truth). */
+export function foldAccents(input: string): string {
+  let out = '';
+  for (const ch of input.toLowerCase()) {
+    const i = ACCENT_FOLD_FROM.indexOf(ch);
+    out += i >= 0 ? ACCENT_FOLD_TO[i] : ch;
+  }
+  return out;
+}
+
+/**
+ * Turn a raw query into a word-boundary regex, or `null` when it has no searchable
+ * token. Tokens are `[a-z0-9]+` only (split on everything else), so no regex
+ * metacharacter can reach the pattern — the query cannot inject regex. Each token is
+ * matched as a WHOLE word (windows on both sides) with an optional plural `s`/`x`;
+ * multiple tokens are ANDed in order. This is what turns `pain` → 5 bakery/shop
+ * results instead of the 29 that `ilike '%pain%'` returned (painter, paints, copain).
+ */
+export function buildWordBoundaryPattern(raw: string): string | null {
+  const tokens = foldAccents(raw)
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length > 0);
+  if (tokens.length === 0) return null;
+  // Non-consuming boundaries (lookbehind/lookahead): a CONSUMING boundary would eat the
+  // separator and break multi-token queries ("au bon pain"), so the next token then had no
+  // delimiter left to anchor on. Postgres `~` (ARE) and JS RegExp both support these.
+  return tokens
+    .map((t) => `(?<![a-z0-9])${t}[sx]?(?![a-z0-9])`)
+    .join('.*');
+}
+
+// NOTE: the folded haystack is written INLINE in each query template. A helper returning a
+// prebuilt JS string like `translate(...)` would be passed to `sql` as a BOUND PARAMETER,
+// so the query compared the literal string "translate(...)" against the pattern instead of
+// the column — every search returned 0 rows (caught by the read-path proof, not by tsc or
+// the unit suite). The fold-map constants themselves are safe as parameters of `translate`.
+// Only the regex `namePattern` is generated per query.
+
 // D-MAP-1 (fondateur 2026-10-07) : la découverte est plafonnée PAR FENÊTRE de viewport.
 // Le monde compte 13 744 lieux ; l'ancien `limit 250` absolu n'en montrait que 250 au
 // centre d'une vue ville (Lomé : 5 992 réels → 4 %). On relève le plafond à 2 000 par
@@ -2285,6 +2334,9 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       return retryDatabase(async () => {
         const [west, south, east, north] = bounds ?? [-180, -90, 180, 90];
         const queryText = query?.trim() ?? '';
+        // SEARCH-03 : mot entier + accents pliés (le sous-chaîne remontait `painter`/
+        // `paint`/`copain` pour « pain » — un faux positif mesuré en prod).
+        const namePattern = buildWordBoundaryPattern(queryText);
         const categoryText = category?.trim() ?? '';
         const budgetMaxMinor = constraints?.budgetMaxMinor ?? null;
         // D-LOC-3 — the budget is expressed in the user's currency. Never compare
@@ -2381,14 +2433,13 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
                and camp.starts_at <= now() and camp.ends_at > now()
           where f.longitude between ${west} and ${east}
             and f.latitude between ${south} and ${north}
-            and (${queryText} = ''
-              or f.name ilike '%' || ${queryText} || '%'
-              or coalesce(f.category, '') ilike '%' || ${queryText} || '%'
+            and (${namePattern}::text is null
+              or translate(lower(coalesce(f.name, '') || ' ' || coalesce(f.category, '')), ${ACCENT_FOLD_FROM}, ${ACCENT_FOLD_TO}) ~ ${namePattern}
               or exists (
                 select 1 from v2_products matched
                 where matched.facility_id = f.id
                   and matched.publication_state = 'published'
-                  and (matched.name ilike '%' || ${queryText} || '%' or coalesce(matched.category, '') ilike '%' || ${queryText} || '%')
+                  and translate(lower(coalesce(matched.name, '') || ' ' || coalesce(matched.category, '')), ${ACCENT_FOLD_FROM}, ${ACCENT_FOLD_TO}) ~ ${namePattern}
               ))
             and (${categoryText} = '' or coalesce(f.category, '') = ${categoryText})
             ${quantiteMin === null ? sql`` : sql`and exists (
@@ -2539,6 +2590,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
      */
     async searchPublicEntities(query?: string): Promise<PublicEntity[]> {
       const queryText = query?.trim() ?? '';
+      // SEARCH-03 : mot entier + accents pliés, au lieu du sous-chaîne sensible à l'accent.
+      const namePattern = buildWordBoundaryPattern(queryText);
       const rows = await retryDatabase(() => sql`
         select
           e.id,
@@ -2564,7 +2617,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         left join v2_products p
           on p.entity_id = e.id and p.publication_state = 'published'
         where e.trust_state in ('unconfirmed', 'confirmed', 'certified')
-          and (${queryText} = '' or e.display_name ilike '%' || ${queryText} || '%')
+          and (${namePattern}::text is null
+            or translate(lower(coalesce(e.display_name, '')), ${ACCENT_FOLD_FROM}, ${ACCENT_FOLD_TO}) ~ ${namePattern})
         group by e.id, e.display_name, e.kind, e.trust_state, f.category, f.address, f.latitude, f.longitude
         order by e.trust_state = 'certified' desc, count(p.id) desc, e.display_name
         limit 100
