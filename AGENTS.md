@@ -1200,3 +1200,25 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
   `docs/founder-hq/handoff-receipt-HO-OMNI-37.md`. **Porte Heartwood.** Décisions ouvertes : ouvrir/
   retirer **Web Push** et la **surface opérateur runs** ; puis **terrain** (en dernier).
 
+### Install (A2HS) — le préalable honnête du Web Push (`10d0523`, en prod)
+
+- **Décision fondateur :** ne pas retirer Web Push — au contraire, **prompter les Android** et **guider
+  l'installation sur iOS**. Vérifié (Apple + Mozilla, 2025) : **iOS Safari ne supporte NI
+  `beforeinstallprompt` NI le push hors écran d'accueil** (16.4+) ; c'est **la seule plateforme** où
+  l'automatique est impossible. **On ne prompte jamais iOS — on guide.** Et **jamais** demander la
+  permission avant l'installation : dans un onglet Safari l'invite n'apparaît pas → « l'app a l'air
+  cassée ». L'ordre correct : **expliquer → installer → demander depuis l'app installée**.
+- **Livré :** `src/trunk/pwa-install.ts` (pur, 7 tests) — détection iPhone/iPad (y compris iPadOS qui se
+  déguise en Mac tactile via `Macintosh + Mobile`), état honnête `installed`/`installable`/`manual-guide`/
+  `unsupported`, étapes par plateforme. `TrunkAppV13` : capture `beforeinstallprompt` (Android/desktop →
+  **vrai bouton**) + `appinstalled`, feuille `install`, **entrée de menu AVANT session** (on installe
+  avant de créer un compte). **Rien** si déjà installé (`display-mode:standalone` / `navigator.standalone`).
+- **Garde `pwa-shell-guard`** : la couche **reste câblée** — c'est exactement la classe `gateRequest`
+  (construire un fichier qui n'est jamais branché). **Preuve navigateur** `probe-pwa-install.mjs` **6/6
+  en prod** (desktop + iPhone simulé : guide Partager → Sur l'écran d'accueil → Ajouter).
+- **Tranche 2 (à décider)** : le **sender** Web Push + consentement (depuis l'app **installée**) + VAPID.
+  **Gratuit** (les services de push des navigateurs = 0 $ ; FCM/APNs sans frais par envoi) ; ~1 tranche.
+- **Leçon :** *un « coût 0 » n'est pas « aucun travail ».* Web Push est gratuit côté service **et** code
+  serveur déjà en place, mais il manque **le sender** (personne ne dépile `web_push='queued'`) **et** le
+  **chemin d'installation** — sur iOS, une **contrainte de plateforme**, pas un oubli de config.
+
