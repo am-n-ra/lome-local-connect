@@ -942,11 +942,13 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // Heartwood : reprend l'action mémorisée AVANT la connexion. Une intention d'achat exige
   // l'onboarding complet ; les autres actions gardées (comparer, dispo groupée) reprennent
   // immédiatement quand une session réelle existe déjà.
-  const resumePendingAction = useCallback(async () => {
+  // `authenticated` est passé par l'appelant : la session vient d'être créée, l'état
+  // `sessionUser` ne serait pas encore reflété dans cette closure (piège de staleness).
+  const resumePendingAction = useCallback(async (authenticated: boolean) => {
     const action = pendingAction;
     setPendingAction(null);
     if (!action) { setSheet('none'); return; }
-    if (!sessionUser) { setSheet('onboard'); return; }
+    if (!authenticated) { setSheet('onboard'); return; }
     const resume = pendingActionResume(action);
     switch (resume.sheet) {
       case 'flow':
@@ -959,7 +961,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       case 'seller': setSheet('seller'); return;
       default: setSheet('none');
     }
-  }, [pendingAction, sessionUser, startFlow, openCompare, openBulk]);
+  }, [pendingAction, startFlow, openCompare, openBulk]);
 
 
   const refreshCreditSummary = useCallback(async () => {
@@ -2575,7 +2577,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               void loadBuyerProStatus();
             }
           }}
-          onClose={() => { setPendingAction(null); setSheet('menu'); }} onComplete={() => { void resumePendingAction(); }} />
+          onClose={() => { setPendingAction(null); setSheet('menu'); }} onComplete={() => { void resumePendingAction(true); }} />
       )}
       {sheet === 'flow' && flowFacility && flowProduct && (
         <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => { setPendingResumeTxnId(null); setSheet('facility'); }} resumeTxnId={pendingResumeTxnId} onGate={gateRequest} onRoute={(longitude: number, latitude: number, name: string) => { setRouteTarget({ longitude, latitude, name }); setSheet('none'); }} walletBalanceMinor={wallet?.balanceMinor ?? null} />
@@ -3356,7 +3358,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               setAuthToken(await getAuthToken());
               if (pendingAction) {
                 // Heartwood : l'utilisateur connecté reprend son action en cours, sans onboarding.
-                await resumePendingAction();
+                await resumePendingAction(true);
               } else {
                 setSheet("menu");
               }

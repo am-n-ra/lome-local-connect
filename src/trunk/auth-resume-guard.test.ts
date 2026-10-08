@@ -31,12 +31,19 @@ describe('AUTH-RESUME — une action gardée est reprise après connexion', () =
 
   it('l\'écran de connexion reprend l\'action au lieu de tomber sur le menu', () => {
     // Le login connecté adopte la session PUIS reprend — jamais un `setSheet("menu")` sec.
-    expect(APP).toMatch(/await resumePendingAction\(\);/);
+    expect(APP).toMatch(/await resumePendingAction\(true\);/);
     expect(APP).not.toMatch(/setAuthToken\(await getAuthToken\(\)\);\s*\n\s*if \(pendingAction\) \{ setSheet\('onboard'\); \} else \{ setSheet\("menu"\); \}/);
   });
 
   it('l\'onboarding et la connexion partagent le même chemin de reprise', () => {
-    expect(APP).toMatch(/onComplete=\{\(\) => \{ void resumePendingAction\(\); \}\}/);
+    expect(APP).toMatch(/onComplete=\{\(\) => \{ void resumePendingAction\(true\); \}\}/);
+  });
+
+  it('la reprise ne se fie pas à l\'état `sessionUser` (staleness après login)', () => {
+    // La session vient d'être créée : l'appelant passe l'état, jamais la closure périmée.
+    const body = APP.slice(APP.indexOf('const resumePendingAction = useCallback'), APP.indexOf('const refreshCreditSummary'));
+    expect(body).toContain('if (!authenticated)');
+    expect(body).not.toContain('if (!sessionUser)');
   });
 
   it('la reprise route vers la feuille demandée (compare/bulk fournies)', () => {
