@@ -166,5 +166,11 @@ proactif** propose l'installation **sans passer par le menu**.
   → la reprise rouvre la fiche. **A/B prod** : avant → `menu`, après → `facility`. Reste = mutations/loads
   (`sendBulk`, `cancel`, favori, refresh) : aucune destination à reprendre. **Leçon : un audit de classe doit
   être REJOUÉ — un seul passage ne suffit pas.**
-- **Poser les clés VAPID** dans Vercel (`web-push generate-vapid-keys`) puis preuve de bout en bout.
+- **Poser les clés VAPID** (`a631724`) : le **runbook** `docs/push-operations.md` a été **corrigé** — il
+  nommait `VITE_VAPID_PUBLIC_KEY`/`PUSH_PROVIDER`, **inexistantes** (0 occurrence) ; il décrit désormais la
+  seule config réelle (`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT`), la séquence d'armement et la
+  **vérification par comportement** (`push-key` `configured:false → true`). Garde `push-operations-docs.test.ts`
+  (falsifié). **Action fondateur (hors sandbox)** : `npx web-push generate-vapid-keys` → poser les 3 variables
+  en **Production** Vercel → **redéployer** → vérifier `GET /api/v2/notifications/push-key` → preuve
+  authentifiée (abonnement → livraison → notification → tap Inbox → révocation).
 - `getOperatorRuns` : sans UI — à ouvrir au terrain ou à retirer.

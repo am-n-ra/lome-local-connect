@@ -1248,4 +1248,17 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
   probe PWA install **11/11 PASS** sur prod ; **T-07d ✅** à chaque push (hash prod === local **et** entrée
   de déploiement GitHub). Leçon : un audit de classe doit être **rejoué** — la 1ʳᵉ passe avait raté 2 des 3
   instances du même défaut.
+- **Heartwood — durcissement du chemin VAPID (`a631724`, 2026-10-07).** `docs/push-operations.md` nommait
+  `VITE_VAPID_PUBLIC_KEY` et `PUSH_PROVIDER`, **absentes du code** (0 occurrence) : suivre le runbook aurait
+  armé les mauvaises variables et le push serait resté `not-configured` — **échec silencieux au moment même
+  où l'on croit avoir activé la fonction**. Document **réécrit sur la vérité du code** (3 variables réelles lues
+  par `vapidConfig()` ; migrations `008`/`006` ; séquence d'armement : générer → poser en prod → **redéployer**
+  → vérifier par le **comportement** de `push-key` ; sémantique d'échec du drain ; preuve minimale ; état
+  honnête `partial/configuration-gated`). **Garde** `src/server/push-operations-docs.test.ts` : la table
+  d'armement ne peut citer que des variables présentes dans le provider (**falsifié** : `PUSH_PROVIDER` injecté
+  → 1 échec). Vérifié aussi, code : le drain est câblé (`drainWebPushBestEffort`), l'enqueue n'émet un
+  `web_push` **que si** un abonnement `granted` existe (pas de livraison zombie), `web-push` est déclaré +
+  bundlé, `sw.js` gère `push`/`notificationclick` (`?notifs=1`), **0 fuite VAPID** dans le bundle client.
+  **982/982 tests**, tsc clean, 6 gardes OK, T-07d ✅ (`a631724` en prod, bundle client inchangé = slice docs/test).
+  **Leçon : un runbook qui nomme une config inexistante est un mensonge dormant — lier le document au code par un garde.**
 
