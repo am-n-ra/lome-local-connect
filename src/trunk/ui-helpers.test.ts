@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describePendingAction, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, pendingActionResume, sortProductsStockFirst, walletBucketTotals } from './ui-helpers';
+import { describePendingAction, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, pendingActionResume, sortProductsStockFirst, walletBucketTotals, type PendingAction } from './ui-helpers';
 
 describe('PendingAction resume contract', () => {
   it('labels each protected action for the access-portal gate', () => {
@@ -21,6 +21,21 @@ describe('PendingAction resume contract', () => {
   it('reprend les actions gardées comparer / dispo groupée (Heartwood)', () => {
     expect(pendingActionResume({ kind: 'compare', returnTo: 'compare' })).toEqual({ sheet: 'compare' });
     expect(pendingActionResume({ kind: 'bulk', returnTo: 'bulk' })).toEqual({ sheet: 'bulk' });
+  });
+
+  it('reprend TOUTES les destinations exposées (classe AUTH-RESUME)', () => {
+    const cases: PendingAction[] = [
+      { kind: 'home', returnTo: 'home' },
+      { kind: 'wallet', returnTo: 'wallet' },
+      { kind: 'saved', returnTo: 'saved' },
+      { kind: 'tour', returnTo: 'tour' },
+      { kind: 'notifs', returnTo: 'notifs' },
+      { kind: 'recovery', returnTo: 'recovery' },
+    ];
+    for (const action of cases) {
+      expect(pendingActionResume(action)).toEqual({ sheet: action.kind });
+      expect(describePendingAction(action)).not.toBe('');
+    }
   });
 
   it('orders products so in-stock items lead', () => {

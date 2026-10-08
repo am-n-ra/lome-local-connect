@@ -796,7 +796,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   }, [compareResults, results, bulkDetails, buyerProStatus]);
 
   const openHome = useCallback(async () => {
-    const token = await requireAuth();
+    const token = await requireAuth({ kind: 'home', returnTo: 'home' });
     if (!token) return;
     setSheet('home'); setBuyerRequestsState('loading'); setBuyerRequestsError('');
     setOpenTxnState('loading');
@@ -828,7 +828,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // verrouillée côté serveur, jamais annulée) sans repasser par la dispo.
   // Déclaré avant openNotification (qui le réutilise pour les deep-links).
   const resumeTransaction = useCallback(async (transaction: { transactionId: string; facilityName?: string | null; productName?: string | null }) => {
-    const token = await requireAuth();
+    const token = await requireAuth({ kind: 'home', returnTo: 'home' });
     if (!token) return;
     const result = await getTransaction({ transactionId: transaction.transactionId, token });
     if (!result.ok || !result.data) {
@@ -844,7 +844,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // X3 — ouvrir la Room dédiée d'une transaction (S-27) : suivi + chat complet + actions.
   // Réutilise le token de session et la ligne de liste ; aucune lecture neuve.
   const openRoom = useCallback(async (transaction: { transactionId: string; facilityName?: string | null; productName?: string | null; actorRole: 'buyer' | 'seller'; lastEventAt?: string | null }) => {
-    const token = await requireAuth();
+    const token = await requireAuth({ kind: 'home', returnTo: 'home' });
     if (!token) return;
     setRoomTxn({
       transactionId: transaction.transactionId,
@@ -862,7 +862,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // Lecture seule d'états existants : aucune persistance neuve, aucun appel neuf
   // sauf le rafraîchissement des transactions (même appel que l'accueil).
   const openRecovery = useCallback(async () => {
-    const token = await requireAuth();
+    const token = await requireAuth({ kind: 'recovery', returnTo: 'recovery' });
     if (!token) return;
     setSheet('recovery');
     setOpenTxnState('loading');
@@ -876,7 +876,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   }, [requireAuth]);
 
   const openNotifs = useCallback(async () => {
-    const token = await requireAuth();
+    const token = await requireAuth({ kind: 'notifs', returnTo: 'notifs' });
     if (!token) return;
     setSheet('notifs'); setNotifsState('loading'); setNotifsError('');
     try {
@@ -938,31 +938,6 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     setFlowProduct(product);
     setSheet('flow');
   }, []);
-
-  // Heartwood : reprend l'action mémorisée AVANT la connexion. Une intention d'achat exige
-  // l'onboarding complet ; les autres actions gardées (comparer, dispo groupée) reprennent
-  // immédiatement quand une session réelle existe déjà.
-  // `authenticated` est passé par l'appelant : la session vient d'être créée, l'état
-  // `sessionUser` ne serait pas encore reflété dans cette closure (piège de staleness).
-  const resumePendingAction = useCallback(async (authenticated: boolean) => {
-    const action = pendingAction;
-    setPendingAction(null);
-    if (!action) { setSheet('none'); return; }
-    if (!authenticated) { setSheet('onboard'); return; }
-    const resume = pendingActionResume(action);
-    switch (resume.sheet) {
-      case 'flow':
-        setSheet('facility');
-        startFlow({ id: resume.facilityId, name: resume.facilityName }, { id: resume.productId, name: resume.productName });
-        return;
-      case 'compare': await openCompare(); return;
-      case 'bulk': await openBulk(); return;
-      case 'search': setSheet('search'); return;
-      case 'seller': setSheet('seller'); return;
-      default: setSheet('none');
-    }
-  }, [pendingAction, startFlow, openCompare, openBulk]);
-
 
   const refreshCreditSummary = useCallback(async () => {
     const token = await requireAuth();
@@ -1090,7 +1065,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   }, [requireAuth, sessionUser, packBuyingId]);
 
   const openWallet = useCallback(async () => {
-    const token = await requireAuth();
+    const token = await requireAuth({ kind: 'wallet', returnTo: 'wallet' });
     if (!token) return;
     setSheet('wallet'); setWalletState('loading'); setWalletError(''); setRechargeState('idle'); setRechargeResult(null);
     try {
@@ -1111,7 +1086,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   }, [requireAuth, loadPacks, refreshCreditSummary]);
 
   const openSaved = useCallback(async () => {
-    const token = await requireAuth();
+    const token = await requireAuth({ kind: 'saved', returnTo: 'saved' });
     if (!token) return;
     setSheet('saved'); setSavedState('loading'); setSavedError('');
     try {
@@ -1305,7 +1280,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
 
   // TF-6 — tournée : charge la file scopée zone, prend, constate, transmet.
   const openTour = useCallback(async () => {
-    const token = await requireAuth();
+    const token = await requireAuth({ kind: 'tour', returnTo: 'tour' });
     if (!token) return;
     setSheet('tour'); setTourState('loading'); setTourError(''); setVisitToast('');
     try {
@@ -1322,6 +1297,36 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       setTourError(caught instanceof Error ? caught.message : 'La tournée ne peut pas être chargée pour le moment.');
     }
   }, [requireAuth]);
+
+  // Heartwood : reprend l'action mémorisée AVANT la connexion. Une intention d'achat exige
+  // l'onboarding complet ; les autres actions gardées (comparer, dispo groupée) reprennent
+  // immédiatement quand une session réelle existe déjà.
+  // `authenticated` est passé par l'appelant : la session vient d'être créée, l'état
+  // `sessionUser` ne serait pas encore reflété dans cette closure (piège de staleness).
+  const resumePendingAction = useCallback(async (authenticated: boolean) => {
+    const action = pendingAction;
+    setPendingAction(null);
+    if (!action) { setSheet('none'); return; }
+    if (!authenticated) { setSheet('onboard'); return; }
+    const resume = pendingActionResume(action);
+    switch (resume.sheet) {
+      case 'flow':
+        setSheet('facility');
+        startFlow({ id: resume.facilityId, name: resume.facilityName }, { id: resume.productId, name: resume.productName });
+        return;
+      case 'compare': await openCompare(); return;
+      case 'bulk': await openBulk(); return;
+      case 'home': await openHome(); return;
+      case 'wallet': await openWallet(); return;
+      case 'saved': await openSaved(); return;
+      case 'tour': await openTour(); return;
+      case 'notifs': await openNotifs(); return;
+      case 'recovery': await openRecovery(); return;
+      case 'search': setSheet('search'); return;
+      case 'seller': setSheet('seller'); return;
+      default: setSheet('none');
+    }
+  }, [pendingAction, startFlow, openCompare, openBulk, openHome, openWallet, openSaved, openTour, openNotifs, openRecovery]);
 
   const openDossier = useCallback((visit: FieldVisit) => {
     setSelVisitId(visit.id);

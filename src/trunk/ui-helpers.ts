@@ -75,7 +75,13 @@ export type PendingAction =
   | { kind: 'seller-entry'; returnTo: 'seller-entry' }
   | { kind: 'search'; returnTo: 'search' }
   | { kind: 'compare'; returnTo: 'compare' }
-  | { kind: 'bulk'; returnTo: 'bulk' };
+  | { kind: 'bulk'; returnTo: 'bulk' }
+  | { kind: 'home'; returnTo: 'home' }
+  | { kind: 'wallet'; returnTo: 'wallet' }
+  | { kind: 'saved'; returnTo: 'saved' }
+  | { kind: 'tour'; returnTo: 'tour' }
+  | { kind: 'notifs'; returnTo: 'notifs' }
+  | { kind: 'recovery'; returnTo: 'recovery' };
 
 export function describePendingAction(action: PendingAction | null): string {
   switch (action?.kind) {
@@ -84,6 +90,12 @@ export function describePendingAction(action: PendingAction | null): string {
     case 'search': return 'Search';
     case 'compare': return 'Comparaison';
     case 'bulk': return 'Disponibilité groupée';
+    case 'home': return 'Mon espace';
+    case 'wallet': return 'Portefeuille';
+    case 'saved': return 'Recherches sauvegardées';
+    case 'tour': return 'Tournée';
+    case 'notifs': return 'Notifications';
+    case 'recovery': return 'Reprise';
     default: return '';
   }
 }
@@ -94,6 +106,12 @@ export type PendingResume =
   | { sheet: 'seller' }
   | { sheet: 'compare' }
   | { sheet: 'bulk' }
+  | { sheet: 'home' }
+  | { sheet: 'wallet' }
+  | { sheet: 'saved' }
+  | { sheet: 'tour' }
+  | { sheet: 'notifs' }
+  | { sheet: 'recovery' }
   | { sheet: 'none' };
 
 export function pendingActionResume(action: PendingAction | null): PendingResume {
@@ -105,6 +123,12 @@ export function pendingActionResume(action: PendingAction | null): PendingResume
   if (action?.kind === 'seller-entry') return { sheet: 'seller' };
   if (action?.kind === 'compare') return { sheet: 'compare' };
   if (action?.kind === 'bulk') return { sheet: 'bulk' };
+  if (action?.kind === 'home') return { sheet: 'home' };
+  if (action?.kind === 'wallet') return { sheet: 'wallet' };
+  if (action?.kind === 'saved') return { sheet: 'saved' };
+  if (action?.kind === 'tour') return { sheet: 'tour' };
+  if (action?.kind === 'notifs') return { sheet: 'notifs' };
+  if (action?.kind === 'recovery') return { sheet: 'recovery' };
  return { sheet: 'none' };
 }
 

@@ -29,6 +29,21 @@ describe('AUTH-RESUME — une action gardée est reprise après connexion', () =
     expect(APP).toContain("requireAuth({ kind: 'bulk', returnTo: 'bulk' })");
   });
 
+  it('TOUTES les destinations exposées depuis le menu déclarent leur reprise', () => {
+    // Classe AUTH-RESUME : toute action qui ouvre une destination APRÈS le gate doit
+    // la mémoriser, sinon l'utilisateur non connecté est renvoyé au menu.
+    for (const kind of ['home', 'wallet', 'saved', 'tour', 'notifs', 'recovery']) {
+      expect(APP, `${kind} doit déclarer sa reprise`).toContain(`requireAuth({ kind: '${kind}', returnTo: '${kind}' })`);
+    }
+  });
+
+  it('la reprise route chaque destination exposée vers sa feuille', () => {
+    for (const kind of ['home', 'wallet', 'saved', 'tour', 'notifs', 'recovery']) {
+      const fn = kind === 'home' ? 'openHome' : kind === 'wallet' ? 'openWallet' : kind === 'saved' ? 'openSaved' : kind === 'tour' ? 'openTour' : kind === 'notifs' ? 'openNotifs' : 'openRecovery';
+      expect(APP, `${kind} doit router`).toContain(`case '${kind}': await ${fn}(); return;`);
+    }
+  });
+
   it('l\'écran de connexion reprend l\'action au lieu de tomber sur le menu', () => {
     // Le login connecté adopte la session PUIS reprend — jamais un `setSheet("menu")` sec.
     expect(APP).toMatch(/await resumePendingAction\(true\);/);
@@ -41,7 +56,8 @@ describe('AUTH-RESUME — une action gardée est reprise après connexion', () =
 
   it('la reprise ne se fie pas à l\'état `sessionUser` (staleness après login)', () => {
     // La session vient d'être créée : l'appelant passe l'état, jamais la closure périmée.
-    const body = APP.slice(APP.indexOf('const resumePendingAction = useCallback'), APP.indexOf('const refreshCreditSummary'));
+    const start = APP.indexOf('const resumePendingAction = useCallback');
+    const body = APP.slice(start, APP.indexOf('const openDossier', start));
     expect(body).toContain('if (!authenticated)');
     expect(body).not.toContain('if (!sessionUser)');
   });
