@@ -82,6 +82,13 @@ const marcheNames = await resultNames();
 if (marcheNames.some((n) => /March/i.test(n))) pass(`offer search 'marche' reached an accented "Marché" name`);
 else fail(`offer search 'marche' did not reach "Marché" (${marcheNames.length} rows)`);
 
+// --- A real entity still resolves by identity (run BEFORE the fallback, which leaves
+// the entity list empty by design) ---
+await search('boulangerie', 'Chercher une entité');
+const entityNames = await resultNames();
+if (entityNames.some((n) => /Boulangerie/i.test(n))) pass(`entity search 'boulangerie' still resolves the real entity`);
+else fail(`entity search 'boulangerie' lost the real entity (${entityNames.length} rows)`);
+
 // --- Complaint 1: entity search for a place name must not be a dead end ---
 await search('mrs', 'Chercher une entité');
 const entityText = await bodyText();
@@ -90,13 +97,6 @@ const bareDeadEnd = /aucune entité ne correspond à ce nom\./i.test(entityText)
 if (hasPlaceHint) pass(`entity search 'mrs' surfaces a place hint and routes to the offer level`);
 else if (bareDeadEnd) fail(`entity search 'mrs' is still a bare dead end (no place hint)`);
 else fail(`entity search 'mrs' answered neither a place hint nor a clear dead-end: ${entityText.slice(0, 160)}`);
-
-// --- A real entity still resolves by identity ---
-await search('boulangerie', 'Chercher une entité');
-const entityNames = await page.evaluate(() =>
-  Array.from(document.querySelectorAll('#hgrid .hcard b')).map((b) => b.textContent || ''));
-if (entityNames.some((n) => /Boulangerie/i.test(n))) pass(`entity search 'boulangerie' still resolves the real entity`);
-else fail(`entity search 'boulangerie' lost the real entity (${entityNames.length} rows)`);
 
 if (errors.length > 0) fail(`page errors: ${errors.join(' | ')}`);
 else pass('no page errors');
