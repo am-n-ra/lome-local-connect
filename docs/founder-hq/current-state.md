@@ -14,13 +14,14 @@
 
 | Field | Value |
 |---|---|
-| **Gate** | `TRUNK_CLOSED_HEARTWOOD_OPEN` |
+| **Gate** | `HEARTWOOD_CLOSED_BRANCHES_OPEN` |
 | **As of** | 2026-10-07 |
-| **Decided by** | Fondateur (« Ok on va clore »). Clôture **Trunk CLOSE** 2026-10-07 ; porte suivante **Heartwood OPEN** = durcissement/fermeture du tronc (voir §Verdict Trunk). |
+| **Decided by** | Fondateur (« clos and next »). Clôture **Heartwood CLOSE** 2026-10-07 ; porte suivante **Branches OPEN** = une fonctionnalité à la fois (voir §Verdict Heartwood). |
 | **Seed** | **CLOS `founder-confirmed`** — `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (32 décisions `S-01…S-32`) |
 | **Species** | **CLOSE `founder-confirmed` 2026-09-25** — maquette `docs/maquette/omni-species-v2-interactive.html` (74 écrans). Validation fondateur de **`SP-1…SP-10`** reçue (« Validé »). |
 | **Root** | **CLOS `founder-confirmed` 2026-09-29** — voir §Verdict Root. 4 caractéristiques vivantes (R-G/R-H/R-I), claim Root+UI, viewport, tap-claim, caméra durcie, preuves MCP réconciliées, revue relais 76/76. |
 | **Trunk** | **CLOSE `founder-confirmed` 2026-10-07** — voir §Verdict Trunk. Os du tronc complets : `DS-1…DS-14`, `X1/X2` (`3d19a50`), `X3` Room (`bda68e0`), `X4` desktop/PWA, `X5` onboarding, `UI-1…UI-10`, `X6` countmark (`5dc5275`), **GLOBE-REG** (`43a3785`, globe bloqué au zoom rue corrigé). Aucune slice de code restante *au titre du périmètre Trunk*. |
+| **Heartwood** | **CLOSE `founder-confirmed` 2026-10-07** — voir §Verdict Heartwood. Durcissement/fermeture : 5 items de fermeture (`S1`/`S1b` QR réel, `S3-a` téléphone déclaré, `S4` ambulants ; `S2` re-classé, `S5` décision close) + `MAP-1`/`MAP-2` + `DOCK-DUP` + `HP-1…HP-5`. Dossier `heartwood-close-dossier-2026-10-07.md`. |
 
 > **⚠️ La validation fondateur est arrivée le 2026-09-25** (« Ok Validé »). Elle porte sur **`SP-1…SP-10`**.
 > **Un audit conforme ne vaut pas acceptation** — la règle reste ; ici l'acceptation est **explicite et
@@ -35,7 +36,7 @@
 >
 > **Mesure au moment de la clôture** : `check:species-t12` → **26 décisions rendues / 32**, `NON MESURÉ = 0`,
 > **0 non conforme** ; `check:maquette` 74 écrans, 5 niveaux, registre honnête ; **600/600 tests**.
-| **Downstream gates** | **Heartwood OUVERTE 2026-10-07** (Trunk CLOSE 2026-10-07, §Verdict Trunk) · **tranches Trunk livrées** : conformité dock/recherche/menus `DS-1…DS-14` (`1da8c3f`) · `X1` expiration d'intention honnête (migration `067`) · `X2` automatisation vendeur (`3d19a50`) · `X3` Room de transaction (`bda68e0`) · `X4` desktop/PWA (`91bfa63`) · `X5` onboarding honnête (`6ccbfd9`) · `UI-1…UI-10` cohérence UI (`3d44e13`/`5ce7686`) · `X6` retrait countmark (`5dc5275`) · `GLOBE-REG` globe bloqué au zoom rue (`43a3785`) · **Branches/Canopy/Ring non ouvertes** |
+| **Downstream gates** | **Branches OUVERTE 2026-10-07** (Heartwood CLOSE 2026-10-07, §Verdict Heartwood) · **tranches Heartwood livrées** : `S1`/`S1b` QR réel · `S3-a` téléphone déclaré · `S4` ambulants découvrables · `MAP-1`/`MAP-2` pins carte · `DOCK-DUP` · `HP-1…HP-5` durcissement · **Canopy/Ring non ouvertes** |
 | **Séquencement terrain — décision fondateur 2026-10-07** | **Le terrain (`TT-1` usage réel / `TT-2` données / Gate 7 Venture Lifecycle) vient EN DERNIER — après clôture de TOUTES les portes Nature Way** (Seed → Species → Root → Trunk → Heartwood → Branches → Canopy → Ring). Mot du fondateur : *« terrain doit venir après qu'on ait fini complètement avec toutes les gates nature way »*. Le lot terrain n'est **jamais une slice Trunk** : il ne démarre pas tant qu'une porte Nature Way aval reste ouverte. Owner terrain = fondateur (hors sandbox). |
 
 ## Verdict Trunk — CLOSE `founder-confirmed` 2026-10-07
@@ -68,6 +69,54 @@
 > **Réserves actées (suivies hors Trunk) :** décisions ouvertes (UM-6, D-LOC-6/8, D-C5, RT-4,
 > H1–H4), spot-checks terrain (session réelle), dette de données (adresses 2,9 %, 17 fantômes
 > Ghana). **Ne rouvrir Trunk que sur fait nouveau** (régression prouvée ou décision fondateur).
+
+## Verdict Heartwood — CLOSE `founder-confirmed` 2026-10-07
+
+> **Décision fondateur :** *« clos and next »* — la porte **Heartwood** ferme ; la porte suivante
+> **Branches** ouvre. Même règle : livrer ne clôt pas, seule une décision enregistrée clôt.
+>
+> **Ce qui est clos (périmètre Heartwood — durcissement/fermeture, pas de nouvelles fondations) :**
+> les **5 items de fermeture** mesurés le 2026-10-07 + tout le durcissement trouvé en chemin :
+> - **`S1`/`S1b`** — QR réel (scannable, `OmniQr` partagé ; décodage `jsqr` 3/3) + QR public
+>   d'entité (S-21, option a) ;
+> - **`S3-a`** — téléphone Togo **déclaré** (jamais « vérifié ») + `wa.me` gratuit (migration `069`) ;
+> - **`S4`** — ambulants découvrables (`facilityType`/`rayonKm` exposés, chip `Transport` activée) ;
+> - **`S2`** — argent réel E2E **re-classé `candidate`** (FedaPay déjà prouvé par le passé) ;
+> - **`S5`** — OSM Togo **décision close** (pas un écart) ;
+> - **`MAP-1`/`MAP-2`** — pins carte (plafond par fenêtre 2 000 ; carte branchée sur la découverte) ;
+> - **`DOCK-DUP`** — jumeaux `.navpill` (clé React fuyante corrigée) ;
+> - **`HP-1…HP-5`** — flood transform MapLibre soigné · frontière d'erreur · délai de requête ·
+>   surfaces d'API client sans UI · garde `check:dock-search` réconcilié.
+>
+> **Preuves :** **1004/1004** tests, `tsc` 0, **9/9 gardes verts** (`state`/`docs`/`coherence`/
+> `live-surface`/`boundary`/`dead-css`/`maquette`/`dock-search`/`species-t12`) ; prod `index-DLYeXIbP.js`
+> === local (T-07d ✅, entrée GitHub `6141213`). Paquet de preuves :
+> `docs/founder-hq/heartwood-close-dossier-2026-10-07.md`.
+>
+> **Réserves actées (suivies hors Heartwood) :** `S2` (re-prouver FedaPay en session fondateur —
+> geste optionnel) ; preuve navigateur des formulaires authentifiés (session réelle requise) ;
+> données `mobile` = 0 (acte vendeur, pas un manque de code) ; décisions ouvertes (UM-6,
+> D-LOC-6/8, D-C5, RT-4, H1–H4). **Ne rouvrir Heartwood que sur fait nouveau** (régression prouvée
+> ou décision fondateur).
+
+## Branches OPEN — 2026-10-07 (porte courante)
+
+> **Phase 5 Nature Way — une fonctionnalité à la fois.** Chaque branche exécute le **cycle imbriqué
+> complet** : mini-seed → mini-species → contrat (données/API/permission/acceptation) → UI + backend
+> ensemble → validation/permissions/états/recovery → preuve (unitaire/intégration/navigateur/largeurs/
+> négatif) → mise à jour du plan/preuve → **la branche suivante ne démarre qu'après vérification**.
+> **Aucune API sans UI atteignable, aucune UI sans opération réelle** (règle `no orphaned layers`).
+>
+> **Sélection des branches = décision fondateur** : une branche qui ne se rattache à **aucune
+> décision `S-xx`** ne démarre pas (H1). Candidats mesurés (à confirmer/ordonner par le fondateur) :
+> - **décisions ouvertes** : `UM-6` (montant du bonus), `D-LOC-6` (unité monétaire canonique),
+>   `D-LOC-8` (convertir ou montrer l'origine), `D-C5` (bulk = 1 besoin), `RT-4` (voix itinéraire) ;
+> - **résidus de slices** : `MENU-01` destinations vendeur restantes (boutons morts si affichés),
+>   analytics par-produit/marché, `getOperatorRuns` filtres/relance ;
+> - **capacités Seed non couvertes** : recommandations (Buyer Pro), publicité IA (au-delà manuel).
+>
+> **Prochaine action :** HQ présente la liste ordonnée au fondateur pour sélection de la **première
+> branche**. Aucune branche ne démarre avant ce choix. **Terrain toujours EN DERNIER.**
 
 ## Fermeture — items (mesurés 2026-10-07, entrants Heartwood)
 

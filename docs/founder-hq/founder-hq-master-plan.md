@@ -28,8 +28,8 @@ These supersede the product framing in `OMNI-V3-MASTER-PLAN.md §2–3` where th
 
 ## Ordered gate plan
 
-> ⚠️ **PORTE COURANTE : HEARTWOOD (ouverte 2026-10-07 — Trunk CLOSE `founder-confirmed` 2026-10-07). Root CLOSE `founder-confirmed` 2026-09-29.**
-> Marker de contrôle : **Species V2 CLOSE** (toujours valide) + **Root CLOSE** (2026-09-29) + **Trunk CLOSE** (2026-10-07) + **Heartwood OPEN** (2026-10-07). Historique ci-dessous : Trunk alors ouverte.
+> ⚠️ **PORTE COURANTE : BRANCHES (ouverte 2026-10-07 — Heartwood CLOSE `founder-confirmed` 2026-10-07). Trunk CLOSE `founder-confirmed` 2026-10-07. Root CLOSE `founder-confirmed` 2026-09-29.**
+> Marker de contrôle : **Species V2 CLOSE** (toujours valide) + **Root CLOSE** (2026-09-29) + **Trunk CLOSE** (2026-10-07) + **Heartwood CLOSE** (2026-10-07) + **Branches OPEN** (2026-10-07). Historique ci-dessous : Trunk puis Heartwood alors ouvertes.
 > Historique : Seed reconciliation + Species reconciliation (RÉOUVERTE 2026-09-23 → CLOSE 2026-09-25).
 > Les statuts `done` des lignes 1–2 ci-dessous décrivent l'état **V1 du 2026-09-02**, **superseded** :
 > le fondateur a rouvert Seed puis Species le **2026-09-23** (voir §« HQ RECONCILIATION — 2026-09-23 »
@@ -49,6 +49,17 @@ These supersede the product framing in `OMNI-V3-MASTER-PLAN.md §2–3` where th
 | 5 | Branches/UI — conformité UI finale vs maquette unifiée acceptée | Inventaire des surfaces vs maquette V1.3; gaps fermés ou endettés explicitement; preuve navigateur 4 largeurs + prod (hash===build(. | `/nature-way` | `visual-and-logic-coherence-review.md`, registres G-05/G-06/V-7 | Proof record | `done` (T-10…T-10v; T-13a–f; HO-OMNI-06 contextualisation nature-way portée; T-08 sim+fraîcheur; registre V-7: T1–T9 `done` — bundle D-5 COMPLET) | — |
 | 6 | Canopy/launch-readiness — pilot-readiness | V-6 + V-7 livrés+provés; dettes listées+triggerées; verdict fondateur「 Go with limits 」 | `/nature-way` | `autonomous-delivery-gates.md`, `proof-and-decision-ledger.md`, registre V-7 | Verdict fondateur + clôture honnête | **`closed` — verdict fondateur「 Go with limits 」 2026-09-11** (V-6/V-7 livrés; spot-check 4 largeurs 2026-09-08; T1–T9 `done`; P1+P2+P3 puis cycle V1 bouclés en 2026-09-16/17 — voir §Reconciliation log) | Fondateur refuse le verdict ou rouvre une décision D-1…D-7 |
 | 7 | Venture Lifecycle — Lomé pilot demand/proof | Only if problem/segment evidence becomes the uncertainty after Gate  ​6. | `/nature-way-venture-lifecycle` | — | Stage scorecard | `watch` | Founder requests or Trunk evidence exposes segment doubt. |
+
+> **⚠️ RECONCILIATION 2026-10-07 (2ᵉ rotation du jour) — la porte courante est BRANCHES.**
+> Le fondateur a clos **Trunk** (« Ok on va clore ») puis **Heartwood** (« clos and next »).
+> Les statuts du tableau ci-dessus sont **V1 (2026-09-02) et superseded** — la séquence réelle
+> est : Seed **CLOS** → Species **CLOSE 2026-09-25** → Root **CLOS 2026-09-29** →
+> Trunk **CLOSE 2026-10-07** → Heartwood **CLOSE 2026-10-07** → **Branches OPEN 2026-10-07**.
+> **Branches = phase 5 Nature Way : une fonctionnalité à la fois** (cycle imbriqué complet :
+> mini-seed → mini-species → contrat → UI+backend → validation → preuve → plan). **Sélection des
+> branches = décision fondateur** ; une branche sans rattachement `S-xx` ne démarre pas (H1).
+> **Canopy** (Gate 6 dans ce tableau) et **Ring** ne sont **pas** ouverts. **Terrain EN DERNIER.**
+> Source de vérité : `docs/founder-hq/current-state.md` (§Verdict Heartwood, §Branches OPEN).
 
 Deliberately **not** active: Fundraising, Opportunity Intelligence, Founder Learning, Sidereal Reflection. **As of 2026-09-13 the founder explicitly opened two new tracks** — (1) YC Winter 2027 application (`/nature-way-opportunity-intelligence`) and (2) pre-YC runway raise via HERLOG S.A. (`/nature-way-fundraising`). Both are registered on the Board and Master Plan as `watch` / `user invocation required` (HO-OMNI-14); neither is active until the founder invokes the specialist. No capital or external commitment is part of the current product milestone.
 

@@ -20,18 +20,20 @@ if (!gate) {
   console.error(`FAIL  ${SOR}: could not read the Gate value`);
   process.exit(1);
 }
-if (gate !== 'TRUNK_CLOSED_HEARTWOOD_OPEN') {
+if (gate !== 'HEARTWOOD_CLOSED_BRANCHES_OPEN') {
   console.error(`FAIL  ${SOR}: unexpected gate "${gate}"`);
   process.exit(1);
 }
 
-// TURNED 2026-10-07 : le fondateur a clos Trunk (« Ok on va clore »). Les marqueurs Root CLOSE et
-// Trunk CLOSE restent exigés (une clôture ne s'efface pas), plus le nouveau marqueur Heartwood OPEN.
-// L'ancien `Trunk OPEN` seul est désormais une revendication périmée (voir forbiddenClaims).
+// TURNED 2026-10-07 (2e rotation du jour) : le fondateur a clos Trunk puis Heartwood
+// (« clos and next »). Les clôtures ne s'effacent pas : Species/Root/Trunk/Heartwood CLOSE
+// restent exigés, plus le nouveau marqueur Branches OPEN. Un artefact qui présente encore
+// Heartwood comme la porte courante est périmé (voir heartwoodClosedStale).
 const MARKER = 'Species V2 CLOSE';
 const ROOT_MARKER = 'Root CLOSE';
 const TRUNK_CLOSED_MARKER = 'Trunk CLOSE';
-const HEARTWOOD_MARKER = 'Heartwood OPEN';
+const HEARTWOOD_CLOSED_MARKER = 'Heartwood CLOSE';
+const BRANCHES_MARKER = 'Branches OPEN';
 
 const mustAgree = [
   ['docs/founder-hq/founder-hq-board.md', MARKER],
@@ -43,9 +45,12 @@ const mustAgree = [
   ['docs/founder-hq/founder-hq-board.md', TRUNK_CLOSED_MARKER],
   ['docs/founder-hq/founder-hq-master-plan.md', TRUNK_CLOSED_MARKER],
   ['AGENTS.md', TRUNK_CLOSED_MARKER],
-  ['docs/founder-hq/founder-hq-board.md', HEARTWOOD_MARKER],
-  ['docs/founder-hq/founder-hq-master-plan.md', HEARTWOOD_MARKER],
-  ['AGENTS.md', HEARTWOOD_MARKER],
+  ['docs/founder-hq/founder-hq-board.md', HEARTWOOD_CLOSED_MARKER],
+  ['docs/founder-hq/founder-hq-master-plan.md', HEARTWOOD_CLOSED_MARKER],
+  ['AGENTS.md', HEARTWOOD_CLOSED_MARKER],
+  ['docs/founder-hq/founder-hq-board.md', BRANCHES_MARKER],
+  ['docs/founder-hq/founder-hq-master-plan.md', BRANCHES_MARKER],
+  ['AGENTS.md', BRANCHES_MARKER],
 ];
 
 const mustPointToV2 = [
@@ -94,7 +99,19 @@ const trunkClosedStale = [
   ['docs/founder-hq/current-state.md', 'ROOT_CLOSED_TRUNK_OPEN', 'must not re-assert the superseded gate code after Trunk closure 2026-10-07'],
   ['docs/founder-hq/founder-hq-board.md', 'PORTE COURANTE = TRUNK (ouverte', 'must not call Trunk the current open gate after closure 2026-10-07'],
   ['docs/founder-hq/founder-hq-master-plan.md', 'PORTE COURANTE : TRUNK', 'must not call Trunk the current open gate after closure 2026-10-07'],
-  ['AGENTS.md', 'Trunk OPEN 2026-10-02', 'must not present Trunk as open — it closed 2026-10-07 (Heartwood open)'],
+  ['AGENTS.md', 'Trunk OPEN 2026-10-02', 'must not present Trunk as open — it closed 2026-10-07 (Heartwood then Branches open)'],
+];
+
+// TURNED 2026-10-07 (2e rotation) : le fondateur a clos Heartwood (« clos and next »). La porte
+// courante devient Branches. Le risque est l'inverse de la rotation précédente : un artefact qui
+// présente encore Heartwood comme la porte OUVERTE après sa clôture. Étroit : chaque entrée ne
+// se déclenche que sur la formulation exacte périmée, jamais sur la prose historique qui nomme
+// Heartwood légitimement (contrats, slices, dossiers de clôture).
+const heartwoodClosedStale = [
+  ['docs/founder-hq/current-state.md', 'TRUNK_CLOSED_HEARTWOOD_OPEN', 'must not re-assert the superseded gate code after Heartwood closure 2026-10-07'],
+  ['docs/founder-hq/founder-hq-board.md', 'PORTE COURANTE = HEARTWOOD (ouverte', 'must not call Heartwood the current open gate after closure 2026-10-07'],
+  ['docs/founder-hq/founder-hq-master-plan.md', 'PORTE COURANTE : HEARTWOOD (ouverte', 'must not call Heartwood the current open gate after closure 2026-10-07'],
+  ['AGENTS.md', 'Heartwood OPEN 2026-10-07', 'must not present Heartwood as open — it closed 2026-10-07 (Branches open)'],
 ];
 
 // A recommendation must not present a DELIVERED slice as still-to-do. This is the staleness
@@ -191,6 +208,7 @@ for (const [f, n] of mustAgree) check(f, n, 'reopen marker');
 for (const [f, n] of mustPointToV2) check(f, n, 'points to Intent Brief V2');
 for (const [f, n, l] of forbidden) check(f, n, l);
 for (const [f, n, l] of trunkClosedStale) forbid(f, n, l);
+for (const [f, n, l] of heartwoodClosedStale) forbid(f, n, l);
 for (const [f, n, l] of incident) check(f, n, l);
 for (const [f, n, l] of forbiddenClaims) forbid(f, n, l);
 for (const [f, n, l] of deliveredSlices) forbid(f, n, l);
