@@ -25,8 +25,11 @@ const SELLER_VERIF = 'src/trunk/SellerVerificationV13.tsx';
 const RULES = [
   ['search-01-sortbar', 'results render the 4 sort chips from RESULTS_SORTS', (s) =>
     /RESULTS_SORTS\.map\(/.test(s[APP]) && /className=\{`sortchip/.test(s[APP])],
+  // MAP-2 (2026-10-07) : la carte est branchée sur la DÉCOUVERTE (`facilities`) au repos et sur
+  // `orderedResults` quand une recherche a des résultats — l'intention reste « le rail/la carte
+  // suivent l'ordre », pas « toujours orderedResults ».
   ['search-01-ordered', 'the map/rail use orderedResults, not raw results', (s) =>
-    /visibleFacilities = useMemo\(\(\) => filterFacilities\(orderedResults/.test(s[APP]) && /orderedResults\.map\(/.test(s[APP])],
+    /visibleFacilities = useMemo\(\s*\(\) => filterFacilities\(results\.length > 0 \? orderedResults : facilities/.test(s[APP]) && /orderedResults\.map\(/.test(s[APP])],
   ['search-01-price', 'result cards show the entry price with the offer currency', (s) =>
     /facility\.minPriceMinor/.test(s[APP]) && /currencyFor\(facility\.priceCurrency\)/.test(s[APP])],
   ['search-01-near-honest', 'Plus proche never invents a distance without a position', (s) =>
@@ -79,8 +82,11 @@ const RULES = [
   ['search-desktop-bar', 'desktop: search is a full-width top bar and the role switch sits top-right, never centered under it', (s) =>
     /\.sheet\[data-sheet="search"\]\{position:absolute;left:64px;right:0;top:0;bottom:auto;width:auto;height:76px/.test(s[CSS]) &&
     /\.rolepill\{top:38px;right:14px;left:auto;transform:translateY\(-50%\);z-index:17\}/.test(s[CSS])],
+  // X5-ZONE (2026-10-07) : un fondu (`mask-image`) + scroll horizontal rend le débordement
+  // atteignable ; la règle est « une ligne scrollable, jamais un wrap qui pousserait sur le
+  // rolepill », pas une liste figée de déclarations.
   ['search-desktop-clip', 'desktop: the constraint row is one clipped/scrollable line — budget/quantity can never reach the role switch', (s) =>
-    /\.sheet\[data-sheet="search"\] \.constraint-zone\{[^}]*flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden\}/.test(s[CSS]) &&
+    /\.sheet\[data-sheet="search"\] \.constraint-zone\{[^}]*flex-wrap:nowrap;[^}]*overflow-x:auto[^}]*overflow-y:hidden/.test(s[CSS]) &&
     /\.sheet\[data-sheet="search"\] \.constraint-zone \.chips\{[^}]*flex-wrap:nowrap/.test(s[CSS])],
   ['menu-01-freshness', 'the seller menu carries the maquette destination "Fraîcheur de la dispo" → sheet freshness', (s) =>
     /setSheet\('freshness'\)[^\n]*Fraîcheur de la dispo/.test(s[APP])],
@@ -116,7 +122,7 @@ if (process.argv.includes('--selftest')) {
   // Each mutation should make at least its rule fire.
   const mutations = [
     [APP, 'RESULTS_SORTS.map(', 'RESULTS_SORTS.filter('],
-    [APP, 'filterFacilities(orderedResults', 'filterFacilities(facilities'],
+    [APP, 'results.length > 0 ? orderedResults : facilities', 'results.length > 0 ? facilities : orderedResults'],
     [APP, 'currencyFor(facility.priceCurrency)', 'currencyFor(undefined)'],
     [SORT, "if (key === 'near') {\n    if (!userPosition) return [...results];", "if (key === 'near') {\n    // mutated"],
     [APP, 'if (isOperator) return [', 'if (false) return ['],
@@ -134,7 +140,7 @@ if (process.argv.includes('--selftest')) {
     [FRESH, 'now >= (expiresAtMs as number) - FRESHNESS_STALE_WINDOW_MS', 'false'],
     [APP, 'worstFreshness(orderedResults.map', 'worstFreshness([] && orderedResults.map'],
     [CSS, '.rolepill{top:38px;right:14px;left:auto;transform:translateY(-50%);z-index:17}', '.rolepill{top:8px;left:50%}'],
-    [CSS, '.sheet[data-sheet="search"] .constraint-zone{flex:1 1 auto;margin-top:0;display:flex;align-items:center;gap:14px;min-width:0;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden}', '.sheet[data-sheet="search"] .constraint-zone{display:flex;flex-wrap:wrap}'],
+    [CSS, '.constraint-zone{flex:1 1 auto;margin-top:0;display:flex;align-items:center;gap:14px;min-width:0;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden', '.constraint-zone{display:flex;flex-wrap:wrap}'],
     [APP, "setSheet('freshness')", "setSheet('seller')"],
     [SELLER_FRESH, "to: 'en_stock'", "to: 'a_valider'"],
     [SELLER_FRESH, 'expiresInHours: windowHours', 'expiresInHours: null'],
