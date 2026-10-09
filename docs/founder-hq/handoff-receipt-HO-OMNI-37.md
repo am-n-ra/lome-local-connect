@@ -199,6 +199,34 @@ proactif** propose l'installation **sans passer par le menu**.
   câblage falsifié, navigateur **A/B** (`npm run proof:error-boundary`).
 - **Déploiement** : prod `index-B5BW3kjI.js` === build local **et** entrée GitHub `76d9f82` (Production)
   → **T-07d ✅**. Preuves navigateur **rejouées sur prod** : PASS.
-- **994/994** tests, `tsc` 0, 5 gardes vertes. **Résidu** : `getOperatorRuns` + 4 autres clients sans UI
-  (`importPublicFacility[Batch]`, `getSellerActivationQueue`, `getBuyerProRenewalStatus`) — couches
-  orphelines à ouvrir au terrain ou retirer ; décision fondateur.
+- **994/994** tests, `tsc` 0, 5 gardes vertes.
+
+## HP-3 (délai de requête, 2026-10-07, déployé T-07d ✅)
+
+- **Omni est mobile-first à Lomé** : sur un réseau instable, `fetchWithRecovery` ré-essayait une fois les
+  5xx **mais ne bornait pas l'attente** — un `fetch` qui ne récupère jamais laissait « Chargement… »
+  **indéfiniment** (ni erreur, ni reprise). Livré `request-timeout.ts` (`raceWithTimeout` →
+  `RequestTimeoutError` honnête, minuteur nettoyé) appliqué aux **deux** tentatives.
+- **Preuves** : unitaire fake timers (6) + **intégration réelle** `api.test.ts` (fetch qui pend → rejette
+  `/réseau/i`) + garde source. **Falsifié** : délai neutralisé → le test d'intégration **expire**. Un harnais
+  navigateur a été écrit puis **retiré** (fragile : état `error` partagé + pas de backend en preview →
+  faux échec) — contrat prouvé **à la couche API**.
+- **Déploiement** : prod `index-CbrtTHmp.js` === local + entrée GitHub `39061b6` → **T-07d ✅**. **1003/1003**.
+
+## HP-4 (surfaces d'API client sans UI, 2026-10-07, déployé T-07d ✅)
+
+- **Décision fondateur « allons avec les clients UI ».** La mesure a montré **deux catégories** :
+  **3 doublons/superseded RETIRÉS** — `getSellerActivationQueue` (route legacy `reviewer=seller-activations`,
+  `AdminV13` utilise déjà `getAdminSellerActivationQueue`), `getBuyerProRenewalStatus` (route legacy
+  `buyer/pro/renewal-status`, renvoie **exactement** `getBuyerProStatus`), `importPublicFacility` (singulier,
+  superseded par `importPublicFacilityBatch({items:[x]})`) — client **et** route serveur morte supprimés ;
+  **2 capacités réelles CÂBLÉES** — `importPublicFacilityBatch` + `getOperatorRuns` via **`AdminImportConsole`**
+  montée dans `AdminV13` (import OSM batch traçable, attribution ODbL pré-remplie, point hors zone refusé,
+  historique des runs d'opérateur, états vides honnêtes, squelette).
+- **Leçon** : câbler un doublon aurait créé **deux points d'entrée pour un même acte** ; la bonne moitié de
+  « clients UI » était parfois **retirer**. La liste blanche `client-api-surface` est désormais **vide**.
+- **Preuves** : rendu jsdom (3) + garde de surface + bundles **client et serverless** vérifiés (régénérés) ;
+  **1004/1004**, `tsc` 0, 5 gardes. **Déploiement** : prod `index-DLYeXIbP.js` === local + entrée GitHub
+  `6141213` → **T-07d ✅**. Dossier `omni-heartwood-hp4-client-ui-surfaces-evidence-2026-10-07.md`.
+- **Résidu** : la preuve navigateur d'un import réel exige une **session admin** (sandbox sans DB/auth) ;
+  `getOperatorRuns` reste une **liste d'observation** (pas de filtre/relance = capacité neuve).
