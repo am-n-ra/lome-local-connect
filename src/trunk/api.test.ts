@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activateBuyerPro, activateSellerAccount, addFavorite, claimFacilityByOsmRef, claimVisit, createAcquisitionObjective, createFacilityAdCampaign, createFieldVisit, createOfferReport, createPurchaseIntent, createSellerFacility, decideOfferReport, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProRenewalStatus, getBuyerProStatus, getClaimRequest, getDemandSignals, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listAcquisitionObjectives, listClosedTransactions, listFacilityAdCampaigns, listFavorites, listOfferReports, listPublicFacilities, listVisitQueue, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, reprogramVisit, requestBulkAvailability, setAcquisitionObjectiveState, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, submitVisitReport, unlockFacilityBonus, verifyQrToken } from './api';
+import { activateBuyerPro, activateSellerAccount, addFavorite, claimFacilityByOsmRef, claimVisit, createAcquisitionObjective, createFacilityAdCampaign, createFieldVisit, createOfferReport, createPurchaseIntent, createSellerFacility, decideOfferReport, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProStatus, getClaimRequest, getDemandSignals, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listAcquisitionObjectives, listClosedTransactions, listFacilityAdCampaigns, listFavorites, listOfferReports, listPublicFacilities, listVisitQueue, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, reprogramVisit, requestBulkAvailability, setAcquisitionObjectiveState, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, submitVisitReport, unlockFacilityBonus, verifyQrToken } from './api';
 
 describe('account context contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -150,18 +150,6 @@ describe('listPublicFacilities search contract', () => {
     );
   });
 
-  it('reads the buyer pro renewal status with the bearer token', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { accountId: 'account-1', plan: 'pro_expired', entitlementId: 'ent-1', startsAt: '2026-08-13T00:00:00.000Z', endsAt: '2026-09-12T00:00:00.000Z', renewalOptIn: true, daysLeft: 0, proPriceMinor: 250000, billingCurrency: 'XOF', walletBalanceMinor: 250000, sufficientFunds: true, compareQuota: 1 } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
-
-    const result = await getBuyerProRenewalStatus({ token: 'session-token' });
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v2/buyer/pro/renewal-status',
-      { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
-    );
-    expect(result.data?.plan).toBe('pro_expired');
-  });
-
   it('sets the buyer pro renewal opt-in', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { accountId: 'account-1', renewalOptIn: true } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
 
@@ -223,17 +211,6 @@ describe('listPublicFacilities search contract', () => {
     await createPurchaseIntent({ responseId: 'response-1', token: 'session-token', idempotencyKey: 'intent-response-1' });
 
     expect(fetchMock).toHaveBeenCalledWith('/api/v2/purchase-intents', { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token', 'Idempotency-Key': 'intent-response-1' }, body: JSON.stringify({ responseId: 'response-1' }) });
-  });
-
-  it('reads the seller activation queue through the existing public function route', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { candidates: [] } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
-
-    await getSellerActivationQueue({ token: 'session-token' });
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v2/public/facilities?reviewer=seller-activations',
-      { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
-    );
   });
 
   it('posts seller account suspension through the existing facility detail function route', async () => {

@@ -8680,39 +8680,6 @@ async function handleApi(req, res, pathname, url) {
       json(res, 200, { ok: true, correlationId, data: { imported: results.length, created: results.filter((result) => result.created).length, existing: results.filter((result) => !result.created).length, skippedOutOfZone: admission.skippedOutOfZone, skippedQuarantine: admission.skippedQuarantine, results } });
       return true;
     }
-    if (req.method === "POST" && pathname === "/api/v2/public/facilities" && url.searchParams.get("action") === "operator-import") {
-      const authUserId = await getAuthUserId(req.headers);
-      if (!authUserId) {
-        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized Omni operator before importing a public facility."));
-        return true;
-      }
-      const input = await parseRequestBody(req);
-      const provider = input.provider === "openstreetmap" ? "openstreetmap" : "";
-      const sourceRef = typeof input.sourceRef === "string" ? input.sourceRef.trim() : "";
-      const name = typeof input.name === "string" ? input.name.trim() : "";
-      const category = input.category === null || input.category === void 0 ? null : String(input.category).trim() || null;
-      const address = input.address === null || input.address === void 0 ? null : String(input.address).trim() || null;
-      const latitude = Number(input.latitude);
-      const longitude = Number(input.longitude);
-      const attribution = typeof input.attribution === "string" ? input.attribution.trim() : "";
-      if (provider !== "openstreetmap" || !sourceRef || !name || !attribution || !Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 || sourceRef.length > 180 || name.length > 180) {
-        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Provide a bounded OpenStreetMap source, facility name, attribution and valid coordinates."));
-        return true;
-      }
-      const scope = parseIntakeScope(url.searchParams.get("scope"));
-      const verdict = classifyIntakePoint({ latitude, longitude, name, address }, isInsidePilotZone);
-      if (verdict.tier === "quarantine") {
-        json(res, 400, errorBody(correlationId, "QUARANTINED", `This place cannot be imported (${verdict.reasons.join(", ")}).`));
-        return true;
-      }
-      if (scope === "pilot" && verdict.tier !== "pilot") {
-        json(res, 400, errorBody(correlationId, "OUT_OF_PILOT_ZONE", "This facility is outside the Omni pilot zone and cannot be imported."));
-        return true;
-      }
-      const result = await repository.createPublicFacilityImport({ authUserId, provider, attribution, sourceRef, name, category, latitude, longitude, address, intakeTier: verdict.tier, correlationId });
-      json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
-      return true;
-    }
     if (req.method === "POST" && pathname === "/api/v2/notifications/push" && url.searchParams.get("action") === "subscribe") {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
@@ -9230,16 +9197,6 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.reviewFacilityClaim({ authUserId, requestId, outcome, reason, correlationId });
-      json(res, 200, { ok: true, correlationId, data: result });
-      return true;
-    }
-    if (req.method === "GET" && pathname === "/api/v2/public/facilities" && url.searchParams.get("reviewer") === "seller-activations") {
-      const authUserId = await getAuthUserId(req.headers);
-      if (!authUserId) {
-        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized reviewer to view seller activation candidates."));
-        return true;
-      }
-      const result = await repository.listSellerActivationQueue({ authUserId });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -10259,20 +10216,6 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.removeFavorite({ authUserId, facilityId: favoriteFacilityMatch[1] });
-      json(res, 200, { ok: true, correlationId, data: result });
-      return true;
-    }
-    if (req.method === "GET" && pathname === "/api/v2/buyer/pro/renewal-status") {
-      const authUserId = await getAuthUserId(req.headers);
-      if (!authUserId) {
-        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in to view your Buyer Pro renewal settings."));
-        return true;
-      }
-      const result = await repository.getBuyerProStatus({ authUserId });
-      if (!result) {
-        json(res, 403, errorBody(correlationId, "ACCOUNT_UNAVAILABLE", "Your Omni account context is not available yet."));
-        return true;
-      }
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

@@ -3,6 +3,7 @@ import { ShieldCheck, UserX, RefreshCw, CheckCircle2, Archive } from 'lucide-rea
 import { getAuthToken } from '../auth';
 import { getAdminConsole, getReviewQueue, getDemandSignals, listOfferReports, decideOfferReport, listAcquisitionObjectives, createAcquisitionObjective, setAcquisitionObjectiveState, createFieldVisit, getRoleManagementAccounts, listTeams, createTeam, inviteTeamMember, revokeTeamInvite, setTeamMemberStatus, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState, setManagedStaffRole, getAdminSellerActivationQueue, adminActivateSellerAccount, assignFacilityZone } from './api';
 import { Skeleton } from './Skeleton';
+import { AdminImportConsole } from './AdminImportConsole';
 import type { AdminConsoleResult, DemandSignal, OfferReportOutcome, OfferReportQueueItem, AcquisitionObjective, ReviewOutcome, ReviewQueueItem, RoleManagementAccount, Team, TeamInvite, TeamMember } from './types';
 
 type AdminV13Props = {
@@ -689,6 +690,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
               </div>
             ))}
           </div>
+          <AdminImportConsole />
           {audits.length > 0 && (
             <div className="cardbox">
               <div className="eyebrow">Audit récent</div>

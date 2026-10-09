@@ -20,13 +20,12 @@ function walk(dir: string, out: string[] = []): string[] {
 
 // Endettements ASSUMÉS et documentés, hors périmètre tant qu'une décision fondateur ne
 // les ouvre pas. Toute autre entrée fait ÉCHOUER le garde (sinon la classe se re-crée).
-const KNOWN_DORMANT: Record<string, string> = {
-  getOperatorRuns: 'surface opérateur sans UI (le terrain arrive en dernier)',
-  importPublicFacility: 'outil d’import admin sans UI (l’import se fait par script serveur)',
-  importPublicFacilityBatch: 'outil d’import admin sans UI (l’import se fait par script serveur)',
-  getSellerActivationQueue: 'doublon : AdminV13 utilise getAdminSellerActivationQueue',
-  getBuyerProRenewalStatus: 'doublon : BuyerFlowV13 utilise getBuyerProStatus',
-};
+// 2026-10-07 (décision fondateur « allons avec les clients UI ») : les 3 dormantes sont TRAITÉES.
+// RETIRÉES (doublons dont le jumeau canonique est déjà câblé) : getSellerActivationQueue
+// (route legacy `reviewer=seller-activations`) ; getBuyerProRenewalStatus (route legacy
+// `buyer/pro/renewal-status`) ; importPublicFacility (singulier — superseded by batch-of-one).
+// CÂBLÉES (console d'import admin, `AdminImportConsole`) : importPublicFacilityBatch + getOperatorRuns.
+const KNOWN_DORMANT: Record<string, string> = {};
 
 describe('classe gateRequest — surface d’API client réellement câblée', () => {
   const files = walk(join(process.cwd(), 'src')).filter((f) => !f.endsWith(join('trunk', 'api.ts')));

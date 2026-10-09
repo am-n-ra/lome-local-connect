@@ -409,13 +409,6 @@ export async function removeFavorite(input: { token: string; facilityId: string 
   return parse<{ removed: true }>(response);
 }
 
-export async function getBuyerProRenewalStatus(input: { token: string }): Promise<ApiResult<import('./types').BuyerProStatus>> {
-  const response = await fetchWithRecovery('/api/v2/buyer/pro/renewal-status', {
-    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
-  });
-  return parse<import('./types').BuyerProStatus>(response);
-}
-
 export async function setBuyerProRenewalOptIn(input: { token: string; optIn: boolean }): Promise<ApiResult<import('./types').BuyerProOptInResult>> {
   const response = await fetchWithRecovery('/api/v2/buyer/pro/renewal-opt-in', {
     method: 'POST',
@@ -788,25 +781,6 @@ export async function importPublicFacilityBatch(input: { token: string; items: A
   });
   return parse(response);
 }
-export async function importPublicFacility(input: {
-  provider: 'openstreetmap';
-  attribution: string;
-  sourceRef: string;
-  name: string;
-  category: string | null;
-  latitude: number;
-  longitude: number;
-  address: string | null;
-  token: string;
-}): Promise<ApiResult<PublicFacilityImportResult>> {
-  const response = await fetchWithRecovery('/api/v2/public/facilities?action=operator-import', {
-    method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
-    body: JSON.stringify({ provider: input.provider, attribution: input.attribution, sourceRef: input.sourceRef, name: input.name, category: input.category, latitude: input.latitude, longitude: input.longitude, address: input.address }),
-  });
-  return parse<PublicFacilityImportResult>(response);
-}
-
 export async function getOperatorRuns(input: { token: string }): Promise<ApiResult<OperatorRunsResult>> {
   const response = await fetchWithRecovery('/api/v2/public/facilities?operator=runs', {
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
@@ -1035,12 +1009,6 @@ export async function reviewFacilityClaim(input: { requestId: string; outcome: R
   return parse<ReviewClaimResult>(response);
 }
 
-export async function getSellerActivationQueue(input: { token: string }): Promise<ApiResult<{ candidates: Array<{ accountId: string; authUserId: string; onboardingState: string; facilityCount: number; createdAt: string; suspended: boolean }> }>> {
-  const response = await fetchWithRecovery('/api/v2/public/facilities?reviewer=seller-activations', {
-    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
-  });
-  return parse(response);
-}
 export async function setSellerAccountSuspension(input: { accountId: string; suspended: boolean; reason: string; token: string }): Promise<ApiResult<{ accountId: string; suspended: boolean }>> {
   const response = await fetchWithRecovery(`/api/v2/facilities/${encodeURIComponent(input.accountId)}?action=reviewer-seller-suspension`, {
     method: 'POST',
