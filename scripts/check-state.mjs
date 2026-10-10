@@ -168,6 +168,15 @@ const resolvedRoom = [
   ['docs/nature-way/omni-dock-search-conformance-register-2026-10-06.md', 'sans modèle) · **`room`**', 'must not list the Room as unbuilt — X3 shipped 2026-10-07'],
 ];
 
+// The money decisions (UM-6, D-LOC-6, D-LOC-8, D-C5) were all DECIDED AND EXECUTED 2026-09-28/29
+// (DEC-V2-09/32/33/34). The board's 2026-09-27 measure section still framed them as open; a
+// recommendation must not present them as live founder decisions. Narrow: fires only on the exact
+// stale phrasing of the un-reconciled section, never on the historical measure prose.
+const moneyDecisionsClosed = [
+  ['docs/founder-hq/founder-hq-board.md', '**UM-6 — le bonus MENT, décision fondateur requise**', 'must not present UM-6 as open — decided + shipped 2026-09-28 (DEC-V2-09)'],
+  ['docs/founder-hq/current-state.md', 'décisions ouvertes : `UM-6`', 'must not list UM-6 as an open decision — DEC-V2-09 (2026-09-28)'],
+];
+
 let failed = 0;
 const check = (file, needle, label) => {
   let text;
@@ -213,6 +222,7 @@ for (const [f, n, l] of incident) check(f, n, l);
 for (const [f, n, l] of forbiddenClaims) forbid(f, n, l);
 for (const [f, n, l] of deliveredSlices) forbid(f, n, l);
 for (const [f, n, l] of resolvedRoom) forbid(f, n, l);
+for (const [f, n, l] of moneyDecisionsClosed) forbid(f, n, l);
 
 if (failed > 0) {
   console.error(`\nSTATE DIVERGENCE: ${failed} problem(s). Reconcile before claiming a gate.\n`);

@@ -31,6 +31,20 @@
 
 ## UNI-MONEY-1 / D-LOC-9 (2026-09-27) — une seule famille monétaire
 
+> **⚠️ RECONCILIÉ 2026-10-07 (3ᵉ occurrence de la classe « mémoire en retard »).** Cette section
+> décrit la **mesure** du 2026-09-27 et présente `UM-6` + `D-LOC-6` comme **ouverts**. Ils ont été
+> **tranchés ET exécutés** les jours suivants — vérifié au **journal de décisions**, pas à la mémoire :
+> - **`UM-6`** → **`DEC-V2-09` (2026-09-28)** : bonus = **20 USD** (≈ 10 000 F), constante unique
+>   `SELLER_BONUS_USD_MINOR = 2000` (`src/domain/pricing.ts`) → `convertUsdMinorToLocal` → **1 000 000**
+>   XOF minor. Test `pricing.test.ts:61` le verrouille. **CLOS.**
+> - **`D-LOC-6`** → **`DEC-V2-33` (2026-09-29)** : famille monétaire unique ×100, migration `062`
+>   appliquée canonique. **CLOS.**
+> - **`D-LOC-8`** → **`DEC-V2-32` (2026-09-29)** : montrer la devise d'origine. **CLOS.**
+> - **`D-C5`** → **`DEC-V2-34` (2026-09-29)** : « 1 crédit par besoin ». **CLOS.**
+>
+> **Conséquence pour la porte Branches :** ces 4 candidats, présentés comme « décisions ouvertes »,
+> ne le sont plus. La liste des branches réellement ouvertes vit dans `current-state.md` §Branches OPEN.
+
 > **Mesure exhaustive (16 colonnes, canonique) → QUATRE conventions, pas deux** — et la base était
 > incohérente **DANS LE TEMPS** : des lignes seed d'août **brutes** à côté d'une ligne écrite **le jour
 > même** déjà ×100 (le client acheteur fait `Math.round(budget*100)`, le formulaire vendeur aussi).
@@ -49,7 +63,9 @@
 > - **⚠️ NON POUSSÉ, EXPRÈS** : le code attend des offres ×100 → poussé seul il afficherait les offres
 >   **100× trop petites**. **Code et base voyagent ensemble ou pas du tout** → **ordre fondateur requis**
 >   pour appliquer `058` sur `br-dawn-hill-am5amy22`, puis push, puis hash prod (T-07d).
-> - **UM-6 — le bonus MENT, décision fondateur requise** : `v2_seller_unlocks.amount_minor` porte
+> - ~~**UM-6 — bonus : décision fondateur requise**~~ **→ RÉSOLU 2026-09-28 (`DEC-V2-09`) :
+>   bonus = 20 USD (≈ 10 000 F), constante unique `SELLER_BONUS_USD_MINOR = 2000`.** *(Mesure
+>   historique du 2026-09-27 ci-dessous, conservée : `v2_seller_unlocks.amount_minor` portait
 >   **10 000** mais le ledger débité porte **2 000**. `10000/2000 = 5` → la glose lit des **centimes USD**
 >   (÷500 = 20 $), le ledger lit **2 000 F**. **Deux lectures de la même constante.** 20 $ ou 2 000 F ?
 

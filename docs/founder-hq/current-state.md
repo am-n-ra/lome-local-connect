@@ -108,12 +108,14 @@
 > **Aucune API sans UI atteignable, aucune UI sans opération réelle** (règle `no orphaned layers`).
 >
 > **Sélection des branches = décision fondateur** : une branche qui ne se rattache à **aucune
-> décision `S-xx`** ne démarre pas (H1). Candidats mesurés (à confirmer/ordonner par le fondateur) :
-> - **décisions ouvertes** : `UM-6` (montant du bonus), `D-LOC-6` (unité monétaire canonique),
->   `D-LOC-8` (convertir ou montrer l'origine), `D-C5` (bulk = 1 besoin), `RT-4` (voix itinéraire) ;
-> - **résidus de slices** : `MENU-01` destinations vendeur restantes (boutons morts si affichés),
->   analytics par-produit/marché, `getOperatorRuns` filtres/relance ;
-> - **capacités Seed non couvertes** : recommandations (Buyer Pro), publicité IA (au-delà manuel).
+> décision `S-xx`** ne démarre pas (H1). Candidats **re-mesurés 2026-10-07** (les « décisions
+> ouvertes » `UM-6`/`D-LOC-6`/`D-LOC-8`/`D-C5` sont **CLOSES** — `DEC-V2-09/32/33/34`) :
+> - **`SCOUT-01`** — couverture de base mondiale des lieux (lazy/claim-par-référence OSM,
+>   `DEC-V2-30`) : le seul item « à décider » restant du Trunk ; rattachement S-05 ;
+> - **destinations menu vendeur `MENU-01`** — 7–8 écrans maquette sans équivalent app
+>   (Commandes, Stock alloué, Fiche entité, Pro renouvellement…) : tranche dédiée si retenue ;
+> - **capacités Seed non couvertes** — recommandations (Buyer Pro, D-K), publicité IA (au-delà manuel) ;
+> - **`COH-V2-09`** (`watch`, faible) — registre `omni_schema_migrations` en retard sur le schéma.
 >
 > **Prochaine action :** HQ présente la liste ordonnée au fondateur pour sélection de la **première
 > branche**. Aucune branche ne démarre avant ce choix. **Terrain toujours EN DERNIER.**
