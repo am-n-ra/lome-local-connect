@@ -467,9 +467,9 @@ function isReservable(input) {
 var LEVELS = [
   { label: "Pr\xE9sente", hint: "sur la carte, pas encore g\xE9r\xE9e" },
   { label: "Revendiqu\xE9e", hint: "une entit\xE9 en a pris la responsabilit\xE9" },
-  { label: "Offre publi\xE9e", hint: "stock d\xE9clar\xE9, non confirm\xE9" },
-  { label: "Disponibilit\xE9 vivante", hint: "confirm\xE9e r\xE9cemment" },
-  { label: "Transactable", hint: "transaction Omni possible maintenant" }
+  { label: "Offre publi\xE9e", hint: "le vendeur a publi\xE9 une offre" },
+  { label: "Disponibilit\xE9 confirm\xE9e", hint: "confirm\xE9e r\xE9cemment" },
+  { label: "Disponible", hint: "vous pouvez lancer une transaction maintenant" }
 ];
 var INTEGRITY_CHECKS = ["visuel", "prix", "description", "doublon"];
 function isExpired(value, now) {

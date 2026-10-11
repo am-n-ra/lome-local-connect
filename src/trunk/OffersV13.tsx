@@ -48,7 +48,7 @@ export function OffersV13({ onClose }: OffersV13Props) {
             <div className="kv"><span>Remise Omni</span><b className="code" style={{ color: 'var(--accent)' }}>{discountPct} %</b></div>
             <div className="kv"><span>Prix Omni</span><b className="code">{omniPrice}</b></div>
           </div>
-          <p className="tiny muted" style={{ marginTop: 7 }}>Sans remise Omni configurée : la facilité reste découvrable, mais l'offre n'est pas transactable.</p>
+          <p className="tiny muted" style={{ marginTop: 7 }}>Cette offre n’a pas encore de remise Omni : elle reste visible, mais n’est pas encore disponible à l’achat.</p>
           <button className="btn" style={{ marginTop: 10 }} type="button" disabled>Enregistrer l'offre</button>
         </>
       )}

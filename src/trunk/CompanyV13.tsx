@@ -45,7 +45,7 @@ export function CompanyV13({ onClose, onProducts, onOffers, catalogue }: Company
       </div>
       <div className="cardbox">
         <div className="row" style={{ justifyContent: 'space-between' }}>
-          <div><b>Compagnie Omni</b><br /><span className="tiny muted">Données réelles serveur · {catalogue.facilities.length} facilité{catalogue.facilities.length > 1 ? 's' : ''} · mis à jour à l'ouverture</span></div>
+          <div><b>Compagnie Omni</b><br /><span className="tiny muted">{catalogue.facilities.length} facilité{catalogue.facilities.length > 1 ? 's' : ''} · mis à jour à l'ouverture</span></div>
           <span className={`status ${catalogue.catalogReady ? 'ok' : 'dash'}`}>{catalogue.catalogReady ? 'Catalogue prêt' : 'Catalogue incomplet'}</span>
         </div>
       </div>

@@ -32,7 +32,7 @@ const STEPS: Array<{ id: Stage; label: string }> = [
   { id: 'rate', label: 'Avis' },
 ];
 const TXN_STAGES = [
-  { label: 'Intention d\'achat', sub: 'enregistrée côté Omni' },
+  { label: 'Intention d\'achat', sub: 'votre décision d’achat' },
   { label: 'Transaction créée', sub: 'en attente de vérification' },
   { label: 'QR de transaction généré', sub: 'à faire scanner par le vendeur' },
   { label: 'Vérifiée', sub: 'le vendeur a scanné le QR' },
@@ -428,7 +428,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
           })()}
           <div className="txntrack" style={{ marginTop: 8 }}>
             {[
-              { id: 'intent', label: 'Intention d\'achat', sub: 'enregistrée côté Omni' },
+              { id: 'intent', label: 'Intention d\'achat', sub: 'votre décision d’achat' },
               { id: 'created', label: 'Transaction créée', sub: 'en attente de vérification' },
               { id: 'qr', label: 'QR de transaction généré', sub: 'à faire scanner par le vendeur' },
               { id: 'verified', label: 'Vérifiée', sub: 'le vendeur a scanné le QR' },
@@ -523,7 +523,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
         <div>
           <div className="cardbox">
             <div className="row" style={{ justifyContent: 'space-between' }}>
-              <div><b>Omni Wallet</b><br /><span className="tiny muted">{walletBalanceMinor === null || walletBalanceMinor === undefined ? 'Solde indisponible. Rechargez via le Wallet' : `${formatMoney(walletBalanceMinor, 'XOF')} disponible`}</span></div>
+              <div><b>Portefeuille Omni</b><br /><span className="tiny muted">{walletBalanceMinor === null || walletBalanceMinor === undefined ? 'Solde indisponible. Rechargez votre portefeuille' : `${formatMoney(walletBalanceMinor, 'XOF')} disponible`}</span></div>
               <span className="status gray">{walletBalanceMinor !== null && walletBalanceMinor !== undefined && walletBalanceMinor > 0 ? 'Disponible' : 'Indisponible'}</span>
             </div>
           </div>
@@ -535,7 +535,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
           </div>
           <div className="cardbox" style={{ marginTop: 6 }}>
             <div className="row" style={{ justifyContent: 'space-between' }}>
-              <div><b>Recharge FedaPay</b><br /><span className="tiny muted">Recharge externe · pas de paiement transaction</span></div>
+              <div><b>Recharge du portefeuille</b><br /><span className="tiny muted">Hors transaction · paiement séparé</span></div>
               <span className="status ink">Externe</span>
             </div>
           </div>

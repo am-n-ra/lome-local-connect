@@ -25,17 +25,17 @@ const DEFAULT_ATTRIBUTION = '© OpenStreetMap contributors (ODbL)';
 
 function parseItems(raw: string): { items?: Item[]; error?: string } {
   const trimmed = raw.trim();
-  if (!trimmed) return { error: 'Collez un tableau JSON de lieux à importer.' };
+  if (!trimmed) return { error: 'Collez la liste des lieux à importer.' };
   let parsed: unknown;
   try {
     parsed = JSON.parse(trimmed);
   } catch {
-    return { error: 'Le JSON est invalide.' };
+    return { error: 'Le format de la liste est invalide.' };
   }
-  if (!Array.isArray(parsed) || parsed.length === 0) return { error: 'Le JSON doit être un tableau non vide.' };
+  if (!Array.isArray(parsed) || parsed.length === 0) return { error: 'La liste est vide.' };
   const items: Item[] = [];
   for (const entry of parsed) {
-    if (typeof entry !== 'object' || entry === null) return { error: 'Chaque lieu doit être un objet.' };
+    if (typeof entry !== 'object' || entry === null) return { error: 'Chaque lieu doit être une fiche.' };
     const e = entry as Record<string, unknown>;
     const sourceRef = typeof e.sourceRef === 'string' ? e.sourceRef.trim() : '';
     const name = typeof e.name === 'string' ? e.name.trim() : '';
@@ -113,8 +113,8 @@ export function AdminImportConsole() {
 
   return (
     <div className="cardbox">
-      <div className="eyebrow">Console d’import · OpenStreetMap</div>
-      <p className="tiny muted">Importez des lieux publics (données ODbL) comme lieux <b>non revendiqués</b>. Un point hors zone pilote est refusé : jamais publié en silence.</p>
+      <div className="eyebrow">Importer des lieux publics</div>
+      <p className="tiny muted">Importez des lieux publics comme lieux <b>non revendiqués</b>. Un point hors zone pilote est refusé : jamais publié en silence.</p>
       <div className="chips" style={{ marginTop: 6 }}>
         <label className="chip" style={{ gap: 6, cursor: 'text', flex: 1 }}>
           <span className="dot" />
@@ -125,8 +125,8 @@ export function AdminImportConsole() {
       <textarea
         value={raw}
         onChange={(event) => setRaw(event.target.value)}
-        placeholder={'[\n  { "sourceRef": "osm:node/123", "name": "Boutique Kodjo", "category": "food", "latitude": 6.13, "longitude": 1.22 }\n]'}
-        aria-label="Lieux à importer (JSON)"
+        placeholder={'[\n  { "name": "Boutique Kodjo", "category": "food", "latitude": 6.13, "longitude": 1.22 }\n]'}
+        aria-label="Lieux à importer"
         rows={5}
         spellCheck={false}
         style={{ width: '100%', fontFamily: 'monospace', fontSize: 12, marginTop: 6 }}

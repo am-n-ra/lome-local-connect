@@ -62,7 +62,7 @@ describe('S-06 existence scale 0→4', () => {
   });
 
   it('labels and hints match the maquette wording', () => {
-    expect(existenceFor(base)).toEqual({ level: 4, label: 'Transactable', hint: 'transaction Omni possible maintenant' });
+    expect(existenceFor(base)).toEqual({ level: 4, label: 'Disponible', hint: 'vous pouvez lancer une transaction maintenant' });
     expect(existenceFor({ ...base, hasEntity: false, publicationState: 'draft' }).label).toBe('Présente');
   });
 

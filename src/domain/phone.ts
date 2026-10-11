@@ -19,7 +19,7 @@ export function normalizeTogoPhone(input: string): string | null {
 
 /** Libellé public : jamais « vérifié ». */
 export function phoneDeclarationLabel(): string {
-  return 'Déclaré · non confirmé';
+  return 'Non vérifié';
 }
 
 /**

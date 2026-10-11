@@ -63,7 +63,7 @@ export function SellerFreshnessV13({ onClose }: Props) {
         setNotice(`${product.name} : disponibilité re-confirmée (${windowHours} h).`);
         void load();
       } else if (result.error?.code === 'FORBIDDEN_OR_PRO_REQUIRED') {
-        setError('Le Pro de l’entité est requis pour déclarer une disponibilité vivante.');
+        setError('Un abonnement Pro est requis pour déclarer une disponibilité.');
       } else {
         setError(`Refusé : ${result.error?.message ?? 'réessayez.'}`);
       }
@@ -140,7 +140,7 @@ export function SellerFreshnessV13({ onClose }: Props) {
           );
         })}
       </div>
-      <p className="lead">Le badge de disponibilité <b>vieillit</b> : il est mis à jour par le vendeur (ou automatiquement, entité Pro). Une disponibilité non re-confirmée repasse « À confirmer » et cesse d’être transactable.</p>
+      <p className="lead">Le badge de disponibilité <b>vieillit</b> : il est mis à jour par le vendeur (ou automatiquement, entité Pro). Une disponibilité non re-confirmée repasse « À confirmer » et n’est plus proposée à l’achat.</p>
     </section>
   );
 }

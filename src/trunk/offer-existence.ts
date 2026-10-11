@@ -39,9 +39,9 @@ export interface OfferReputation {
 const LEVELS: readonly { label: string; hint: string }[] = [
   { label: 'Présente', hint: 'sur la carte, pas encore gérée' },
   { label: 'Revendiquée', hint: 'une entité en a pris la responsabilité' },
-  { label: 'Offre publiée', hint: 'stock déclaré, non confirmé' },
-  { label: 'Disponibilité vivante', hint: 'confirmée récemment' },
-  { label: 'Transactable', hint: 'transaction Omni possible maintenant' },
+  { label: 'Offre publiée', hint: 'le vendeur a publié une offre' },
+  { label: 'Disponibilité confirmée', hint: 'confirmée récemment' },
+  { label: 'Disponible', hint: 'vous pouvez lancer une transaction maintenant' },
 ];
 
 /** The 4 checks S-32 names, in the order the UI lists them. */

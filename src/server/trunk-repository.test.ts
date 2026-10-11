@@ -200,7 +200,7 @@ describe('public product boundary (v3 model)', () => {
       publication_state: 'published', availability_state: 'en_stock', availability_expires_at: null,
       has_entity: true, reputation_count: 3, reputation_sum: 14, is_duplicate: false,
     });
-    expect(product.existence).toEqual({ level: 4, label: 'Transactable', hint: 'transaction Omni possible maintenant' });
+    expect(product.existence).toEqual({ level: 4, label: 'Disponible', hint: 'vous pouvez lancer une transaction maintenant' });
     // No visual → never `ok`, and the reason is named.
     expect(product.integrity?.state).toBe('partielle');
     expect(product.integrity?.failed).toEqual(['visuel']);

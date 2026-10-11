@@ -101,8 +101,8 @@ export const CONSTRAINT_GROUPS: readonly ConstraintGroup[] = [
     label: "Attributs d'offre",
     hint: undefined,
     chips: [
-      { label: 'État / condition', options: undefined, status: 'soon', hint: 'Bientôt : aucune colonne neuf/occasion dans le socle' },
-      { label: 'Créneau', options: undefined, status: 'soon', hint: 'Bientôt : horaires présents, filtre serveur à construire' },
+      { label: 'État / condition', options: undefined, status: 'soon', hint: 'Bientôt : filtrer selon l’état (neuf ou occasion)' },
+      { label: 'Créneau', options: undefined, status: 'soon', hint: 'Bientôt : filtrer selon les horaires d’ouverture' },
     ],
   },
 ];

@@ -62,7 +62,7 @@ describe('AdminImportConsole — l’import public est visible et traçable', ()
     const button = [...container.querySelectorAll('button')].find((b) => b.textContent?.includes('Importer'))!;
     await act(async () => { button.click(); });
     expect(importPublicFacilityBatch).not.toHaveBeenCalled();
-    expect(text()).toContain('JSON est invalide');
+    expect(text()).toContain('format de la liste est invalide');
   });
 
   it('importe un tableau valide et affiche le compte rendu', async () => {

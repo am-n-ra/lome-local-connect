@@ -59,6 +59,14 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 .pin-label span{display:block;color:rgba(255,255,255,.72)}
 .pin-label::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:3px solid transparent;border-top-color:rgba(15,15,15,.92)}
 .rolepill{position:absolute;z-index:7;top:var(--safe-top, 14px);left:50%;transform:translateX(-50%);display:flex;gap:0;padding:3px;border-radius:999px;background:rgba(255,255,255,.9);border:1px solid var(--line);backdrop-filter:blur(10px);box-shadow:var(--sh-md);white-space:nowrap}
+/* SWITCHER-OVERLAP — le sélecteur de rôle et le bandeau d'installation sont empilés
+   en colonne et centrés, au lieu d'être deux éléments centrés indépendants. Mesuré :
+   le rolepill (52px, y14→66) recouvrait la rangée de catégories `.filterrail` (y50) et
+   le bandeau (y58) sur 360→900px. Empilés, ils ne peuvent plus se chevaucher, et
+   `.filterrail` garde sa place (y50) sous la pile. */
+.topstack{position:absolute;z-index:17;top:var(--safe-top,14px);left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;max-width:calc(100% - 24px)}
+.topstack .rolepill{position:static;transform:none;top:auto;left:auto;right:auto;z-index:auto}
+.topstack .installbanner{position:static;transform:none;top:auto;left:auto;right:auto;max-width:100%}
 .roleswitch{position:relative;display:flex}
 .roleswitch .ind{position:absolute;top:0;bottom:0;border-radius:999px;background:var(--ink);transition:transform .28s var(--ease),width .28s var(--ease);z-index:0}
 .roleswitch button{position:relative;z-index:1;border-radius:999px;padding:5px 11px;min-height:44px;font-size:10px;font-weight:800;color:var(--ink-soft);transition:color .2s var(--ease),transform .18s var(--ease)}
@@ -251,6 +259,13 @@ body{background:#dadad7;padding:0}
    chevauchement « budget/quantité sur le role switcher » : la barre réserve sa
    fin droite à la pastille et le contenu ne peut plus l'atteindre. */
 .rolepill{top:38px;right:14px;left:auto;transform:translateY(-50%);z-index:17}
+/* SWITCHER-OVERLAP — desktop : la pile passe en haut à droite. La barre de recherche
+   réserve sa fin droite (padding 152px) pour elle, donc l'alignement à droite est le
+   point sûr ; la légende reste à gauche (x80) et les catégories sous la barre (y50).
+   `.topstack .rolepill{position:static}` (base) neutralise ce positionnement absolu
+   pour l'enfant empilé, donc seule la pile est positionnée. */
+.topstack{top:14px;right:14px;left:auto;transform:none;align-items:flex-end}
+.topstack .rolepill{top:auto;right:auto}
 /* SEARCH — barre permanente qui couvre la largeur du contenu (maquette L238). */
 .sheet[data-sheet="search"]{position:absolute;left:64px;right:0;top:0;bottom:auto;width:auto;height:76px;max-height:none;border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none;padding:14px 152px 14px 24px;overflow:hidden;transform:none!important;opacity:1!important;pointer-events:auto!important;display:flex!important;align-items:center;gap:16px;z-index:16}
 .sheet[data-sheet="search"] .handle{display:none}
@@ -334,4 +349,14 @@ body{background:#dadad7;padding:0}
 .installbanner .ib-x:active{background:var(--panel)}
 @media (max-width:420px){.installbanner .ib-body small{display:none}}
 @media (min-width:1040px){.installbanner{left:calc(64px + (100% - 64px) / 2)}}
+/* SWITCHER-OVERLAP (mobile) — sur écran étroit, le sélecteur centré (70px) et la rangée
+   de catégories à gauche (x12→232) se recouvrent dans la bande y50→64. La pastille de rôle
+   fait 52px (cible tactile 44px, mandat RSP-1) et occupe donc y14→66 : la légende et les
+   catégories passent SOUS cette bande. Avec le bandeau d'installation, la pile est plus
+   haute, donc les catégories descendent encore. Rien ne se chevauche dans aucun état. */
+@media (max-width:1039px){
+  .map-legend{top:auto;bottom:calc(var(--safe-bottom,14px) + 70px);left:12px;right:12px}
+  .filterrail{top:calc(var(--safe-top,12px) + 72px)}
+  .omni-v13-stage:has(.installbanner) .filterrail{top:calc(var(--safe-top,12px) + 118px)}
+}
 

@@ -12,20 +12,22 @@ const APP = readFileSync(resolve(__dirname, 'TrunkAppV13.tsx'), 'utf8');
 const ONBOARD = readFileSync(resolve(__dirname, 'OnboardV13.tsx'), 'utf8');
 
 describe('le numéro déclaré n’est jamais présenté comme vérifié (S-16)', () => {
-  it('le libellé public ne dit pas « vérifié »', () => {
+  it('le libellé public dit « non vérifié » (jamais « vérifié »)', () => {
     const label = PHONE.slice(PHONE.indexOf('export function phoneDeclarationLabel'), PHONE.indexOf('export function phoneDeclarationLabel') + 120);
-    expect(label).toContain('Déclaré');
-    expect(label).not.toMatch(/v[ée]rifi/i);
+    // La copie utilisateur reste honnête et courte : « Non vérifié ». Elle ne
+    // s'adresse pas à l'équipe (« Omni ne vérifie pas ce numéro »).
+    expect(label).toMatch(/Non v[ée]rifi[ée]/i);
+    expect(label).not.toMatch(/ne v[ée]rifie pas/i);
   });
 
-  it('la carte Compte étiquette la déclaration comme non confirmée', () => {
+  it('la carte Compte étiquette la déclaration comme non vérifiée', () => {
     expect(APP).toContain('phoneDeclarationLabel()');
-    expect(APP).toMatch(/Omni ne vérifie pas ce numéro/);
+    expect(APP).not.toMatch(/Omni ne v[ée]rifie pas ce num[ée]ro/);
   });
 
   it('l’inscription porte le numéro déclaré, jamais présenté comme vérifié (S-16)', () => {
     expect(ONBOARD).toContain('phoneDeclarationLabel()');
-    expect(ONBOARD).toMatch(/Omni ne vérifie pas ce numéro/);
+    expect(ONBOARD).not.toMatch(/Omni ne v[ée]rifie pas ce num[ée]ro/);
     expect(ONBOARD).not.toMatch(/v[ée]rifier (le|votre) num[ée]ro/i);
   });
 

@@ -108,7 +108,7 @@ function statusLabel(requestStatus: string): string {
 const LOME = [1.22, 6.13] as const;
 
 // S-06 — libellés de l'échelle d'existence (maquette : Discoverable ≠ Queryable ≠ Available ≠ Transactable).
-const EXISTENCE_LABELS = ['Présente', 'Revendiquée', 'Offre publiée', 'Disponibilité vivante', 'Transactable'] as const;
+const EXISTENCE_LABELS = ['Présente', 'Revendiquée', 'Offre publiée', 'Disponibilité confirmée', 'Disponible'] as const;
 
 /**
  * D-CON-5 — the buyer's constraints are the three explicit families from
@@ -119,7 +119,7 @@ const EXISTENCE_LABELS = ['Présente', 'Revendiquée', 'Offre publiée', 'Dispon
 const ROLE_CONSTRAINTS: Record<Role, string[]> = {
   buyer: [],
   seller: ['Ma compagnie', 'Vérifiée', 'À valider', 'Stock bas'],
-  admin: ['Claims', 'Créations', 'À valider', 'Preuves prêtes'],
+  admin: ['Revendications', 'Créations', 'À valider', 'Preuves prêtes'],
   operator: ['Tournée du jour', 'À visiter', 'Vérifiés'],
 };
 
@@ -324,7 +324,7 @@ export function TrunkAppV13() {
     try {
       const keyResult = await getWebPushKey();
       const publicKey = keyResult.ok ? keyResult.data?.publicKey ?? null : null;
-      if (!publicKey) { setPushMsg('Les notifications ne sont pas encore configurées sur ce serveur.'); return; }
+      if (!publicKey) { setPushMsg('Les alertes ne sont pas encore disponibles.'); return; }
       const subscription = await createPushSubscription(publicKey, {
         registerServiceWorker: () => navigator.serviceWorker.ready,
         permission: () => Notification.requestPermission(),
@@ -1215,11 +1215,11 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         setWalletState('idle');
       } else {
         setWalletState('error');
-        setWalletError(result.error?.message ?? 'Le Wallet ne peut pas être chargé pour le moment.');
+        setWalletError(result.error?.message ?? 'Le portefeuille ne peut pas être chargé pour le moment.');
       }
     } catch (caught) {
       setWalletState('error');
-      setWalletError(caught instanceof Error ? caught.message : 'Le Wallet ne peut pas être chargé pour le moment.');
+      setWalletError(caught instanceof Error ? caught.message : 'Le portefeuille ne peut pas être chargé pour le moment.');
     }
     void loadPacks();
     void refreshCreditSummary();
@@ -1647,10 +1647,10 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         idempotencyKey: `wallet-recharge:${crypto.randomUUID()}`,
       });
       if (result.ok && result.data) { setRechargeResult(result.data); setRechargeState('success'); }
-      else { setRechargeState('error'); setRechargeError(result.error?.message ?? 'La recharge Wallet n’a pas pu être préparée.'); }
+      else { setRechargeState('error'); setRechargeError(result.error?.message ?? 'La recharge du portefeuille n’a pas pu être préparée.'); }
     } catch (caught) {
       setRechargeState('error');
-      setRechargeError(caught instanceof Error ? caught.message : 'La recharge Wallet n’a pas pu être préparée.');
+      setRechargeError(caught instanceof Error ? caught.message : 'La recharge du portefeuille n’a pas pu être préparée.');
     }
   }, [requireAuth, rechargeAmount, sessionUser]);
 
@@ -2135,6 +2135,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           <span>{`Aucun ${MAP_FILTERS.find((f) => f.id === mapFilter)?.label.toLowerCase() ?? ''} dans cette zone. Élargissez ou revenez à « Tout ».`}</span>
         </div>
       )}
+      <div className="topstack">
       <div className="rolepill" role="tablist" aria-label="Changer de rôle">
         <div className="roleswitch" ref={rolesRef}>
           <span className="ind" ref={rolesIndRef} />
@@ -2157,6 +2158,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           <button className="ib-x" type="button" aria-label="Ne plus proposer" onClick={dismissInstallBanner}><X size={14} /></button>
         </div>
       )}
+      </div>
       {/* DOCK-DUP — no key here. A role-dependent key (`key={role}`) made React leak the
           previous dock node on every role/sheet change, stacking identical `.navpill`
           siblings (2 then 3, same rect, duplicate a11y landmarks). A stable dock just
@@ -2515,7 +2517,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 <button key={facility.id} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => { if (facility.trust !== 'unclaimed' && product) { startFlow({ id: facility.id, name: facility.name, latitude: facility.latitude, longitude: facility.longitude }, { id: product.id, name: product.name, priceKind: product.priceKind ?? null, listedPriceMinor: product.prixReduit ?? null }); } else { setSheet('facility'); void handlePinSelect(facility); } }}>
                   <div className="row" style={{ justifyContent: 'space-between' }}>
                     <div><b>{facility.name}</b><br /><span className="tiny muted">{facility.category} · {facility.plan}</span></div>
-                    {cheapest ? <span className="status ok">dès {formatMoney(cheapest.prixReduit, currencyFor(cheapest.currency).currency)}</span> : <span className="status gray">Non transactable</span>}
+                    {cheapest ? <span className="status ok">dès {formatMoney(cheapest.prixReduit, currencyFor(cheapest.currency).currency)}</span> : <span className="status gray">Indisponible</span>}
                   </div>
                   {product && <p className="tiny muted" style={{ marginTop: 4 }}>{product.name} · {moneyOrQty(product.stockLoueOmni)}</p>}
                 </button>
@@ -2627,7 +2629,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 <div style={{ marginTop: 8 }}>
                   <span className="exlevel">Niveau {selectedFacility.existenceLevel} · {EXISTENCE_LABELS[selectedFacility.existenceLevel]}</span>
                   <div className="stepline" aria-hidden="true">{[0, 1, 2, 3, 4].map((i) => <i key={i} className={i <= selectedFacility.existenceLevel! ? 'on' : ''} />)}</div>
-                  <div className="steplabels"><span>0 Présente</span><span>4 Transactable</span></div>
+                  <div className="steplabels"><span>0 Présente</span><span>4 Disponible</span></div>
                 </div>
               )}
               {rankedFacilityProducts.map((product) => {
@@ -2825,7 +2827,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     <button className="menuitem" type="button" onClick={() => setSheet('seller')}><span className="mi"><Inbox size={15} /></span><span><b>Transactions</b><small>conversation, paiement, remise</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('offers')}><span className="mi"><PackageSearch size={15} /></span><span><b>Offres</b><small>prix & remise Omni</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('company')}><span className="mi"><Building2 size={15} /></span><span><b>Compagnies</b><small>mes facilités</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Wallet</b><small>solde, Pro & recharges</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Portefeuille</b><small>solde, Pro & recharges</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('plans')}><span className="mi"><Building2 size={15} /></span><span><b>Plans</b><small>Gratuit vs Pro</small></span></button>
                   </>
                 )}
@@ -2836,7 +2838,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                       <button className="menuitem" type="button" onClick={() => void openTour()}><span className="mi"><MapPin size={15} /></span><span><b>Tournée du jour</b><small>dossiers à constater</small></span></button>
                     )}
                     <button className="menuitem" type="button" onClick={() => void openNotifs()}><span className="mi"><Bell size={15} /></span><span><b>Notifications</b><small>demandes à examiner, tours</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Wallet</b><small>solde & recharges</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Portefeuille</b><small>solde & recharges</small></span></button>
                   </>
                 )}
                 <button className="menuitem" type="button" onClick={() => setSheet('account')}><span className="mi"><User size={15} /></span><span><b>Compte</b><small>profil & rôles</small></span></button>
@@ -2861,7 +2863,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           </div>
           <div className="cardbox" style={{ marginTop: 8 }}>
             <div className="kv"><span>Numéro de téléphone</span><b>{phoneDeclared ?? 'Aucun'}</b></div>
-            {phoneDeclared && <p className="tiny muted" style={{ marginTop: 4 }}>{phoneDeclarationLabel()}. Omni ne vérifie pas ce numéro ; c'est un contact que vous déclarez.</p>}
+            {phoneDeclared && <p className="tiny muted" style={{ marginTop: 4 }}>Statut : {phoneDeclarationLabel()} · contact que vous avez déclaré.</p>}
             <div className="label" style={{ marginTop: 6 }}>Déclarer un numéro Togo</div>
             <input className="field" inputMode="tel" autoComplete="tel" placeholder="+228 90 12 34 56" value={phoneDraft} onChange={(e) => setPhoneDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void declarePhone(); }} />
             <div className="row" style={{ gap: 6, marginTop: 6 }}>
@@ -2891,7 +2893,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <Skeleton variant="kv" count={2} />
           )}
           <div className="cardbox" style={{ marginTop: 8 }}>
-            <div className="kv"><span>Wallet</span><b>{walletState === 'idle' && wallet ? formatMoney(wallet.balanceMinor ?? 0, wallet.currency ?? userCurrency.currency) : 'N/D'}</b></div>
+            <div className="kv"><span>Portefeuille</span><b>{walletState === 'idle' && wallet ? formatMoney(wallet.balanceMinor ?? 0, wallet.currency ?? userCurrency.currency) : 'N/D'}</b></div>
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" onClick={() => setSheet('wallet')}>Recharger le wallet</button>
           </div>
           <div className="cardbox" style={{ marginTop: 8 }}>
@@ -2908,7 +2910,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               <p className="tiny muted" style={{ marginTop: 4 }}>La permission a été refusée dans ce navigateur. Réactivez-la dans les réglages du site pour recevoir les alertes. L’Inbox garde tout de toute façon.</p>
             )}
             {pushSupport === 'not-configured' && (
-              <p className="tiny muted" style={{ marginTop: 4 }}>Les notifications ne sont pas encore configurées sur ce serveur. L’Inbox garde tout de toute façon.</p>
+              <p className="tiny muted" style={{ marginTop: 4 }}>Les alertes ne sont pas encore activées. Vos notifications restent dans l’Inbox.</p>
             )}
             {pushSupport === 'unsupported' && (
               <p className="tiny muted" style={{ marginTop: 4 }}>Ce navigateur ne prend pas en charge les notifications. L’Inbox garde tout.</p>
@@ -2960,6 +2962,13 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               );
             })}
           </div>
+          {installPlatform === 'android' && (
+            <p className="tiny muted" style={{ marginTop: 8 }}>
+              Android affiche parfois un avertissement de sécurité pour les applications
+              installées depuis un navigateur. Il vient du système, pas d’Omni, et ne change
+              rien à votre sécurité. Vous pouvez aussi continuer à utiliser Omni dans le navigateur.
+            </p>
+          )}
           <p className="tiny muted" style={{ marginTop: 8 }}>
             Une fois installée, ouvrez Omni depuis l’icône : vous pourrez alors activer les notifications
             depuis vos réglages. Rien ne vous est imposé : l’Inbox garde tout, même sans notification.
@@ -3055,16 +3064,16 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             </div>
           ))}
           <div className="btnrow" style={{ marginTop: 10 }}>
-            <button className="btn ghost" type="button" onClick={() => void openWallet()}><Wallet size={15} /> Wallet</button>
+            <button className="btn ghost" type="button" onClick={() => void openWallet()}><Wallet size={15} /> Portefeuille</button>
             <button className="btn ghost" type="button" onClick={() => setSheet('plans')}>Plans</button>
           </div>
         </section>
       )}
       {sheet === 'wallet' && (
-        <section className="sheet h-mid" data-sheet="wallet" role="dialog" aria-modal="false" aria-label="Omni Wallet" onKeyDown={trapDrawerFocus}>
+        <section className="sheet h-mid" data-sheet="wallet" role="dialog" aria-modal="false" aria-label="Portefeuille Omni" onKeyDown={trapDrawerFocus}>
           <div className="handle" />
           <div className="sheet-head">
-            <div><div className="eyebrow">Omni Wallet</div><h1>Votre pouvoir de recherche.</h1></div>
+            <div><div className="eyebrow">Portefeuille Omni</div><h1>Votre pouvoir de recherche.</h1></div>
             <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
           </div>
           {walletState === 'loading' && <Skeleton variant="kv" count={3} />}
@@ -3094,8 +3103,8 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 </div>
               )}
               <div className="cardbox">
-                <div className="eyebrow">Recharger le Wallet</div>
-                <p className="tiny muted">Rechargez des crédits Omni pour les services de plateforme. La confirmation finale vient du webhook FedaPay vérifié.</p>
+                <div className="eyebrow">Recharger le portefeuille</div>
+                <p className="tiny muted">Rechargez des crédits Omni pour les services de plateforme. Le paiement est confirmé automatiquement par Mobile Money.</p>
                 <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginTop:   8 }}>
                   {[50,100,250].map((amount) => (
                     <button key={amount} type="button" disabled={rechargeState === 'success'} className={rechargeAmount === String(amount) ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', minHeight: 28 }} onClick={() => setRechargeAmount(String(amount))}>{amount} F</button>
@@ -3107,7 +3116,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 {rechargeState === 'success' && rechargeResult ? (
                   <div className="cardbox" style={{ marginTop: 8 }}>
                     <p className="sub" role="status">Recharge créée · {formatMoney(rechargeResult.amountMinor, rechargeResult.currency)} en attente de confirmation.</p>
-                    <button className="btn" type="button" style={{ marginTop: 8 }} onClick={() => { window.location.assign(rechargeResult.checkoutUrl); }}>Continuer le paiement FedaPay <ArrowRight size={15} /></button>
+                    <button className="btn" type="button" style={{ marginTop: 8 }} onClick={() => { window.location.assign(rechargeResult.checkoutUrl); }}>Continuer le paiement <ArrowRight size={15} /></button>
                     <button className="btn ghost sm" type="button" style={{ marginTop: 8 }} onClick={() => { setRechargeState('idle'); setRechargeResult(null); setRechargeAmount('100'); }}>Nouvelle recharge</button>
                   </div>
                 ) : (
@@ -3160,7 +3169,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               </div>
               <div className="cardbox">
                 <div className="eyebrow">Packs crédits bulk</div>
-                <p className="tiny muted">Des crédits surplus pour vos demandes multi-commerces. Payés via FedaPay (Mobile Money au paiement), confirmés par webhook.</p>
+                <p className="tiny muted">Des crédits en plus pour vos demandes multi-commerces. Payables par Mobile Money.</p>
                 {bulkCreditSummary && (
                   <p className="sub" style={{ marginTop: 4 }}>Solde actuel : <b>{bulkCreditSummary.creditsRemaining} crédit(s)</b> {bulkCreditSummary.plan === 'pro' ? '· plan Pro' : '· plan Gratuit (3/mois)'}</p>
                 )}

@@ -447,13 +447,13 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
         <>
           <div className="stat">
             <div className="tile"><small>Créations</small><strong>{consoleData.pendingActivations}</strong></div>
-            <div className="tile"><small>Claims</small><strong>{consoleData.pendingClaims}</strong></div>
+            <div className="tile"><small>Revendications</small><strong>{consoleData.pendingClaims}</strong></div>
             <div className="tile"><small>Signalements</small><strong>{consoleData.pendingReports}</strong></div>
             <div className="tile"><small>Audit aujourd’hui</small><strong>{consoleData.auditEventsToday}</strong></div>
           </div>
           <div className="cardbox" style={{ marginTop: 8 }}>
             <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-              <div><b>Recharges Wallet</b><br /><span className="tiny muted">Re-vérifier les paiements FedaPay en attente</span></div>
+              <div><b>Recharges portefeuille</b><br /><span className="tiny muted">Re-vérifier les recharges en attente</span></div>
               <button className="btn sm" type="button" disabled={reconciling} onClick={() => void reconcile()}><RefreshCw size={14} /> {reconciling ? 'Vérification…' : 'Re-vérifier'}</button>
             </div>
           </div>

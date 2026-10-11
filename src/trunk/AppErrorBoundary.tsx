@@ -34,7 +34,7 @@ export class AppErrorBoundary extends Component<Props, State> {
           <div className="eyebrow">Un imprévu</div>
           <h1>L’application s’est arrêtée</h1>
           <p className="sub">
-            Rien n’est perdu : votre session, votre panier et vos transactions en cours sont conservés côté serveur.
+            Rien n’est perdu : votre session, votre panier et vos transactions en cours sont conservés en sécurité.
           </p>
           <div className="btnrow" style={{ marginTop: 14 }}>
             <button type="button" className="btn" onClick={() => { window.location.reload(); }}>Recharger</button>

@@ -34,8 +34,8 @@ describe('AppErrorBoundary — un lancer de rendu ne laisse pas une page blanche
     expect(text).toContain('L’application s’est arrêtée');
     expect(text).toContain('Recharger');
     expect(text).toContain('Réessayer');
-    // La promesse d'honnêteté : rien n'est perdu, l'état serveur reste.
-    expect(text).toContain('conservés côté serveur');
+    // La promesse d'honnêteté : rien n'est perdu.
+    expect(text).toContain('conservés en sécurité');
   });
 
   it('laisse passer un enfant sain sans interface d’erreur', () => {

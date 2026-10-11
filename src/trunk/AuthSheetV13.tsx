@@ -98,7 +98,9 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose }: AuthShee
         <button type="button" className="sheet-close" onClick={onClose} aria-label="Fermer"><X size={15} /></button>
       </div>
       <p className="sub">
-        {authClient ? 'La connexion Omni (Neon Auth) est active.' : "L'authentification n'est pas configurée dans cet environnement."}
+        {authClient
+          ? (isSignup ? 'Créez votre compte en quelques secondes.' : 'Entrez vos identifiants pour continuer.')
+          : 'L’ouverture de compte est momentanément indisponible. Réessayez plus tard.'}
       </p>
       <form className="cardbox" onSubmit={(event: FormEvent<HTMLFormElement>) => { event.preventDefault(); void submit(); }}>
         {isSignup && (
@@ -107,15 +109,15 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose }: AuthShee
             <input id="v13-auth-firstname" name="firstName" className="field" placeholder="Ama" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
           </>
         )}
-        <label className="label" htmlFor="v13-auth-email">Email</label>
-        <input id="v13-auth-email" name="email" type="email" autoComplete="email" required className="field" placeholder="vous@exemple.fr" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <label className="label" htmlFor="v13-auth-email">E-mail</label>
+        <input id="v13-auth-email" name="email" type="email" autoComplete="email" required className="field" placeholder="vous@exemple.com" value={email} onChange={(e) => setEmail(e.target.value)} />
         <label className="label" htmlFor="v13-auth-password">Mot de passe</label>
         <input id="v13-auth-password" name="password" type="password" autoComplete={isSignup ? 'new-password' : 'current-password'} required className="field" placeholder={isSignup ? '6 caractères minimum' : undefined} value={password} onChange={(e) => setPassword(e.target.value)} />
         {isSignup && (
           <>
             <label className="label" htmlFor="v13-auth-phone">Téléphone (optionnel)</label>
             <input id="v13-auth-phone" name="phone" inputMode="tel" autoComplete="tel" className="field" placeholder="+228 90 12 34 56" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            <p className="tiny muted" style={{ marginTop: 5 }}>Au Togo le numéro est plus courant que l'email. Statut : {phoneDeclarationLabel()}. Omni ne vérifie pas ce numéro.</p>
+            <p className="tiny muted" style={{ marginTop: 5 }}>Au Togo, le téléphone est souvent plus pratique que l'email. Statut : {phoneDeclarationLabel()}.</p>
           </>
         )}
         <button className="btn" type="submit" style={{ marginTop: 10 }} disabled={!canSubmit}>

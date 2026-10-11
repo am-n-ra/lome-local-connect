@@ -32,8 +32,8 @@ export function StockEventLedgerV13({ productId, onClose }: StockEventLedgerV13P
     <section className="sheet h-mid" data-sheet="stockevent" role="region" aria-label="Historique stock">
       <div className="handle" />
       <div className="sheet-head">
-        <div><div className="eyebrow">Historique stock</div><h1>Ledger des changements</h1></div>
-        <span className="status gray">Read-only</span>
+        <div><div className="eyebrow">Historique stock</div><h1>Journal des mouvements</h1></div>
+        <span className="status gray">Lecture seule</span>
       </div>
       <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginBottom: 8 }} onClick={onClose}><ArrowLeft size={15} /> Retour</button>
       {loading && <Skeleton variant="kv" count={3} />}
@@ -46,7 +46,7 @@ export function StockEventLedgerV13({ productId, onClose }: StockEventLedgerV13P
           </div>
         ))}
       </div>
-      <p className="tiny muted" style={{ marginTop: 7 }}>Ledger serveur. Chaque événement est soit dérivé d'une transaction, soit une correction manuelle du vendeur.</p>
+      <p className="tiny muted" style={{ marginTop: 7 }}>Chaque ligne vient d’une transaction ou d’une correction du vendeur.</p>
     </section>
   );
 }

@@ -77,8 +77,8 @@ describe('X5 honest onboarding (replaces the simulated OTP)', () => {
     renderUi();
     act(() => container.querySelector<HTMLButtonElement>('.btn.ok')!.click());
     expect(text()).toContain('Téléphone (optionnel)');
-    expect(text()).toContain('Déclaré · non confirmé');
-    expect(text()).toContain('Omni ne vérifie pas ce numéro');
+    expect(text()).toContain('Non vérifié');
+    expect(text()).not.toContain('Omni ne vérifie pas ce numéro');
     expect(container.querySelector<HTMLInputElement>('input[autocomplete="tel"]')).toBeTruthy();
   });
 });

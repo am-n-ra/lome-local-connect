@@ -169,7 +169,7 @@ export function SellerQrScannerSheet({ onClose, onVerified }: Props) {
       <div className="cardbox" style={{ marginTop: 8 }}>
         <label className="tiny muted" htmlFor="omni-seller-qr-manual" style={{ display: 'block', marginBottom: 4 }}>Saisir le code</label>
         <div className="row" style={{ gap: 6 }}>
-          <input id="omni-seller-qr-manual" value={manual} onChange={(event) => setManual(event.target.value)} placeholder="transactionId:jeton" aria-label="Code QR" style={{ flex: 1, minWidth: 0 }} />
+          <input id="omni-seller-qr-manual" value={manual} onChange={(event) => setManual(event.target.value)} placeholder="Collez le code affiché" aria-label="Code QR" style={{ flex: 1, minWidth: 0 }} />
           <button className="btn sm" type="button" disabled={busy || manual.trim().length < 8} onClick={() => void verify(manual)}><ScanLine size={14} /> Vérifier</button>
         </div>
       </div>

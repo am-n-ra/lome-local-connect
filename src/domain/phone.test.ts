@@ -20,10 +20,12 @@ describe('normalizeTogoPhone', () => {
 });
 
 describe('honnêteté du libellé et du lien', () => {
-  it('le libellé ne dit JAMAIS « vérifié »', () => {
+  it('le libellé nie la vérification, il ne la revendique jamais', () => {
     const label = phoneDeclarationLabel();
-    expect(label).not.toMatch(/v[ée]rifi[ée]/i);
-    expect(label).toContain('Déclaré');
+    // « Non vérifié » : la seule forme honnête. Ce qui est interdit, c'est de
+    // PRÉTENDRE une vérification (« Vérifié », « Déclaré · vérifié »).
+    expect(label).toMatch(/^non v[ée]rifi[ée]/i);
+    expect(label).not.toMatch(/^(v[ée]rifi[ée]|d[ée]clar[ée]\s*\u00b7\s*v[ée]rifi)/i);
   });
 
   it('le lien wa.me ne prétend pas vérifier et encode le message', () => {

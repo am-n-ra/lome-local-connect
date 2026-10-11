@@ -101,7 +101,7 @@ export function OnboardV13({ pendingSearch, hasSession, onClose, onComplete, onA
   const currencyInput = { locale: typeof navigator === 'undefined' ? null : navigator.language };
 
   return (
-    <section className="sheet h-mid" data-sheet="onboard" role="region" aria-label="Onboarding">
+    <section className="sheet h-mid" data-sheet="onboard" role="region" aria-label="Bienvenue">
       <div className="handle" />
       {step === 1 && (
         <>
@@ -139,7 +139,7 @@ export function OnboardV13({ pendingSearch, hasSession, onClose, onComplete, onA
               <input className="field" placeholder="Ama" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
             </>
           )}
-          <div className="label" style={{ marginTop: 8 }}>Email</div>
+          <div className="label" style={{ marginTop: 8 }}>E-mail</div>
           <input className="field lg" type="email" autoComplete="email" placeholder="vous@exemple.com" value={email} onChange={(e) => setEmail(e.target.value)} />
           <div className="label" style={{ marginTop: 8 }}>Mot de passe</div>
           <input className="field lg" type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} placeholder="6 caractères minimum" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void submitAccount(); }} />
@@ -147,7 +147,7 @@ export function OnboardV13({ pendingSearch, hasSession, onClose, onComplete, onA
             <>
               <div className="label" style={{ marginTop: 8 }}>Téléphone (optionnel)</div>
               <input className="field lg" inputMode="tel" autoComplete="tel" placeholder="+228 90 12 34 56" value={phone} onChange={(e) => setPhone(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void submitAccount(); }} />
-              <p className="tiny muted" style={{ marginTop: 5 }}>Au Togo le numéro est plus courant que l'email. Statut : {phoneDeclarationLabel()}. Omni ne vérifie pas ce numéro.</p>
+              <p className="tiny muted" style={{ marginTop: 5 }}>Au Togo, le téléphone est souvent plus pratique que l'email. Statut : {phoneDeclarationLabel()}.</p>
             </>
           )}
           <button className="btn ok" style={{ marginTop: 10 }} type="button" disabled={busy || !email.trim() || password.length < 6} onClick={() => void submitAccount()}>
@@ -175,7 +175,7 @@ export function OnboardV13({ pendingSearch, hasSession, onClose, onComplete, onA
           </div>
           <div className="cardbox">
             <div className="row" style={{ justifyContent: 'space-between' }}>
-              <div><b>Acheteur Gratuit</b><br /><span className="tiny muted">Ce que vous avez déjà</span></div>
+              <div><b>Acheteur gratuit</b><br /><span className="tiny muted">Ce que vous avez déjà</span></div>
               <span className="status gray">Actuel</span>
             </div>
           </div>
