@@ -53,6 +53,7 @@ import { StockEventLedgerV13 } from './StockEventLedgerV13';
 import { OffersV13 } from './OffersV13';
 import { CompanyV13 } from './CompanyV13';
 import { OnboardV13 } from './OnboardV13';
+import { AuthSheetV13 } from './AuthSheetV13';
 import { chipHintFor, chipStatusFor, chipsToSearchOptions, CONSTRAINT_GROUPS, emptyConstraints, activeConstraintCount, QUANTITY_DEFAULT, BUDGET_DEFAULT_LOCAL_MINOR, budgetFieldToMinor, RAYON_SCOPE_LABELS, summarizeActiveChips, type SearchConstraints } from './search-constraints';
 import { MAP_FILTERS, filterFacilities, type MapFilter } from './map-filters';
 import { parseEntityIdFromQr } from './entity-qr';
@@ -365,6 +366,10 @@ const [bulkCreditSummary, setBulkCreditSummary] = useState<BuyerCreditSummary | 
 const [stockEventProductId, setStockEventProductId] = useState<string | null>(null);
 const [pendingSearch, setPendingSearch] = useState('');
 const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  // Heartwood — l'écran `auth` est PARTAGÉ connexion / création de compte. Sans ce
+  // mode, l'écran n'offrait que « Se connecter » : un nouvel utilisateur n'avait aucun
+  // chemin vers la création de compte (le bouton du menu promet pourtant « Créer un compte »).
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [bulkLoading, setBulkLoading] = useState(false);
   // D-C5 : la fiche multi-produits d'UNE facilité rend des vérifications manuelles
   // gratuites, pas un bulk. La sheet partage l'affichage des lignes, jamais le nom :
@@ -792,14 +797,15 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const requireAuth = useCallback(async (resume?: PendingAction): Promise<string | null> => {
     try {
       const token = await getAuthToken();
-      if (!token) { if (resume) setPendingAction(resume); setSheet('auth'); return null; }
+      if (!token) { if (resume) setPendingAction(resume); setAuthMode('signin'); setSheet('auth'); return null; }
       return token;
-    } catch { if (resume) setPendingAction(resume); setSheet('auth'); return null; }
+    } catch { if (resume) setPendingAction(resume); setAuthMode('signin'); setSheet('auth'); return null; }
   }, []);
 
   const gateRequest = useCallback((action: PendingAction): boolean => {
     if (sessionUser) return true;
     setPendingAction(action);
+    setAuthMode('signin');
     setSheet('auth');
     return false;
   }, [sessionUser]);
@@ -1311,6 +1317,35 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       return false;
     }
   }, [requireAuth]);
+
+  // Heartwood — un compte créé ou connecté depuis l'écran `auth` adopte sa session
+  // EXACTEMENT comme l'onboarding : rôles, capacités, favoris, plan Acheteur Pro. Sans
+  // ce chemin, un nouvel inscrit restait sans capacités chargées (le menu ne reflétait
+  // pas le compte fraîchement créé).
+  const adoptSession = useCallback(async (user: SessionUser) => {
+    setSessionUser(user);
+    // Best-effort : la session est adoptée même si le chargement des capacités échoue
+    // (une panne d'API ne doit JAMAIS faire passer une création de compte réussie pour
+    // un échec, ni bloquer la navigation).
+    try {
+      const token = await getAuthToken();
+      if (!token) return;
+      setAuthToken(token);
+      const caps = await getAccountCapabilities({ token });
+      if (caps.ok && caps.data) {
+        setAccountRoles(caps.data.roles ?? []);
+        setOwnedFacilityIds(caps.data.ownedFacilityIds ?? []);
+        setAdminTools(Boolean(caps.data.capabilities?.adminTools));
+        setSellerAvailable(Boolean(caps.data.capabilities?.sellerWorkspace));
+        setPhoneDeclared(caps.data.phoneDeclared ?? null);
+        if (caps.data.capabilities?.sellerWorkspace) void loadSellerWorkspace();
+      }
+      void loadFavorites();
+      void loadBuyerProStatus();
+    } catch {
+      /* capacités indisponibles : le compte existe, l'app reste utilisable */
+    }
+  }, [loadSellerWorkspace, loadFavorites, loadBuyerProStatus]);
 
   const activateBuyerProUI = useCallback(async () => {
     const token = await requireAuth();
@@ -2754,7 +2789,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           </div>
           <div className="menugrid" style={{ display: 'grid', gap: 8, marginTop: 10 }}>
             {!sessionUser && (
-              <button className="btn" type="button" onClick={() => setSheet('auth')}><User size={16} /> Créer un compte / se connecter</button>
+              <button className="btn" type="button" onClick={() => { setAuthMode('signup'); setSheet('auth'); }}><User size={16} /> Créer un compte / se connecter</button>
             )}
             {/* Installable avant toute session : c'est le préalable du Web Push sur iOS. */}
             {shouldOfferInstall(installState) && (
@@ -3563,45 +3598,20 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         </section>
       )}
       {sheet === 'auth' && (
-        <section className="sheet h-mid" data-sheet="auth" role="dialog" aria-modal="true" aria-label="Connexion" onKeyDown={trapDrawerFocus}>
-          <div className="handle" />
-          <div className="sheet-head">
-            <div><div className="eyebrow">Bienvenue</div><h1>Connectez-vous pour continuer.</h1></div>
-            <button type="button" className="sheet-close" onClick={() => setSheet('none')} aria-label="Fermer"><X size={15} /></button>
-          </div>
-          <p className="sub">
-            {authClient ? 'La connexion Omni (Neon Auth) est active.' : 'L’authentification n’est pas configurée dans cet environnement.'}
-          </p>
-          <form className="cardbox" onSubmit={async (event: FormEvent<HTMLFormElement>) => {
-            event.preventDefault();
-            const data = new FormData(event.currentTarget);
-            const email = String(data.get("email") ?? "");
-            const password = String(data.get("password") ?? "");
-            if (!email || !password) return;
-            try {
-              await authClient.signIn.email({ email, password });
-              const session = await authClient.getSession();
-              const user = sessionUserFromAuthResult(session);
-              if (user) setSessionUser(user);
-              // RT-D1: unlock a gated itinerary right after signing in.
-              setAuthToken(await getAuthToken());
-              if (pendingAction) {
-                // Heartwood : l'utilisateur connecté reprend son action en cours, sans onboarding.
-                await resumePendingAction(true);
-              } else {
-                setSheet("menu");
-              }
-            } catch {
-              setError("Connexion impossible - vérifiez vos identifiants.");
+        <AuthSheetV13
+          initialMode={authMode}
+          onAuthenticated={async (user) => {
+            await adoptSession(user);
+            // RT-D1: unlock a gated itinerary right after signing in.
+            if (pendingAction) {
+              // Heartwood : l'utilisateur connecté reprend son action en cours, sans onboarding.
+              await resumePendingAction(true);
+            } else {
+              setSheet('menu');
             }
-          }}>
-            <label className="label" htmlFor="v13-email">Email</label>
-            <input id="v13-email" name="email" type="email" required className="field" placeholder="vous@exemple.fr" />
-            <label className="label" htmlFor="v13-password">Mot de passe</label>
-            <input id="v13-password" name="password" type="password" required className="field" />
-            <button className="btn" type="submit" style={{ marginTop: 10 }}>Se connecter</button>
-          </form>
-        </section>
+          }}
+          onClose={() => setSheet('none')}
+        />
       )}
 
       {mapState === 'loading' && <div className="map-legend" role="status"><span>Chargement…</span></div>}

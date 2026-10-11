@@ -21,7 +21,8 @@ const APP = readFileSync(resolve(__dirname, 'TrunkAppV13.tsx'), 'utf8');
 describe('AUTH-RESUME — une action gardée est reprise après connexion', () => {
   it('`requireAuth` accepte une action à reprendre et la mémorise', () => {
     expect(APP).toMatch(/requireAuth = useCallback\(async \(resume\?: PendingAction\)/);
-    expect(APP).toMatch(/if \(resume\) setPendingAction\(resume\);\s*setSheet\('auth'\)/);
+    // la reprise est mémorisée AVANT d'ouvrir l'écran (le mode connexion s'intercale).
+    expect(APP).toMatch(/if \(resume\) setPendingAction\(resume\);\s*setAuthMode\('signin'\);\s*setSheet\('auth'\)/);
   });
 
   it('comparer et dispo groupée déclarent leurs intentions', () => {
