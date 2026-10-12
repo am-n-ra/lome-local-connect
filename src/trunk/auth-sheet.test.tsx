@@ -10,14 +10,15 @@ const mocks = vi.hoisted(() => ({
   signUp: vi.fn(async () => ({})),
   signIn: vi.fn(async () => ({})),
   getSession: vi.fn(async (): Promise<{ data: { user: unknown } }> => ({ data: { user: { id: 'u1', email: 'ama@example.com', name: 'Ama' } } })),
-  sendVerificationEmail: vi.fn(async () => ({})),
+  sendVerificationOtp: vi.fn(async () => ({})),
+  verifyEmail: vi.fn(async (): Promise<Record<string, unknown>> => ({ data: { user: { id: 'u1', email: 'ama@example.com', name: 'Ama' } } })),
 }));
 vi.mock('../auth', () => ({
   authClient: {
     signUp: { email: mocks.signUp },
     signIn: { email: mocks.signIn },
     getSession: mocks.getSession,
-    sendVerificationEmail: mocks.sendVerificationEmail,
+    emailOtp: { sendVerificationOtp: mocks.sendVerificationOtp, verifyEmail: mocks.verifyEmail },
   },
   getAuthToken: vi.fn(async () => 'header.payload.signature'),
 }));
@@ -25,16 +26,18 @@ vi.mock('./api', () => ({ setDeclaredPhone: vi.fn(async () => ({ ok: true })) })
 
 import { AuthSheetV13 } from './AuthSheetV13';
 
-const { signUp, signIn, getSession, sendVerificationEmail } = mocks;
+const { signUp, signIn, getSession, sendVerificationOtp, verifyEmail } = mocks;
 
 let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
-  signUp.mockClear(); signIn.mockClear(); getSession.mockClear(); sendVerificationEmail.mockClear();
+  signUp.mockClear(); signIn.mockClear(); getSession.mockClear(); sendVerificationOtp.mockClear(); verifyEmail.mockClear();
   signUp.mockResolvedValue({});
   signIn.mockResolvedValue({});
   getSession.mockResolvedValue({ data: { user: { id: 'u1', email: 'ama@example.com', name: 'Ama' } } });
+  sendVerificationOtp.mockResolvedValue({});
+  verifyEmail.mockResolvedValue({ data: { user: { id: 'u1', email: 'ama@example.com', name: 'Ama' } } });
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -55,6 +58,9 @@ function renderUi(mode: 'signin' | 'signup', onAuthenticated = vi.fn()) {
 function text() { return container.textContent ?? ''; }
 function submitButton() {
   return container.querySelector<HTMLButtonElement>('button[type="submit"]');
+}
+function findButton(label: string) {
+  return [...container.querySelectorAll<HTMLButtonElement>('button')].find((b) => (b.textContent ?? '').includes(label)) ?? null;
 }
 // React controlled inputs ignore a plain `.value =`; the native setter makes onChange fire.
 function typeInto(el: HTMLInputElement, value: string) {
@@ -136,8 +142,8 @@ describe('AUTH-CREATE — l\'écran auth permet de CRÉER un compte (bug fondate
   });
 });
 
-describe('AUTH-CONFIRM — la confirmation e-mail n\'est plus une impasse (fondateur 2026-10-07)', () => {
-  it('quand la création n\'ouvre pas de session, un ÉTAT de confirmation clair remplace la phrase en passant', async () => {
+describe('BRANCH-2 — confirmation e-mail par CODE (OTP), envoi automatique, renvoi différé', () => {
+  it('quand la création n\'ouvre pas de session, l\'état de confirmation demande le CODE reçu', async () => {
     getSession.mockResolvedValue({ data: { user: null } }); // plateforme exige la confirmation
     renderUi('signup');
     fillSignup('Ama', 'ama@example.com', 'secret6');
@@ -146,14 +152,56 @@ describe('AUTH-CONFIRM — la confirmation e-mail n\'est plus une impasse (fonda
     expect(text()).toContain('ama@example.com');
     // l'impasse précédente (« validez-la puis connectez-vous », puis rien) a disparu
     expect(text()).not.toContain('Si une confirmation par email est demandée');
-    // l'e-mail de confirmation est réellement déclenché
-    expect(sendVerificationEmail).toHaveBeenCalledWith({ email: 'ama@example.com', callbackURL: expect.any(String) });
-    // une issue existe : renvoyer + se connecter
-    expect(text()).toContain("Renvoyer l'e-mail de confirmation");
-    expect(text()).toContain("J'ai confirmé");
+    // le CODE de vérification est réellement déclenché (pas un lien)
+    expect(sendVerificationOtp).toHaveBeenCalledWith({ email: 'ama@example.com', type: 'email-verification' });
+    // un champ de saisie du code existe, et une action pour le valider
+    expect(container.querySelector('#v13-auth-code')).toBeTruthy();
+    expect(text()).toContain('Confirmer mon adresse');
   });
 
-  it('une connexion refusée pour e-mail non confirmé dit la VÉRITÉ (pas « identifiants incorrects ») et propose de renvoyer', async () => {
+  it('saisir le code reçu confirme l\'adresse et ouvre la session (verifyEmail appelé)', async () => {
+    // 1er getSession (après signup) : pas de session → état de confirmation ;
+    // 2e getSession (après verifyEmail) : la session est ouverte.
+    getSession.mockResolvedValueOnce({ data: { user: null } });
+    const onAuth = renderUi('signup');
+    fillSignup('Ama', 'ama@example.com', 'secret6');
+    await act(async () => { submitButton()!.click(); });
+    typeInto(container.querySelector<HTMLInputElement>('#v13-auth-code')!, '123456');
+    await act(async () => { findButton('Confirmer mon adresse')!.click(); });
+    expect(verifyEmail).toHaveBeenCalledWith({ email: 'ama@example.com', otp: '123456' });
+    expect(onAuth).toHaveBeenCalledWith({ id: 'u1', email: 'ama@example.com', name: 'Ama' });
+  });
+
+  it('un code invalide est dit comme tel, et laisse l\'utilisateur réessayer', async () => {
+    getSession.mockResolvedValue({ data: { user: null } });
+    verifyEmail.mockResolvedValue({ error: { message: 'Invalid OTP', code: 'INVALID_OTP' } });
+    renderUi('signup');
+    fillSignup('Ama', 'ama@example.com', 'secret6');
+    await act(async () => { submitButton()!.click(); });
+    typeInto(container.querySelector<HTMLInputElement>('#v13-auth-code')!, '000000');
+    await act(async () => { findButton('Confirmer mon adresse')!.click(); });
+    expect(text()).toContain('Code incorrect ou expiré');
+    expect(container.querySelector('#v13-auth-code')).toBeTruthy(); // toujours là pour réessayer
+  });
+
+  it('le renvoi n\'apparaît qu\'APRÈS un délai (on ne propose pas de renvoyer un e-mail qui vient de partir)', async () => {
+    vi.useFakeTimers();
+    try {
+      getSession.mockResolvedValue({ data: { user: null } });
+      renderUi('signup');
+      fillSignup('Ama', 'ama@example.com', 'secret6');
+      await act(async () => { submitButton()!.click(); });
+      // juste après l'envoi : renvoi verrouillé par un compte à rebours
+      expect(text()).toContain('Renvoyer le code dans');
+      await act(async () => { vi.advanceTimersByTime(31000); });
+      // après le délai : le bouton de renvoi est disponible
+      expect(findButton('Renvoyer le code')).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('une connexion refusée pour e-mail non confirmé dit la VÉRITÉ (pas « identifiants incorrects ») et envoie un code', async () => {
     signIn.mockResolvedValue({ error: { message: 'Email not verified', code: 'EMAIL_NOT_VERIFIED' } });
     renderUi('signin');
     typeInto(container.querySelector<HTMLInputElement>('#v13-auth-email')!, 'ama@example.com');
@@ -161,7 +209,7 @@ describe('AUTH-CONFIRM — la confirmation e-mail n\'est plus une impasse (fonda
     await act(async () => { submitButton()!.click(); });
     expect(text()).toContain('Confirmez votre e-mail.');
     expect(text()).not.toContain('Vérifiez vos identifiants');
-    expect(sendVerificationEmail).toHaveBeenCalled();
+    expect(sendVerificationOtp).toHaveBeenCalled();
   });
 
   it('un vrai mauvais mot de passe reste dit comme tel (on ne confond pas les deux échecs)', async () => {
@@ -171,7 +219,7 @@ describe('AUTH-CONFIRM — la confirmation e-mail n\'est plus une impasse (fonda
     typeInto(container.querySelector<HTMLInputElement>('#v13-auth-password')!, 'secret6');
     await act(async () => { submitButton()!.click(); });
     expect(text()).toContain('Vérifiez vos identifiants');
-    expect(sendVerificationEmail).not.toHaveBeenCalled();
+    expect(sendVerificationOtp).not.toHaveBeenCalled();
   });
 });
 

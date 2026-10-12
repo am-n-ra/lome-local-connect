@@ -73,7 +73,7 @@ export function savedSearchConstraintSummary(search: SavedSearch): string {
 export type PendingAction =
   | { kind: 'intent'; returnTo: 'flow'; facilityId: string; facilityName: string; productId: string; productName: string; quantity: number }
   | { kind: 'seller-entry'; returnTo: 'seller-entry' }
-  | { kind: 'search'; returnTo: 'search' }
+  | { kind: 'search'; returnTo: 'search'; query?: string; level?: 'offer' | 'entity' }
   | { kind: 'compare'; returnTo: 'compare' }
   | { kind: 'bulk'; returnTo: 'bulk' }
   | { kind: 'home'; returnTo: 'home' }
@@ -106,7 +106,7 @@ export function describePendingAction(action: PendingAction | null): string {
 
 export type PendingResume =
   | { sheet: 'flow'; facilityId: string; facilityName: string; productId: string; productName: string }
-  | { sheet: 'search' }
+  | { sheet: 'search'; query?: string; level?: 'offer' | 'entity' }
   | { sheet: 'seller' }
   | { sheet: 'compare' }
   | { sheet: 'bulk' }
@@ -124,7 +124,7 @@ export function pendingActionResume(action: PendingAction | null): PendingResume
   if (action?.kind === 'intent') {
     return { sheet: 'flow', facilityId: action.facilityId, facilityName: action.facilityName, productId: action.productId, productName: action.productName };
   }
-  if (action?.kind === 'search') return { sheet: 'search' };
+  if (action?.kind === 'search') return { sheet: 'search', query: action.query, level: action.level };
   if (action?.kind === 'seller-entry') return { sheet: 'seller' };
   if (action?.kind === 'compare') return { sheet: 'compare' };
   if (action?.kind === 'bulk') return { sheet: 'bulk' };
@@ -240,5 +240,60 @@ export function offerTrustLabel(input: {
     ok: integrity !== undefined && integrity.state === 'ok',
     missing,
   };
+}
+
+
+/**
+ * BRANCH-1 — où retombe une feuille quand on la retire d'un geste (tirer vers le bas).
+ *
+ * Le geste doit produire le MÊME effet que le bouton de fermeture de la feuille, sinon deux
+ * sorties mèneraient à deux endroits différents. `null` = aucune feuille active (le stage
+ * décide alors de ne rien faire). Les feuilles d'un parcours reviennent à l'étape précédente
+ * (sous-écran vendeur → espace vendeur ; bulk/compare/claim/signal → fiche), les destinations
+ * reviennent au menu, et les surfaces plein-écran (recherche, résultats, fiche, entité)
+ * reviennent à la carte.
+ */
+export function sheetDismissTarget(sheet: string): 'none' | 'menu' | 'facility' | 'seller' | 'home' | null {
+  switch (sheet) {
+    case 'search':
+    case 'results':
+    case 'facility':
+    case 'entity':
+      return 'none';
+    case 'bulk':
+    case 'compare':
+    case 'claim':
+    case 'signal':
+      return 'facility';
+    case 'seller-reply':
+    case 'seller-qr':
+    case 'products':
+    case 'stockevent':
+    case 'offers':
+    case 'company':
+    case 'freshness':
+    case 'verification':
+      return 'seller';
+    case 'receipt':
+    case 'op-side':
+      return 'home';
+    case 'auth':
+    case 'legal':
+    case 'menu':
+    case 'account':
+    case 'admin':
+    case 'home':
+    case 'wallet':
+    case 'plans':
+    case 'saved':
+    case 'favorites':
+    case 'notifs':
+    case 'recovery':
+    case 'tour':
+    case 'install':
+      return 'menu';
+    default:
+      return null;
+  }
 }
 

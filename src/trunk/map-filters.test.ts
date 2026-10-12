@@ -1,3 +1,7 @@
+// @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 import { MAP_FILTERS, facilityMatchesFilter, filterFacilities } from './map-filters';
 
@@ -74,5 +78,32 @@ describe('S-07 map filters — rail', () => {
       { entityKind: 'organisation' as const, facilityType: 'digital' as const, name: 'Boutique en ligne' },
     ];
     expect(filterFacilities(marche, 'transport').map((f) => f.name)).toEqual(['Vendeur ambulant']);
+  });
+});
+
+/**
+ * BRANCH-3 — « Ambulants » doit être sur la MÊME ligne que les autres catégories
+ * (fondateur 2026-10-07). Le rail s'enroulait (`flex-wrap:wrap` + `max-width:220px`) et la
+ * 4e chip tombait seule en dessous. Ce garde lit le CSS réel de l'app.
+ */
+describe('BRANCH-3 — le rail de catégories tient sur une seule ligne', () => {
+  const css = readFileSync(resolve(process.cwd(), 'src/trunk/ui-v13.css'), 'utf8');
+
+  function rule(selector: string): string {
+    const match = css.match(new RegExp(`${selector.replace('.', '\\.')}\\{([^}]*)\\}`));
+    return match?.[1] ?? '';
+  }
+
+  it('le rail n\'a plus de retour à la ligne ni de largeur qui le force', () => {
+    const rail = rule('.filterrail');
+    expect(rail).toContain('flex-wrap:nowrap');
+    expect(rail).not.toContain('flex-wrap:wrap');
+    expect(rail).not.toMatch(/max-width:220px/);
+  });
+
+  it('les chips ne se coupent pas et ne se compressent pas (elles restent sur la ligne)', () => {
+    const chip = rule('.fchip');
+    expect(chip).toContain('white-space:nowrap');
+    expect(chip).toContain('flex:none');
   });
 });

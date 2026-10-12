@@ -1,10 +1,13 @@
-import { FormEvent, useCallback, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
 import { normalizeTogoPhone, phoneDeclarationLabel } from '../domain/phone';
 import { setDeclaredPhone } from './api';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
 import { trapDrawerFocus } from './ui-helpers';
+
+/** BRANCH-2 — délai (s) avant que « Renvoyer » ne redevienne disponible. */
+const RESEND_DELAY_SECONDS = 30;
 
 export type AuthMode = 'signin' | 'signup';
 
@@ -21,18 +24,19 @@ type AuthSheetV13Props = {
   onOpenLegal: (section: 'confidentialite' | 'conditions' | 'mentions') => void;
 };
 
-/** The confirmation link must return the user to Omni so they can sign in. */
-function emailConfirmCallbackUrl(): string {
-  if (typeof window === 'undefined') return '/';
-  return `${window.location.origin}/`;
-}
-
 /** A sign-in that failed because the address is not confirmed yet is NOT a wrong password.
  *  The two need different words, or the user retries a correct password forever. */
 function isUnverifiedEmail(error: { message?: string; code?: string } | null | undefined): boolean {
   if (!error) return false;
   const hay = `${error.code ?? ''} ${error.message ?? ''}`.toLowerCase();
   return hay.includes('verif') || hay.includes('not confirmed') || hay.includes('confirm');
+}
+
+/** Un code de vérification invalide ou expiré se dit avec SES mots, pas « erreur réseau ». */
+function isBadCode(error: { message?: string; code?: string } | null | undefined): boolean {
+  if (!error) return false;
+  const hay = `${error.code ?? ''} ${error.message ?? ''}`.toLowerCase();
+  return hay.includes('invalid') || hay.includes('otp') || hay.includes('expired') || hay.includes('incorrect');
 }
 
 /**
@@ -63,6 +67,12 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose, onOpenLega
   // AUTH-CONFIRM — non-null = we are waiting for the user to confirm this address.
   const [awaitingConfirm, setAwaitingConfirm] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  // BRANCH-2 — le code reçu par e-mail (Neon Auth `email_verification_method = otp`).
+  const [code, setCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  // BRANCH-2 — le renvoi n'apparaît qu'APRÈS un délai : on ne propose pas de renvoyer un
+  // e-mail qui vient de partir, et on ne laisse pas l'utilisateur devant un bouton inerte.
+  const [resendIn, setResendIn] = useState(0);
   // BRANCHES — consentement explicite au traitement (loi togolaise 2019-014).
   const [consent, setConsent] = useState(false);
 
@@ -70,14 +80,25 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose, onOpenLega
   const nameOk = firstName.trim().length > 0;
   const canSubmit = !busy && (!isSignup || (nameOk && consent)) && email.trim().length > 0 && password.length >= 6;
 
+  // BRANCH-2 — envoi du CODE de vérification (OTP), pas d'un lien. Le délai de renvoi
+  // démarre en même temps : l'utilisateur voit qu'un e-mail vient de partir.
   const sendConfirmation = useCallback(async (address: string) => {
     if (!authClient) return;
+    setResendIn(RESEND_DELAY_SECONDS);
     try {
-      await authClient.sendVerificationEmail({ email: address, callbackURL: emailConfirmCallbackUrl() });
+      await authClient.emailOtp.sendVerificationOtp({ email: address, type: 'email-verification' });
     } catch {
       /* best-effort : l'écran propose de renvoyer, il ne bloque jamais sur l'envoi */
     }
   }, []);
+
+  // Compte à rebours du renvoi — nettoyé dès qu'on quitte l'état de confirmation.
+  useEffect(() => {
+    if (!awaitingConfirm || resendIn <= 0) return;
+    const id = window.setInterval(() => setResendIn((s) => (s > 0 ? s - 1 : 0)), 1000);
+    return () => window.clearInterval(id);
+  }, [awaitingConfirm, resendIn]);
+
 
   const submit = useCallback(async () => {
     if (busy || !email.trim() || password.length < 6) return;
@@ -143,13 +164,41 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose, onOpenLega
   }, [busy, nameOk, consent, email, password, phone, firstName, mode, onAuthenticated, sendConfirmation]);
 
   const resend = useCallback(async () => {
-    if (!awaitingConfirm || resending) return;
+    if (!awaitingConfirm || resending || resendIn > 0) return;
     setResending(true);
     setNotice(null);
     await sendConfirmation(awaitingConfirm);
     setResending(false);
-    setNotice(`E-mail renvoyé à ${awaitingConfirm}. Vérifiez aussi vos indésirables.`);
-  }, [awaitingConfirm, resending, sendConfirmation]);
+    setNotice(`Nouveau code envoyé à ${awaitingConfirm}. Vérifiez aussi vos indésirables.`);
+  }, [awaitingConfirm, resending, resendIn, sendConfirmation]);
+
+  // BRANCH-2 — l'utilisateur SAISIT le code reçu. Un code juste ouvre la session ; un code
+  // faux est dit comme tel. Un succès sans session (rare) retombe sur la connexion.
+  const verifyCode = useCallback(async () => {
+    const trimmed = code.trim();
+    if (!awaitingConfirm || verifying || trimmed.length === 0) return;
+    setVerifying(true);
+    setError(null);
+    setNotice(null);
+    try {
+      if (!authClient) { setError("L'authentification n'est pas configurée dans cet environnement."); return; }
+      const result = await authClient.emailOtp.verifyEmail({ email: awaitingConfirm, otp: trimmed });
+      if (result?.error) {
+        setError(isBadCode(result.error) ? 'Code incorrect ou expiré. Vérifiez le code reçu, ou demandez-en un nouveau.' : 'La vérification a échoué. Réessayez.');
+        return;
+      }
+      const session = await authClient.getSession();
+      const user = sessionUserFromAuthResult(session);
+      if (user) { await onAuthenticated(user); return; }
+      setNotice('Adresse confirmée. Vous pouvez maintenant vous connecter.');
+      setAwaitingConfirm(null);
+      setMode('signin');
+    } catch {
+      setError('La vérification a échoué. Réessayez.');
+    } finally {
+      setVerifying(false);
+    }
+  }, [awaitingConfirm, verifying, code, onAuthenticated]);
 
   return (
     <section className="sheet h-mid" data-sheet="auth" role="dialog" aria-modal="true" aria-label={awaitingConfirm ? 'Confirmez votre e-mail' : isSignup ? 'Création de compte' : 'Connexion'} onKeyDown={trapDrawerFocus}>
@@ -164,18 +213,38 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose, onOpenLega
 
       {awaitingConfirm ? (
         <>
-          <p className="sub">Nous avons envoyé un lien de confirmation à <b>{awaitingConfirm}</b>. Ouvrez ce lien, puis revenez vous connecter.</p>
+          <p className="sub">Nous avons envoyé un <b>code</b> de confirmation à <b>{awaitingConfirm}</b>. Saisissez-le ci-dessous.</p>
           <div className="cardbox">
             <div className="kv"><span>1 · Ouvrez l'e-mail</span><b>Expéditeur Omni</b></div>
-            <div className="kv"><span>2 · Cliquez le lien</span><b>Votre adresse est confirmée</b></div>
-            <div className="kv"><span>3 · Revenez ici</span><b>Se connecter</b></div>
+            <div className="kv"><span>2 · Saisissez le code</span><b>Ci-dessous</b></div>
           </div>
-          <p className="tiny muted" style={{ marginTop: 7 }}>Rien reçu ? Regardez vos indésirables, puis renvoyez l'e-mail ci-dessous.</p>
-          <button className="btn" style={{ marginTop: 10 }} type="button" onClick={() => void resend()} disabled={resending}>
-            {resending ? 'Envoi…' : "Renvoyer l'e-mail de confirmation"}
+          <label className="label" htmlFor="v13-auth-code" style={{ marginTop: 8 }}>Code de confirmation</label>
+          <input
+            id="v13-auth-code"
+            name="code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            className="field"
+            placeholder="123456"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+          />
+          <button className="btn ok" style={{ marginTop: 8 }} type="button" onClick={() => void verifyCode()} disabled={verifying || code.trim().length === 0}>
+            {verifying ? 'Vérification…' : 'Confirmer mon adresse'}
           </button>
-          <button className="btn ok" style={{ marginTop: 7 }} type="button" onClick={() => { setAwaitingConfirm(null); setMode('signin'); setError(null); setNotice(null); }}>
-            J'ai confirmé : me connecter
+          {error && <p className="tiny" style={{ color: 'var(--warn)', marginTop: 7 }} role="alert">{error}</p>}
+          <p className="tiny muted" style={{ marginTop: 9 }}>Rien reçu ? Regardez vos indésirables.</p>
+          {resendIn > 0 ? (
+            <button className="btn ghost sm" style={{ marginTop: 7 }} type="button" disabled>
+              Renvoyer le code dans {resendIn} s
+            </button>
+          ) : (
+            <button className="btn" style={{ marginTop: 7 }} type="button" onClick={() => void resend()} disabled={resending}>
+              {resending ? 'Envoi…' : 'Renvoyer le code'}
+            </button>
+          )}
+          <button className="btn ghost sm" style={{ marginTop: 7 }} type="button" onClick={() => { setAwaitingConfirm(null); setCode(''); setMode('signin'); setError(null); setNotice(null); }}>
+            Déjà confirmé : me connecter
           </button>
           {notice && <p className="tiny muted" style={{ marginTop: 7 }} role="status">{notice}</p>}
         </>

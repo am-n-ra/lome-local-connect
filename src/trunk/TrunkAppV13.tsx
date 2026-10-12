@@ -19,7 +19,8 @@ import {
   listVisitQueue, claimVisit, submitVisitReport, reprogramVisit, uploadVisitEvidence,
   getWebPushKey, getWebPushStatus, subscribeWebPush, revokeWebPush,
 } from './api';
-import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
+import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, trapDrawerFocus, walletBucketTotals, sheetDismissTarget, type PendingAction } from './ui-helpers';
+import { useSheetDrag } from './use-sheet-drag';
 import { Skeleton, SkeletonDetail } from './Skeleton';
 import { TransactionRoom } from './TransactionRoom';
 import { cartProductsFor, cartProductCount, clearFacilityCart, parseCarts, pruneCart, serializeCarts, toggleCartProduct, FACILITY_CARTS_STORAGE_KEY, type FacilityCarts } from './facility-cart';
@@ -712,6 +713,21 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     if (!active) setRevealPending(false);
     if (!active && (sheet === 'none' || sheet === 'results')) setSheet('results');
   }, [sheet]);
+
+  // BRANCH-1 — retirer une feuille mobile d'un geste (tirer sa poignée vers le bas).
+  // Le geste produit le MÊME effet que le bouton de fermeture de la feuille (une seule table
+  // de vérité, `sheetDismissTarget`), sinon deux sorties mèneraient à deux endroits.
+  const handleSheetDismiss = useCallback(() => {
+    const target = sheetDismissTarget(sheet);
+    if (!target) return;
+    if (target === 'facility') { setSheet('facility'); return; }
+    if (target === 'seller') { setSheet('seller'); return; }
+    if (target === 'home') { setSheet('home'); return; }
+    if (target === 'menu') { setSheet('menu'); return; }
+    setSelectedId(null);
+    setSheet('none');
+  }, [sheet]);
+  const sheetDrag = useSheetDrag(handleSheetDismiss);
 
   const handleResultsScroll = useCallback(() => {
     if (resultsScrollFrame.current !== null) return;
@@ -1498,11 +1514,24 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         // l'acheteur retrouve sa sélection et peut relancer la demande de disponibilité.
         await handlePinSelect({ id: resume.facilityId });
         return;
-      case 'search': setSheet('search'); return;
+      case 'search':
+        // BRANCH-4 — relance la requête retenue (D-05 : elle survit à l'authentification).
+        if (resume.query && resume.query.trim()) {
+          setQuery(resume.query);
+          if (resume.level === 'entity') void runEntitySearch(resume.query);
+          else void runSearch(resume.query, currentSearchOptions());
+          return;
+        }
+        setSheet('search');
+        return;
       case 'seller': setSheet('seller'); return;
       default: setSheet('none');
     }
-  }, [pendingAction, startFlow, openCompare, openBulk, openHome, openWallet, openSaved, openTour, openNotifs, openRecovery, handlePinSelect]);
+    // `runEntitySearch`/`currentSearchOptions` sont déclarés plus bas : on ne les met pas dans
+    // les deps (TDZ) — le callback est recréé quand `pendingAction` change, donc la closure
+    // capturée au moment où la recherche est retenue est la bonne.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAction, startFlow, openCompare, openBulk, openHome, openWallet, openSaved, openTour, openNotifs, openRecovery, handlePinSelect, runSearch]);
 
   const openDossier = useCallback((visit: FieldVisit) => {
     setSelVisitId(visit.id);
@@ -1988,9 +2017,21 @@ const [compareBlocked, setCompareBlocked] = useState(0);
 
   const handleSubmitSearch = (event: FormEvent) => {
     event.preventDefault();
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    // BRANCH-4 — D-05 : chercher est une DEMANDE Omni, elle exige un compte. On retient la
+    // requête (et son niveau), on ouvre l'authentification, et on relance APRÈS connexion —
+    // la requête survit à l'authentification (D-05 : « query preserved through auth »).
+    // Consulter la carte et taper un pin reste libre (aucune connexion demandée).
+    if (!sessionUser) {
+      setPendingAction({ kind: 'search', returnTo: 'search', query: trimmed, level: searchLevel });
+      setAuthMode('signup');
+      setSheet('auth');
+      return;
+    }
     // R-E (S-11): the level decides what is searched — an offerer's identity, or an offer.
-    if (searchLevel === 'entity') { void runEntitySearch(query); return; }
-    void runSearch(query, currentSearchOptions());
+    if (searchLevel === 'entity') { void runEntitySearch(trimmed); return; }
+    void runSearch(trimmed, currentSearchOptions());
   };
 
   /** R-E (S-11) — level ENTITY: find an offerer by identity, then open its public page.
@@ -2089,7 +2130,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   );
 
   return (
-    <div className="omni-v13-stage" data-role={role} data-map-state={mapState} data-sheet={sheet} ref={stageRef}>
+    <div className="omni-v13-stage" data-role={role} data-map-state={mapState} data-sheet={sheet} ref={stageRef} onPointerDown={sheetDrag.onPointerDown} onPointerMove={sheetDrag.onPointerMove} onPointerUp={sheetDrag.onPointerUp} onPointerCancel={sheetDrag.onPointerUp}>
       <section className="mapbase" aria-label="Carte Omni">
         <Suspense fallback={<div role="status">Chargement de la carte…</div>}>
           <TrunkMap

@@ -78,9 +78,13 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 .rolepill button.on{color:#fff;background:var(--ink)}
 .map-legend{position:absolute;z-index:6;top:calc(var(--safe-top, 12px)+36px);left:16px;font-size:8px;color:var(--ink-soft);letter-spacing:1px;text-transform:uppercase}
 /* S-07 — rail de filtres de la carte (porté 1:1 de la maquette acceptée `filterrail`).
-   Position : sous le rolepill, en haut à gauche de la carte. */
-.filterrail{position:absolute;left:12px;top:50px;display:flex;gap:6px;z-index:6;flex-wrap:wrap;max-width:220px}
-.fchip{background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:9.5px;font-weight:700;box-shadow:var(--sh-sm);color:var(--ink);cursor:pointer}
+   Position : sous le rolepill, en haut à gauche de la carte.
+   BRANCH-3 — les 4 catégories tiennent sur UNE ligne (fondateur 2026-10-07). Le rail
+   s'enroulait (`flex-wrap:wrap` + `max-width:220px`) et « Ambulants » tombait seul en
+   dessous. On garde une seule ligne ; les chips rétrécissent leur rembourrage plutôt que
+   de passer à la ligne. */
+.filterrail{position:absolute;left:12px;top:50px;display:flex;gap:5px;z-index:6;flex-wrap:nowrap;max-width:none}
+.fchip{background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:999px;padding:5px 8px;font-size:9px;font-weight:700;box-shadow:var(--sh-sm);color:var(--ink);cursor:pointer;white-space:nowrap;flex:none}
 .fchip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .fchip.soon{color:var(--ink-faint);cursor:default}
 .fchip[disabled]{cursor:default}
@@ -88,7 +92,12 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 .sheet::-webkit-scrollbar{width:0;display:none}
 .sheet.h-full{height:64%}.sheet.h-mid{height:52%}.sheet.h-auto{height:auto;max-height:60%}.sheet.h-low{height:auto;max-height:44%}
 .sheet.peek{overflow:hidden}
-.handle{width:38px;height:4px;border-radius:4px;background:#dcdcda;margin:0 auto 10px;flex:none;cursor:pointer}
+.handle{width:38px;height:4px;border-radius:4px;background:#dcdcda;margin:0 auto 10px;flex:none;cursor:pointer;touch-action:none;position:relative}
+/* BRANCH-1 — la poignée est la cible du geste « tirer pour fermer » : on élargit sa zone
+   tactile (44px de haut) sans changer le trait visible, et on bloque le scroll natif dessus
+   (`touch-action:none`) pour que le glissement vertical pilote la feuille, pas la page. */
+.handle::before{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:64px;height:44px}
+.sheet.dragging{transition:none}
 .sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .sheet-close{flex:none;width:28px;height:28px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);display:grid;place-items:center;cursor:pointer;transition:.18s var(--ease);box-shadow:var(--sh-sm)}
 .sheet-close:hover{color:var(--ink);border-color:var(--ink)}
