@@ -11,6 +11,8 @@ import { describe, expect, it } from 'vitest';
  * création de compte n'était exposé — `OnboardV13` (la seule surface de création)
  * n'était atteignable que par un chemin mort (`resumePendingAction(false)`, appelé
  * nulle part). Un nouvel utilisateur ne pouvait donc PAS créer de compte.
+ * (`OnboardV13` a depuis été retiré : sa fonction vit dans la surface partagée
+ * `AuthSheetV13`, et laisser une surface morte violerait « no orphaned layers ».)
  *
  * Ce garde verrouille la source : le geste « Créer un compte » ouvre l'écran en mode
  * création, une action gardée ouvre le mode connexion, et l'écran partagé adopte

@@ -51,8 +51,11 @@ describe('AUTH-RESUME — une action gardée est reprise après connexion', () =
     expect(APP).not.toMatch(/setAuthToken\(await getAuthToken\(\)\);\s*\n\s*if \(pendingAction\) \{ setSheet\('onboard'\); \} else \{ setSheet\("menu"\); \}/);
   });
 
-  it('l\'onboarding et la connexion partagent le même chemin de reprise', () => {
-    expect(APP).toMatch(/onComplete=\{\(\) => \{ void resumePendingAction\(true\); \}\}/);
+  it('la connexion partagée reprend l\'action en cours (jamais un menu sec)', () => {
+    // L'écran auth (AuthSheetV13) est la surface PARTAGÉE ; `OnboardV13` a été retiré
+    // (atteignable par un chemin mort, sa fonction vit désormais dans AuthSheetV13).
+    expect(APP).toMatch(/onAuthenticated=\{async \(user\) => \{[\s\S]{0,400}resumePendingAction\(true\)/);
+    expect(APP).not.toContain('OnboardV13');
   });
 
   it('la reprise ne se fie pas à l\'état `sessionUser` (staleness après login)', () => {

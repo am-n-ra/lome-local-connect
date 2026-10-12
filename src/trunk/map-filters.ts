@@ -19,7 +19,7 @@ export type MapFilter = 'tout' | 'commerces' | 'particuliers' | 'transport';
 export interface MapFilterOption {
   id: MapFilter;
   label: string;
-  /** Toutes les chips sont actives (S4) : `Transport (mobile)` filtre la FORME du lieu. */
+  /** Toutes les chips sont actives (S4) : la chip `transport` filtre la FORME du lieu. */
   soon: boolean;
   /** Raison affichée quand la chip est `soon` (aucune aujourd'hui). */
   soonReason?: string;
@@ -29,10 +29,13 @@ export const MAP_FILTERS: readonly MapFilterOption[] = [
   { id: 'tout', label: 'Tout', soon: false },
   { id: 'commerces', label: 'Commerces', soon: false },
   { id: 'particuliers', label: 'Particuliers', soon: false },
-  // S4 (Heartwood) — la chip existait mais était désactivée. Elle filtre la FORME du lieu
-  // (`mobile` = ambulant), pas une catégorie d'offre. Le libellé est explicité (« mobile »)
-  // pour ne pas laisser croire à des services de livraison (S-08/S-12, hors Heartwood).
-  { id: 'transport', label: 'Transport (mobile)', soon: false },
+  // S-12 : le TRANSPORT comme service (requête A→B + assignation) est `V1+` — il n'existe
+  // pas dans cette version. La chip ne filtre d'ailleurs PAS un service : elle filtre la
+  // FORME du lieu (`mobile` = l'offreur se déplace, ex. un ambulant). L'appeler « Transport »
+  // promettait donc une catégorie d'offre absente (S-08/S-12). Le libellé dit maintenant ce
+  // que le filtre fait vraiment : des lieux ambulants. S-12 est honoré — rien n'est caché,
+  // mais rien d'inexistant n'est promis.
+  { id: 'transport', label: 'Ambulants', soon: false },
 ];
 
 /** Le sous-ensemble de `PublicFacility` dont ce filtre dépend — testable sans DOM. */
@@ -50,7 +53,7 @@ export function facilityMatchesFilter(facility: FilterableFacility, filter: MapF
     case 'particuliers':
       return facility.entityKind === 'individu';
     case 'transport':
-      // S4 — « Transport (mobile) » = le lieu SE DÉPLACE (forme `mobile`). Un lieu digital ou
+      // S4 — la chip « Ambulants » = le lieu SE DÉPLACE (forme `mobile`). Un lieu digital ou
       // fixe, ou de forme non déclarée (`null`), ne matche pas. On n'invente pas une forme.
       return facility.facilityType === 'mobile';
   }

@@ -52,7 +52,7 @@ import { ProductCatalogueV13 } from './ProductCatalogueV13';
 import { StockEventLedgerV13 } from './StockEventLedgerV13';
 import { OffersV13 } from './OffersV13';
 import { CompanyV13 } from './CompanyV13';
-import { OnboardV13 } from './OnboardV13';
+import { LegalSheetV13, type LegalSectionId } from './LegalSheetV13';
 import { AuthSheetV13 } from './AuthSheetV13';
 import { chipHintFor, chipStatusFor, chipsToSearchOptions, CONSTRAINT_GROUPS, emptyConstraints, activeConstraintCount, QUANTITY_DEFAULT, BUDGET_DEFAULT_LOCAL_MINOR, budgetFieldToMinor, RAYON_SCOPE_LABELS, summarizeActiveChips, type SearchConstraints } from './search-constraints';
 import { MAP_FILTERS, filterFacilities, type MapFilter } from './map-filters';
@@ -68,7 +68,7 @@ import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
 import { normalizeTogoPhone, phoneDeclarationLabel, whatsappDeclareLink } from '../domain/phone';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal' | 'tour' | 'freshness' |   'op-side' | 'verification' | 'room' | 'install';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal' | 'tour' | 'freshness' |   'op-side' | 'verification' | 'room' | 'install' | 'legal';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -160,7 +160,7 @@ export function TrunkAppV13() {
   useViewportInsets(stageRef);
   const [facilities, setFacilities] = useState<PublicFacility[]>([]);
   /**
-   * S-07 — la carte est filtrable : Tout / Commerces / Particuliers / Transport.
+   * S-07 — la carte est filtrable : Tout / Commerces / Particuliers / Ambulants.
    * La maquette acceptée porte ce rail (`filterrail`) ; l'app ne l'avait pas.
    * Le filtre porte sur l'ENTITÉ (S-13 : un particulier EST une entité), pas sur
    * un attribut de produit — c'est ce qui rend découvrable « un particulier vend
@@ -370,6 +370,8 @@ const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   // mode, l'écran n'offrait que « Se connecter » : un nouvel utilisateur n'avait aucun
   // chemin vers la création de compte (le bouton du menu promet pourtant « Créer un compte »).
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  // BRANCHES — quelle section légale ouvrir (Confidentialité / Conditions / Mentions).
+  const [legalSection, setLegalSection] = useState<LegalSectionId>('confidentialite');
   const [bulkLoading, setBulkLoading] = useState(false);
   // D-C5 : la fiche multi-produits d'UNE facilité rend des vérifications manuelles
   // gratuites, pas un bulk. La sheet partage l'affichage des lignes, jamais le nom :
@@ -1476,7 +1478,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     const action = pendingAction;
     setPendingAction(null);
     if (!action) { setSheet('none'); return; }
-    if (!authenticated) { setSheet('onboard'); return; }
+    if (!authenticated) { setSheet('auth'); return; }
     const resume = pendingActionResume(action);
     switch (resume.sheet) {
       case 'flow':
@@ -1865,7 +1867,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     // back arrow like the maquette's `backItem`. Resting screens (map, search, menu, buyer
     // home, onboarding) get none — a back arrow there would point nowhere. The locked
     // transaction flow never offers a live back at all (its own dock below, FF-1 `Quitter`).
-    const destination = sheet !== 'none' && sheet !== 'search' && sheet !== 'qr' && sheet !== 'menu' && sheet !== 'home' && sheet !== 'auth' && sheet !== 'onboard' && !homeLike;
+    const destination = sheet !== 'none' && sheet !== 'search' && sheet !== 'qr' && sheet !== 'menu' && sheet !== 'home' && sheet !== 'auth' && !homeLike;
     if (destination) return [
       { icon: 'back', label: 'Retour', target: 'back', center: false, active: false },
       isOperator
@@ -1926,7 +1928,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       if (sheet === 'receipt') { setSheet('home'); return; }
       if (sheet === 'notifs') { setSheet('menu'); return; }
       if (sheet === 'recovery') { setSheet('home'); return; }
-      if (sheet === 'account' || sheet === 'wallet' || sheet === 'plans' || sheet === 'saved' || sheet === 'auth' || sheet === 'onboard' || sheet === 'install') { setSheet('menu'); return; }
+      if (sheet === 'account' || sheet === 'wallet' || sheet === 'plans' || sheet === 'saved' || sheet === 'auth' || sheet === 'install' || sheet === 'legal') { setSheet('menu'); return; }
       if (sheet === 'products' || sheet === 'stockevent' || sheet === 'offers' || sheet === 'company' || sheet === 'seller-reply' || sheet === 'freshness' || sheet === 'verification') { setSheet('seller'); return; }
       if (sheet === 'op-side') { setOpSideVisitId(null); setSheet('tour'); return; }
       setSheet('none');
@@ -2751,31 +2753,6 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       {sheet === 'company' && (
         <CompanyV13 onClose={() => setSheet('seller')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} catalogue={sellerCatalogue} />
       )}
-      {sheet === 'onboard' && (
-        <OnboardV13
-          pendingSearch={pendingSearch}
-          hasSession={Boolean(sessionUser)}
-          onAuthenticated={async (user) => {
-            // X5 — compte réel créé/connecté depuis l'onboarding : on adopte la
-            // session en place (comme le fait le login de l'écran Auth).
-            setSessionUser(user);
-            const token = await getAuthToken();
-            if (token) {
-              setAuthToken(token);
-              const caps = await getAccountCapabilities({ token });
-              if (caps.ok && caps.data) {
-                setAccountRoles(caps.data.roles ?? []);
-                setOwnedFacilityIds(caps.data.ownedFacilityIds ?? []);
-                setAdminTools(Boolean(caps.data.capabilities?.adminTools));
-                setSellerAvailable(Boolean(caps.data.capabilities?.sellerWorkspace));
-                if (caps.data.capabilities?.sellerWorkspace) void loadSellerWorkspace();
-              }
-              void loadFavorites();
-              void loadBuyerProStatus();
-            }
-          }}
-          onClose={() => { setPendingAction(null); setSheet('menu'); }} onComplete={() => { void resumePendingAction(true); }} />
-      )}
       {sheet === 'flow' && flowFacility && flowProduct && (
         <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => { setPendingResumeTxnId(null); setSheet('facility'); }} resumeTxnId={pendingResumeTxnId} onGate={gateRequest} onRoute={(longitude: number, latitude: number, name: string) => { setRouteTarget({ longitude, latitude, name }); setSheet('none'); }} walletBalanceMinor={wallet?.balanceMinor ?? null} />
       )}
@@ -2797,6 +2774,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             {shouldOfferInstall(installState) && (
               <button className="menuitem" type="button" onClick={openInstall}><span className="mi"><Download size={15} /></span><span><b>Installer Omni</b><small>{installPlatform === 'ios-safari' ? 'guide pour iPhone / iPad' : 'comme une application'}</small></span></button>
             )}
+            {/* BRANCHES — accessible même sans compte : la confidentialité n'est pas
+                réservée aux inscrits (loi togolaise 2019-014, information préalable). */}
+            <button className="menuitem" type="button" onClick={() => { setLegalSection('confidentialite'); setSheet('legal'); }}><span className="mi"><ShieldCheck size={15} /></span><span><b>Informations légales</b><small>confidentialité, conditions, vos droits</small></span></button>
             {sessionUser && (
               <>
                 {role === 'buyer' && (
@@ -2923,6 +2903,14 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           <div className="cardbox" style={{ marginTop: 8 }}>
             <div className="kv"><span>Plan</span><b>{sellerAvailable ? 'Vendeur Gratuit' : 'Acheteur Gratuit'}</b></div>
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" onClick={() => setSheet('plans')}>Voir les plans</button>
+          </div>
+          <div className="cardbox" style={{ marginTop: 8 }}>
+            <div className="kv"><span>Vos données</span><b>Confidentialité & droits</b></div>
+            <div className="row" style={{ gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+              <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} type="button" onClick={() => { setLegalSection('confidentialite'); setSheet('legal'); }}>Confidentialité</button>
+              <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} type="button" onClick={() => { setLegalSection('conditions'); setSheet('legal'); }}>Conditions</button>
+              <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} type="button" onClick={() => { setLegalSection('supprimer'); setSheet('legal'); }}>Supprimer mes données</button>
+            </div>
           </div>
           <button className="btn ghost" style={{ marginTop: 10, width: '100%' }} type="button" onClick={() => { void authClient.signOut(); setSessionUser(null); setSheet('search'); }}><LogOut size={15} /> Déconnexion</button>
         </section>
@@ -3606,6 +3594,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}><ShieldCheck size={12} /> Un claim ne devient certifié qu’après preuves privées, revue de l’équipe et historique auditable.</p>
         </section>
       )}
+      {sheet === 'legal' && (
+        <LegalSheetV13 initialSection={legalSection} onClose={() => setSheet('menu')} />
+      )}
       {sheet === 'auth' && (
         <AuthSheetV13
           initialMode={authMode}
@@ -3620,6 +3611,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             }
           }}
           onClose={() => setSheet('none')}
+          onOpenLegal={(section) => { setLegalSection(section); setSheet('legal'); }}
         />
       )}
 

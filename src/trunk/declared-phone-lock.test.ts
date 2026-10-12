@@ -9,7 +9,10 @@ import { describe, expect, it } from 'vitest';
 
 const PHONE = readFileSync(resolve(__dirname, '../domain/phone.ts'), 'utf8');
 const APP = readFileSync(resolve(__dirname, 'TrunkAppV13.tsx'), 'utf8');
-const ONBOARD = readFileSync(resolve(__dirname, 'OnboardV13.tsx'), 'utf8');
+// Le numéro déclaré se saisit sur la surface d'authentification PARTAGÉE (AuthSheetV13).
+// `OnboardV13` (l'ancienne surface de création) a été retiré : il n'était atteignable que
+// par un chemin mort, et sa fonction vit désormais dans `AuthSheetV13`.
+const AUTH = readFileSync(resolve(__dirname, 'AuthSheetV13.tsx'), 'utf8');
 
 describe('le numéro déclaré n’est jamais présenté comme vérifié (S-16)', () => {
   it('le libellé public dit « non vérifié » (jamais « vérifié »)', () => {
@@ -26,9 +29,9 @@ describe('le numéro déclaré n’est jamais présenté comme vérifié (S-16)'
   });
 
   it('l’inscription porte le numéro déclaré, jamais présenté comme vérifié (S-16)', () => {
-    expect(ONBOARD).toContain('phoneDeclarationLabel()');
-    expect(ONBOARD).not.toMatch(/Omni ne v[ée]rifie pas ce num[ée]ro/);
-    expect(ONBOARD).not.toMatch(/v[ée]rifier (le|votre) num[ée]ro/i);
+    expect(AUTH).toContain('phoneDeclarationLabel()');
+    expect(AUTH).not.toMatch(/Omni ne v[ée]rifie pas ce num[ée]ro/);
+    expect(AUTH).not.toMatch(/v[ée]rifier (le|votre) num[ée]ro/i);
   });
 
   it('le lien WhatsApp n’est jamais décrit comme une vérification', () => {

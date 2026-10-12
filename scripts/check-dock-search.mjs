@@ -130,7 +130,7 @@ if (process.argv.includes('--selftest')) {
     [APP, 'Tout Omni, depuis ici', 'Tout Omni'],
     [APP, '<div className="eyebrow">{group.label}</div>', '<div className="label">{group.label}</div>'],
     [APP, "Scanner le code d'un acheteur", 'Scanner le code'],
-    [APP, "sheet !== 'home' && sheet !== 'auth' && sheet !== 'onboard' && !homeLike;", "sheet !== 'home' && sheet !== 'auth' && sheet !== 'onboard' && sheet !== 'account' && sheet !== 'wallet' && !homeLike;"],
+    [APP, "sheet !== 'home' && sheet !== 'auth' && !homeLike;", "sheet !== 'home' && sheet !== 'auth' && sheet !== 'account' && sheet !== 'wallet' && !homeLike;"],
     [APP, '<span><b>Mon compte</b><small>identité & réglages</small></span>', '<span><b>Compte</b><small>identité & réglages</small></span>'],
     [APP, 'Recherches sauvegardées</button>', 'Recherches</button>'],
     [CSS, '.linkbtn{', '.linkbtn-x{'],

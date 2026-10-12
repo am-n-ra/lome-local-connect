@@ -7,8 +7,11 @@ import { MAP_FILTERS, facilityMatchesFilter, filterFacilities } from './map-filt
  */
 
 describe('S-07 map filters — rail', () => {
-  it('exposes the four chips; Transport (mobile) is active (S4 Heartwood)', () => {
-    expect(MAP_FILTERS.map((f) => f.label)).toEqual(['Tout', 'Commerces', 'Particuliers', 'Transport (mobile)']);
+  it('exposes the four chips; the mobile-place chip is honest about what it filters', () => {
+    // S-12 — le TRANSPORT (service A→B) est `V1+` et n'existe pas ici. La chip filtre la
+    // FORME du lieu (`mobile` = ambulant), donc elle est étiquetée « Ambulants », pas
+    // « Transport » (ce dernier promettrait une catégorie d'offre absente).
+    expect(MAP_FILTERS.map((f) => f.label)).toEqual(['Tout', 'Commerces', 'Particuliers', 'Ambulants']);
     const transport = MAP_FILTERS.find((f) => f.id === 'transport');
     // S4 — la chip n'est plus « soon » : elle filtre la FORME du lieu (mobile = ambulant).
     expect(transport?.soon).toBe(false);
@@ -34,7 +37,7 @@ describe('S-07 map filters — rail', () => {
     expect(facilityMatchesFilter(unclaimed, 'particuliers')).toBe(false);
   });
 
-  it('Transport (mobile) matches only `mobile` places, never fixe/digital/undeclared (S4)', () => {
+  it('the mobile-place chip matches only `mobile` places, never fixe/digital/undeclared (S4)', () => {
     // S4 — le filtre porte sur la FORME du lieu, pas sur une catégorie d'offre. Un lieu de
     // forme non déclarée (`null`, fond de carte) ne matche pas : on n'invente pas une forme.
     expect(facilityMatchesFilter({ facilityType: 'mobile' }, 'transport')).toBe(true);
@@ -64,7 +67,7 @@ describe('S-07 map filters — rail', () => {
     expect(found.map((f) => f.name)).toEqual(['Particulier — ordinateur']);
   });
 
-  it('renders the mobile-vendor case: an ambulant is discoverable under Transport (mobile) (S4)', () => {
+  it('renders the mobile-vendor case: an ambulant is discoverable under Ambulants (S4)', () => {
     const marche = [
       { entityKind: 'organisation' as const, facilityType: 'fixe' as const, name: 'Boutique fixe' },
       { entityKind: 'individu' as const, facilityType: 'mobile' as const, name: 'Vendeur ambulant' },

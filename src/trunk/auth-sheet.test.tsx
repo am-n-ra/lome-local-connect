@@ -4,27 +4,37 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // The Neon Auth client is an external network boundary; the UI contract is what this
-// test owns. We assert the REAL sign-up path is invoked (not a simulated OTP).
+// test owns. We assert the REAL sign-up path is invoked (not a simulated OTP), and
+// that the email-confirmation dead-end is replaced by a real, actionable state.
 const mocks = vi.hoisted(() => ({
   signUp: vi.fn(async () => ({})),
   signIn: vi.fn(async () => ({})),
-  getSession: vi.fn(async () => ({ data: { user: { id: 'u1', email: 'ama@example.com', name: 'Ama' } } })),
+  getSession: vi.fn(async (): Promise<{ data: { user: unknown } }> => ({ data: { user: { id: 'u1', email: 'ama@example.com', name: 'Ama' } } })),
+  sendVerificationEmail: vi.fn(async () => ({})),
 }));
 vi.mock('../auth', () => ({
-  authClient: { signUp: { email: mocks.signUp }, signIn: { email: mocks.signIn }, getSession: mocks.getSession },
+  authClient: {
+    signUp: { email: mocks.signUp },
+    signIn: { email: mocks.signIn },
+    getSession: mocks.getSession,
+    sendVerificationEmail: mocks.sendVerificationEmail,
+  },
   getAuthToken: vi.fn(async () => 'header.payload.signature'),
 }));
 vi.mock('./api', () => ({ setDeclaredPhone: vi.fn(async () => ({ ok: true })) }));
 
 import { AuthSheetV13 } from './AuthSheetV13';
 
-const { signUp, signIn, getSession } = mocks;
+const { signUp, signIn, getSession, sendVerificationEmail } = mocks;
 
 let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
-  signUp.mockClear(); signIn.mockClear(); getSession.mockClear();
+  signUp.mockClear(); signIn.mockClear(); getSession.mockClear(); sendVerificationEmail.mockClear();
+  signUp.mockResolvedValue({});
+  signIn.mockResolvedValue({});
+  getSession.mockResolvedValue({ data: { user: { id: 'u1', email: 'ama@example.com', name: 'Ama' } } });
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -37,7 +47,7 @@ afterEach(() => {
 
 function renderUi(mode: 'signin' | 'signup', onAuthenticated = vi.fn()) {
   act(() => {
-    root.render(<AuthSheetV13 initialMode={mode} onAuthenticated={onAuthenticated} onClose={() => {}} />);
+    root.render(<AuthSheetV13 initialMode={mode} onAuthenticated={onAuthenticated} onClose={() => {}} onOpenLegal={() => {}} />);
   });
   return onAuthenticated;
 }
@@ -51,23 +61,47 @@ function typeInto(el: HTMLInputElement, value: string) {
   const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!;
   act(() => { setter.call(el, value); el.dispatchEvent(new Event('input', { bubbles: true })); });
 }
+function checkConsent() {
+  const box = container.querySelector<HTMLInputElement>('input[type="checkbox"]');
+  if (box && !box.checked) act(() => { box.click(); });
+}
+function fillSignup(name: string, email: string, password: string) {
+  typeInto(container.querySelector<HTMLInputElement>('#v13-auth-firstname')!, name);
+  typeInto(container.querySelector<HTMLInputElement>('#v13-auth-email')!, email);
+  typeInto(container.querySelector<HTMLInputElement>('#v13-auth-password')!, password);
+  checkConsent();
+}
 
 describe('AUTH-CREATE — l\'écran auth permet de CRÉER un compte (bug fondateur 2026-10-07)', () => {
   it('en mode signup, propose la création (Prénom + Téléphone) et non la seule connexion', () => {
     renderUi('signup');
     expect(text()).toContain('Créez votre compte.');
-    expect(text()).toContain('Prénom (optionnel)');
+    expect(text()).toContain('Prénom');
     expect(text()).toContain('Créer mon compte');
     expect(text()).toContain('Téléphone (optionnel)');
     // le mensonge X5 (code OTP simulé) n'existe pas
     expect(text()).not.toMatch(/code à 4 chiffres/i);
   });
 
+  it('le Prénom est REQUIS (fondateur 2026-10-07 : le nom ne doit pas être optionnel)', () => {
+    renderUi('signup');
+    // pas de « (optionnel) » sur le prénom
+    expect(text()).not.toContain('Prénom (optionnel)');
+    // sans prénom, le bouton reste désactivé même avec e-mail + mot de passe + consentement
+    typeInto(container.querySelector<HTMLInputElement>('#v13-auth-email')!, 'ama@example.com');
+    typeInto(container.querySelector<HTMLInputElement>('#v13-auth-password')!, 'secret6');
+    checkConsent();
+    expect(submitButton()!.disabled).toBe(true);
+    typeInto(container.querySelector<HTMLInputElement>('#v13-auth-firstname')!, 'Ama');
+    expect(submitButton()!.disabled).toBe(false);
+  });
+
   it('en mode signin, ne demande ni prénom ni téléphone', () => {
     renderUi('signin');
     expect(text()).toContain('Connectez-vous pour continuer.');
     expect(text()).toContain('Se connecter');
-    expect(text()).not.toContain('Prénom (optionnel)');
+    expect(container.querySelector('#v13-auth-firstname')).toBeNull();
+    expect(container.querySelector('#v13-auth-phone')).toBeNull();
   });
 
   it('bascule création ↔ connexion sur la même surface', () => {
@@ -79,22 +113,93 @@ describe('AUTH-CREATE — l\'écran auth permet de CRÉER un compte (bug fondate
     expect(container.querySelectorAll<HTMLButtonElement>('button.btn.ghost.sm')[0].textContent).toContain('Se connecter');
   });
 
-  it('le bouton reste désactivé tant que email + mot de passe (≥6) ne sont pas valides', () => {
+  it('le bouton reste désactivé tant que prénom + email + mot de passe (≥6) + consentement ne sont pas valides', () => {
     renderUi('signup');
     expect(submitButton()!.disabled).toBe(true);
     typeInto(container.querySelector<HTMLInputElement>('#v13-auth-email')!, 'ama@example.com');
     expect(submitButton()!.disabled).toBe(true);
     typeInto(container.querySelector<HTMLInputElement>('#v13-auth-password')!, 'secret6');
+    expect(submitButton()!.disabled).toBe(true); // prénom encore vide
+    typeInto(container.querySelector<HTMLInputElement>('#v13-auth-firstname')!, 'Ama');
+    expect(submitButton()!.disabled).toBe(true); // consentement pas encore coché
+    checkConsent();
     expect(submitButton()!.disabled).toBe(false);
   });
 
   it('soumettre en mode création appelle la VRAIE création de compte puis onAuthenticated', async () => {
     const onAuth = renderUi('signup');
-    typeInto(container.querySelector<HTMLInputElement>('#v13-auth-email')!, 'ama@example.com');
-    typeInto(container.querySelector<HTMLInputElement>('#v13-auth-password')!, 'secret6');
+    fillSignup('Ama', 'ama@example.com', 'secret6');
     await act(async () => { submitButton()!.click(); });
-    expect(signUp).toHaveBeenCalledWith({ email: 'ama@example.com', password: 'secret6', name: 'ama@example.com' });
+    expect(signUp).toHaveBeenCalledWith({ email: 'ama@example.com', password: 'secret6', name: 'Ama' });
     expect(signIn).not.toHaveBeenCalled();
     expect(onAuth).toHaveBeenCalledWith({ id: 'u1', email: 'ama@example.com', name: 'Ama' });
   });
 });
+
+describe('AUTH-CONFIRM — la confirmation e-mail n\'est plus une impasse (fondateur 2026-10-07)', () => {
+  it('quand la création n\'ouvre pas de session, un ÉTAT de confirmation clair remplace la phrase en passant', async () => {
+    getSession.mockResolvedValue({ data: { user: null } }); // plateforme exige la confirmation
+    renderUi('signup');
+    fillSignup('Ama', 'ama@example.com', 'secret6');
+    await act(async () => { submitButton()!.click(); });
+    expect(text()).toContain('Confirmez votre e-mail.');
+    expect(text()).toContain('ama@example.com');
+    // l'impasse précédente (« validez-la puis connectez-vous », puis rien) a disparu
+    expect(text()).not.toContain('Si une confirmation par email est demandée');
+    // l'e-mail de confirmation est réellement déclenché
+    expect(sendVerificationEmail).toHaveBeenCalledWith({ email: 'ama@example.com', callbackURL: expect.any(String) });
+    // une issue existe : renvoyer + se connecter
+    expect(text()).toContain("Renvoyer l'e-mail de confirmation");
+    expect(text()).toContain("J'ai confirmé");
+  });
+
+  it('une connexion refusée pour e-mail non confirmé dit la VÉRITÉ (pas « identifiants incorrects ») et propose de renvoyer', async () => {
+    signIn.mockResolvedValue({ error: { message: 'Email not verified', code: 'EMAIL_NOT_VERIFIED' } });
+    renderUi('signin');
+    typeInto(container.querySelector<HTMLInputElement>('#v13-auth-email')!, 'ama@example.com');
+    typeInto(container.querySelector<HTMLInputElement>('#v13-auth-password')!, 'secret6');
+    await act(async () => { submitButton()!.click(); });
+    expect(text()).toContain('Confirmez votre e-mail.');
+    expect(text()).not.toContain('Vérifiez vos identifiants');
+    expect(sendVerificationEmail).toHaveBeenCalled();
+  });
+
+  it('un vrai mauvais mot de passe reste dit comme tel (on ne confond pas les deux échecs)', async () => {
+    signIn.mockResolvedValue({ error: { message: 'Invalid credentials', code: 'INVALID_EMAIL_OR_PASSWORD' } });
+    renderUi('signin');
+    typeInto(container.querySelector<HTMLInputElement>('#v13-auth-email')!, 'ama@example.com');
+    typeInto(container.querySelector<HTMLInputElement>('#v13-auth-password')!, 'secret6');
+    await act(async () => { submitButton()!.click(); });
+    expect(text()).toContain('Vérifiez vos identifiants');
+    expect(sendVerificationEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe('LEGAL — consentement au traitement et accès aux informations légales', () => {
+  it('la création exige le consentement explicite (loi togolaise 2019-014)', () => {
+    renderUi('signup');
+    // champs remplis SANS cocher le consentement
+    typeInto(container.querySelector<HTMLInputElement>('#v13-auth-firstname')!, 'Ama');
+    typeInto(container.querySelector<HTMLInputElement>('#v13-auth-email')!, 'ama@example.com');
+    typeInto(container.querySelector<HTMLInputElement>('#v13-auth-password')!, 'secret6');
+    expect(submitButton()!.disabled).toBe(true);
+    const checkbox = container.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+    expect(checkbox).toBeTruthy();
+    act(() => { checkbox.click(); });
+    expect(submitButton()!.disabled).toBe(false);
+  });
+
+  it('les liens Confidentialité / Conditions ouvrent la feuille légale', () => {
+    const onOpenLegal = vi.fn();
+    act(() => {
+      root.render(<AuthSheetV13 initialMode="signup" onAuthenticated={vi.fn()} onClose={() => {}} onOpenLegal={onOpenLegal} />);
+    });
+    const links = [...container.querySelectorAll<HTMLButtonElement>('button.linkbtn')];
+    const labels = links.map((l) => l.textContent);
+    expect(labels.some((l) => /conditions/i.test(l ?? ''))).toBe(true);
+    expect(labels.some((l) => /confidentialit/i.test(l ?? ''))).toBe(true);
+    act(() => links.find((l) => /confidentialit/i.test(l.textContent ?? ''))!.click());
+    expect(onOpenLegal).toHaveBeenCalledWith('confidentialite');
+  });
+});
+

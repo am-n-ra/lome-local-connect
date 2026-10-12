@@ -291,7 +291,7 @@ body{background:#dadad7;padding:0}
 .sheet[data-sheet="results"] .hgrid .hcard{flex:none;width:100%;scroll-snap-align:none}
 .sheet[data-sheet="results"] .btnrow{margin-top:14px}
 /* everything else (menu, account, home, wallet, plans, saved, auth) is a genuinely separate destination — a right-hand drawer over the map is the correct pattern there */
-.sheet[data-sheet="menu"],.sheet[data-sheet="account"],.sheet[data-sheet="home"],.sheet[data-sheet="wallet"],.sheet[data-sheet="plans"],.sheet[data-sheet="saved"],.sheet[data-sheet="auth"],.sheet[data-sheet="seller"],.sheet[data-sheet="products"],.sheet[data-sheet="stockevent"],.sheet[data-sheet="offers"],.sheet[data-sheet="company"],.sheet[data-sheet="onboard"],.sheet[data-sheet="claim"],.sheet[data-sheet="admin"]{left:auto;right:0;top:112px;bottom:0;width:min(400px,90vw);border:0;border-left:1px solid var(--line);border-radius:0 0 16px 0;box-shadow:-18px 0 40px rgba(0,0,0,.14);transform:translateX(0);z-index:18;padding:14px 20px 22px}
+.sheet[data-sheet="menu"],.sheet[data-sheet="account"],.sheet[data-sheet="home"],.sheet[data-sheet="wallet"],.sheet[data-sheet="plans"],.sheet[data-sheet="saved"],.sheet[data-sheet="auth"],.sheet[data-sheet="seller"],.sheet[data-sheet="products"],.sheet[data-sheet="stockevent"],.sheet[data-sheet="offers"],.sheet[data-sheet="company"],.sheet[data-sheet="claim"],.sheet[data-sheet="admin"]{left:auto;right:0;top:112px;bottom:0;width:min(400px,90vw);border:0;border-left:1px solid var(--line);border-radius:0 0 16px 0;box-shadow:-18px 0 40px rgba(0,0,0,.14);transform:translateX(0);z-index:18;padding:14px 20px 22px}
 .sheet>*{animation:none!important}
 }
 
