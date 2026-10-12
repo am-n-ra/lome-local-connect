@@ -793,6 +793,9 @@ button[aria-busy="true"]::before { width: 12px; height: 12px; flex: 0 0 auto; co
 
 
 
+.onboard-dots { display: flex; gap: 6px; margin-top: 10px; }
+.onboard-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--line, #e6e6e6); }
+.onboard-dot.done { background: var(--ink-soft, #6b6b6b); }
 .onboard-dot.active { width: 24px; background: var(--forest); }
 
 

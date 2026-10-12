@@ -3669,6 +3669,15 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       {sheet === 'welcome' && (
         <WelcomeV13
           firstName={welcomeName}
+          onChooseRole={(next) => {
+            if (next === 'seller') {
+              setRole('seller');
+              if (sessionUser) void loadSellerWorkspace();
+            } else {
+              setRole('buyer');
+            }
+          }}
+          onTrySearch={(query) => { void runSearch(query); }}
           onExplore={() => setSheet('none')}
           onPublish={() => { setRole('seller'); setSheet('seller'); if (sessionUser) void loadSellerWorkspace(); }}
           onClose={() => setSheet('menu')}
