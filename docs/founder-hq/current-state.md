@@ -135,6 +135,22 @@
 > Le reste des obligations (déclaration IPDCP, rétention chiffrée, catégories réglementées) exige un
 > humain qualifié — voir le dossier.
 
+> **Décision fondateur requise — ONBOARDING (2026-10-07)** : « pourquoi l'utilisateur arrive-t-il
+> directement dans l'app après l'auth ? ». **Constat mesuré** : il **n'existe aucune étape après
+> l'auth** — `onAuthenticated` fait `if (pendingAction) resumePendingAction(true); else setSheet('menu')`.
+> Ce **n'est pas une régression** : `OnboardV13` (éducatif + choix de plan) a été **retiré à juste
+> titre** (`a86e891`) car **seul un chemin jamais appelé l'atteignait** (vérifié `git show 6ccbfd9` :
+> l'appel `setSheet('onboard')` était dans la branche `!authenticated`, inatteignable). Le geste
+> significatif **a lieu** (Prénom **requis**, **consentement requis**, e-mail/mot de passe, téléphone
+> déclaré). **L'onboarding n'est pas spécifié** (Seed : pas de mur post-inscription — S-31 « publier
+> tôt » ; S-28 entité « étape quasi invisible » ; maquette V2 : 0 écran d'auth/onboarding) → `OnboardV13`
+> était un **`orphaned leaf`**. **Écart Seed réel trouvé** : **S-16** promet l'inscription
+> **téléphone-OU-email** (WhatsApp initié) ; l'app exige **l'e-mail** (téléphone **déclaré**, optionnel).
+> **Options** : **A** activation minimale après création (recommandée, honnête, sans plan forcé) ·
+> **B** reprendre `OnboardV13` (chemin rendu vivant ; tension S-31) · **C** **S-16** téléphone-first
+> (grande, seule promesse Seed manquante). Dossier `omni-onboarding-gap-2026-10-07.md` ; retour
+> `handoff-receipt-HO-OMNI-41.md`. **Aucun code écrit** — décision requise (Root avant pixels).
+
 ## Fermeture — items (mesurés 2026-10-07, entrants Heartwood)
 
 | # | Item | Mesure | Verdict |
