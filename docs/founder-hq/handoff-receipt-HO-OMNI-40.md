@@ -98,3 +98,29 @@ code) → **3/4 échecs**.
 1. Fondateur : rejouer la création de compte sur son appareil (spot-check navigateur réel).
 2. HQ : présenter la **liste ordonnée des branches candidates** au fondateur pour sélection de la
    branche suivante (aucune branche ne démarre avant ce choix).
+
+---
+
+## Suite — `BRANCHES-SEARCH-SCOPE` (2026-10-07, commit `8d73dbc`)
+
+**Signal fondateur :** « chercher « pain » parmi les offres → rien ; parmi les entités → « 6
+lieux » ; puis « parmi les offres » affiche des établissements. »
+
+**Cause (mesurée) :** la recherche d'**offre** passait le **viewport** de la carte à
+`listPublicFacilities` ; le prédicat serveur bornait donc les résultats au visible. Une offre
+qui existe devenait introuvable dès que la carte était ailleurs, tandis que le **niveau entité**
+interrogeait tout le corpus → deux niveaux, deux portées. Mesure prod : `q=pain` + viewport sur
+Lomé = **4**, + viewport loin = **0**, `entities?q=pain` (global) → indice **6 lieux**.
+
+**Correctif :** le prédicat viewport ne s'applique plus **qu'en l'absence de requête** ; une
+**recherche tapée est GLOBALE** (la distance s'exprime par la chip de rayon, D-CON-4) ; le
+**browse** non filtré reste borné au viewport.
+
+**Preuve (falsifiable) :** `prove-root-read-paths` **37/37** (SQL réel canonique) —
+`search is global :: 'pain' far-off === global (6)` et `browse is viewport-scoped :: far=0,
+lome=2000` ; **falsifié** (ancien prédicat → `FAIL global=6, far-off=0`) · `proof:search-scope-global`
+(navigateur, géoloc hors Lomé) **prod avant 2/5 → après 5/5** · garde statique
+`search-scope.test.ts` **falsifiée** · **1057/1057** · tsc 0 · 6 gardes verts.
+
+**T-07d ✅ :** prod `index-CRzUr8sZ.js` === build local ; entrée GitHub `deployments` `8d73dbc` ;
+**comportement prod changé** (0 → 6). Dossier `omni-branches-search-scope-2026-10-07.md`.
