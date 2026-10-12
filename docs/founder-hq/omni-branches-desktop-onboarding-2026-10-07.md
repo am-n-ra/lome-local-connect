@@ -134,3 +134,14 @@ Fichiers : `src/trunk/WelcomeV13.tsx` (neuf), `src/trunk/AuthSheetV13.tsx` (sign
 `npm run proof:branches-desktop-onboarding` (`scripts/prove-branches-desktop-onboarding.mjs`) —
 pilote le **vrai build** : connexion, recherche tapée, ouverture d'un résultat, action produit,
 `WelcomeV13` présent dans le **bundle servi** et **aucun mur de plan**. **Prod : 5/5 PASS.**
+
+## 6. Déploiement (push ≠ deploy)
+
+- **Commit** `e6e49f4` poussé sur `origin/omni-v2-rebuild` (`aee3362..e6e49f4`).
+- **Vercel** : déploiement `e6e49f4` créé (~14:45Z, plus lent que d'habitude — ~5 min de
+  mise en file). **Prod `index-Bfc5_tJ0.js` === build local, SHA-256 byte-identique**
+  (`02c24a87…`), et entrée GitHub `deployments` `e6e49f4` présente → **T-07d ✅**.
+- **Preuve prod rejouée** : `proof:branches-desktop-onboarding` → **5/5 PASS** sur
+  `omni.sparkafrika.online` (le correctif est **vivant**).
+- **Reste (preuve fondateur)** : créer un **compte neuf** en prod (chemin `signUp → WelcomeV13`) ;
+  clic carte sur un **poste lent** (le vol de clic est intermittent et lié à la vitesse).

@@ -56,5 +56,16 @@
 
 ## Push
 
-**À faire — sur ordre fondateur.** Vérifier `T-07d` (hash prod === build local **et** entrée GitHub
-`deployments`) avant de déclarer déployé.
+**Fait — `e6e49f4` poussé, déployé, vérifié.** `T-07d ✅` : prod `index-Bfc5_tJ0.js` === build local
+byte-identique (SHA-256 `02c24a87…`) **et** entrée GitHub `deployments` `e6e49f4`. Preuve prod
+`proof:branches-desktop-onboarding` rejouée → **5/5 PASS**.
+
+## Correction de diagnostic (à retenir)
+
+Le relais avait consigné un « bug prix ÷100 » dans `BuyerFlowV13`. **Mesure en base avant d'agir :
+c'était FAUX** — depuis `062_one_money_family.sql` (D-LOC-9, **appliquée : `062` est au registre
+`omni_schema_migrations` de la canonique**), **toute** la monnaie est stockée ×100, donc ÷100 EST la
+convention (`Box déjeuner togolais.price_minor = 80000` = **800 F**).
+Le code divisait correctement ; seul le **format** (`toFixed(2)`) était à remplacer par `formatMoney`.
+**Un rapport de bug peut être faux : vérifier le modèle monétaire en base avant de « corriger » un
+formateur.**
