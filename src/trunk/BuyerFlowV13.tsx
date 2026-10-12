@@ -350,7 +350,8 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
               <span className="status ok">Vérification manuelle gratuite</span>
             </div>
           )}
-          <button className="btn ok" type="submit" disabled={busy} style={{ marginTop: 10 }}>Envoyer la demande</button>
+          {error && <p className="sub" role="alert" style={{ marginTop: 8, color: 'var(--ink)' }}>{error}</p>}
+          <button className="btn ok" type="submit" disabled={busy} style={{ marginTop: 10 }}>{busy ? 'Envoi de la demande…' : 'Envoyer la demande'}</button>
         </form>
       )}
 
@@ -384,8 +385,8 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
         <div>
           <div className="cardbox">
             <div className="kv"><span>{product.name} ×{quantity} (source : auto)</span><b className="status ok">{liveResponse.quantityAvailable} dispo</b></div>
-            <div className="kv"><span>Prix unitaire</span><b>{(liveResponse.priceMinor / 100).toFixed(2)} FCFA</b></div>
-            <div className="kv"><span>Total</span><b>{((liveResponse.priceMinor * quantity) / 100).toFixed(2)} FCFA</b></div>
+            <div className="kv"><span>Prix unitaire</span><b>{formatMoney(liveResponse.priceMinor, 'XOF')}</b></div>
+            <div className="kv"><span>Total</span><b>{formatMoney(liveResponse.priceMinor * quantity, 'XOF')}</b></div>
           </div>
           <div className={`freshbar${freshness.level === 'stale' ? ' stale' : freshness.level === 'expired' ? ' expired' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, padding: '6px 10px', borderRadius: 999, background: 'var(--accent-soft)', fontSize: 9 }}>
             <span className="fdot" />

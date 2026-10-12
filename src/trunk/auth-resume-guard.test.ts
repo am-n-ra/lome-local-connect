@@ -54,7 +54,7 @@ describe('AUTH-RESUME — une action gardée est reprise après connexion', () =
   it('la connexion partagée reprend l\'action en cours (jamais un menu sec)', () => {
     // L'écran auth (AuthSheetV13) est la surface PARTAGÉE ; `OnboardV13` a été retiré
     // (atteignable par un chemin mort, sa fonction vit désormais dans AuthSheetV13).
-    expect(APP).toMatch(/onAuthenticated=\{async \(user\) => \{[\s\S]{0,400}resumePendingAction\(true\)/);
+    expect(APP).toMatch(/onAuthenticated=\{async \(user, created\) => \{[\s\S]{0,400}resumePendingAction\(true\)/);
     expect(APP).not.toContain('OnboardV13');
   });
 

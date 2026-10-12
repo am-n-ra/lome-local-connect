@@ -148,7 +148,7 @@ h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{
    est grossier (tactile), sans toucher au rendu desktop. C'est le même garde que celui
    déjà posé sur `.searchdock .fld input`, étendu aux champs qui le manquaient. */
 @media(pointer:coarse){
-  input,.field,.field.lg,.input,textarea,select{font-size:16px!important}
+  input:not([type=checkbox]):not([type=radio]),.field,.field.lg,.input,textarea,select,[contenteditable="true"]{font-size:16px!important}
 }
 .label{font-size:8.5px;color:var(--ink-soft);margin-top:10px;font-weight:700}
 .seg{display:flex;gap:6px;margin-top:8px}

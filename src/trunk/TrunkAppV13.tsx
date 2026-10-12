@@ -55,6 +55,7 @@ import { OffersV13 } from './OffersV13';
 import { CompanyV13 } from './CompanyV13';
 import { LegalSheetV13, type LegalSectionId } from './LegalSheetV13';
 import { AuthSheetV13 } from './AuthSheetV13';
+import { WelcomeV13 } from './WelcomeV13';
 import { chipHintFor, chipStatusFor, chipsToSearchOptions, CONSTRAINT_GROUPS, emptyConstraints, activeConstraintCount, QUANTITY_DEFAULT, BUDGET_DEFAULT_LOCAL_MINOR, budgetFieldToMinor, RAYON_SCOPE_LABELS, summarizeActiveChips, type SearchConstraints } from './search-constraints';
 import { MAP_FILTERS, filterFacilities, type MapFilter } from './map-filters';
 import { parseEntityIdFromQr } from './entity-qr';
@@ -69,7 +70,7 @@ import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
 import { normalizeTogoPhone, phoneDeclarationLabel, whatsappDeclareLink } from '../domain/phone';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal' | 'tour' | 'freshness' |   'op-side' | 'verification' | 'room' | 'install' | 'legal';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal' | 'tour' | 'freshness' |   'op-side' | 'verification' | 'room' | 'install' | 'legal' | 'welcome';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -383,6 +384,9 @@ const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [myTeamInvitesError, setMyTeamInvitesError] = useState('');
   const [myTeamInviteBusy, setMyTeamInviteBusy] = useState<string | null>(null);
   const [inviteToast, setInviteToast] = useState('');
+  // BRANCHES — accueil après CRÉATION : on mémorise le prénom saisi pour l'afficher, et on
+  // ne montre l'étape qu'au PREMIER compte créé (jamais à la connexion d'un compte existant).
+  const [welcomeName, setWelcomeName] = useState<string | null>(null);
 const [bulkSending, setBulkSending] = useState(false);
 const [bulkResults, setBulkResults] = useState<Array<{ facilityId: string; facilityName: string; productId: string; productName: string; status: 'submitted' | 'available' | 'partial' | 'unavailable' | 'expired' | 'error'; quantityAvailable: number | null; observedAt: string | null }> | null>(null);
 const [bulkErrors, setBulkErrors] = useState<string | null>(null);
@@ -400,6 +404,10 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const [revealKey, setRevealKey] = useState<string | null>(null);
   const [revealActive, setRevealActive] = useState(false);
   const [revealPending, setRevealPending] = useState(false);
+  // Un tap pendant la cinématique de révélation : si l'acheteur ouvre déjà une fiche
+  // alors que le style de carte est lent, la fin du vol ne doit pas le RENVOYER à la
+  // grille de résultats (ce qui donnait l'impression que le clic « ne fait rien »).
+  const openedDuringRevealRef = useRef(false);
   const [bounds, setBounds] = useState<[number, number, number, number] | null>(null);
   const [viewportLoading, setViewportLoading] = useState(false);
   const lastLoadedBoundsRef = useRef<[number, number, number, number] | null>(null);
@@ -515,7 +523,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
   // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
 
-  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'recovery', 'signal', 'tour', 'op-side', 'seller', 'seller-reply', 'freshness', 'verification', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity', 'room', 'install']), []);
+  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'recovery', 'signal', 'tour', 'op-side', 'seller', 'seller-reply', 'freshness', 'verification', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity', 'room', 'install', 'welcome']), []);
   const isJourney = journeySheets.has(sheet);
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width:1040px)');
@@ -671,6 +679,8 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     if (!trimmed) return;
     lastSearchRef.current = trimmed;
     setSearchedTerm(trimmed);
+    // Nouvelle recherche = nouvelle cinématique : l'acheteur n'a encore rien ouvert.
+    openedDuringRevealRef.current = false;
     setResultsLoading(true);
     setSheet('none');
     try {
@@ -711,7 +721,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const handleRevealStateChange = useCallback((active: boolean) => {
     setRevealActive(active);
     if (!active) setRevealPending(false);
-    if (!active && (sheet === 'none' || sheet === 'results')) setSheet('results');
+    // La fin de la cinématique ne force les résultats QUE si l'acheteur n'a pas déjà
+    // ouvert une fiche pendant le vol (sinon sa propre action est annulée sous ses yeux).
+    if (!active && !openedDuringRevealRef.current && (sheet === 'none' || sheet === 'results')) setSheet('results');
   }, [sheet]);
 
   // BRANCH-1 — retirer une feuille mobile d'un geste (tirer sa poignée vers le bas).
@@ -771,12 +783,16 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     const t = window.setTimeout(() => {
       setRevealPending(false);
       setRevealActive(false);
-      setSheet(sheet === 'none' ? 'results' : sheet);
+      if (!openedDuringRevealRef.current) setSheet(sheet === 'none' ? 'results' : sheet);
     }, 5500);
     return () => window.clearTimeout(t);
   }, [revealPending, sheet]);
 
   const handlePinSelect = useCallback(async (facility: Pick<PublicFacility, 'id'>) => {
+    // Un choix EXPLICITE de l'acheteur prend la main sur toute cinématique en cours :
+    // on note qu'il a ouvert une fiche pendant la révélation pour que sa fin ne le
+    // ramène pas aux résultats (bug « le clic ne fait rien » sur poste lent).
+    openedDuringRevealRef.current = true;
     setSelectedId(facility.id);
     setSelectedFacility(null);
     // Défilement contextuel bidirectionnel (v1.3 §4.4): un tap marker pendant
@@ -2665,7 +2681,12 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 </div>
               )}
               {claimState === 'error' && <p className="sub" role="alert">{claimError}</p>}
-              {selectedFacility.products.length === 0 && selectedFacility.trust !== 'unclaimed' && <p className="tiny muted" style={{ marginTop: 8 }}>Cette facilité n’a pas encore de produits référencés.</p>}
+              {selectedFacility.products.length === 0 && selectedFacility.trust !== 'unclaimed' && (
+                <div className="cardbox" style={{ marginTop: 8 }}>
+                  <p className="sub">Cette facilité n’a pas encore de produits référencés.</p>
+                  <p className="tiny muted">Sans offre publiée, il n’y a rien dont Omni puisse demander la disponibilité. On ne vous propose donc pas de faux bouton. Vous pouvez signaler ce lieu pour qu’Omni le complète.</p>
+                </div>
+              )}
               {selectedFacility.trust !== 'unclaimed' && selectedFacility.products.length > 0 && <div className="label" style={{ marginTop: 8 }}>Produits · sélectionnez (panier de demande propre à cette facilité)</div>}
               {highlightedProductId && <p className="tiny" style={{ marginTop: 4 }}><span className="status ink">Produit recherché</span> mis en avant pour « {searchedTerm} ».</p>}
               {typeof selectedFacility.existenceLevel === 'number' && (
@@ -2715,7 +2736,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     }
                   }}>Demander la disponibilité (<span id="selCount">{facProductSel.length}</span>)</button>
                   <button className="btn ghost sm" type="button" style={{ marginTop: 7 }} onClick={() => setCarts((current) => clearFacilityCart(current, selectedFacility.id))}>Vider le panier</button>
-                  <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>Contact vendeur & chat débloqués après intention d’achat.</p>
+                  <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>{facProductSel.length === 0 ? 'Sélectionnez d’abord un produit ci-dessus : le bouton s’activera.' : 'Contact vendeur & chat débloqués après intention d’achat.'}</p>
                 </div>
               )}
             </div>
@@ -3638,15 +3659,27 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       {sheet === 'legal' && (
         <LegalSheetV13 initialSection={legalSection} onClose={() => setSheet('menu')} />
       )}
+      {sheet === 'welcome' && (
+        <WelcomeV13
+          firstName={welcomeName}
+          onExplore={() => setSheet('none')}
+          onPublish={() => { setRole('seller'); setSheet('seller'); if (sessionUser) void loadSellerWorkspace(); }}
+          onClose={() => setSheet('menu')}
+        />
+      )}
       {sheet === 'auth' && (
         <AuthSheetV13
           initialMode={authMode}
-          onAuthenticated={async (user) => {
+          onAuthenticated={async (user, created) => {
             await adoptSession(user);
             // RT-D1: unlock a gated itinerary right after signing in.
             if (pendingAction) {
               // Heartwood : l'utilisateur connecté reprend son action en cours, sans onboarding.
               await resumePendingAction(true);
+            } else if (created) {
+              // BRANCHES — accueil après CRÉATION (une seule étape, jamais un mur ; S-31).
+              setWelcomeName(typeof user.name === 'string' && user.name.trim() !== '' ? user.name.trim() : null);
+              setSheet('welcome');
             } else {
               setSheet('menu');
             }

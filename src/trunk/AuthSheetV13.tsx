@@ -16,8 +16,10 @@ type AuthSheetV13Props = {
    *  a gated action needs an existing account → `signin`. */
   initialMode: AuthMode;
   /** Called with the REAL session once the account is created / signed in. The app
-   *  adopts it (roles, capabilities, favorites, plan) — never a raw `setSheet('menu')`. */
-  onAuthenticated: (user: SessionUser) => Promise<void> | void;
+   *  adopts it (roles, capabilities, favorites, plan) — never a raw `setSheet('menu')`.
+   *  `created` is true ONLY on a fresh signup (not a sign-in): the app uses it to show the
+   *  one-step welcome ONCE, and never to an existing account that merely logs in. */
+  onAuthenticated: (user: SessionUser, created: boolean) => Promise<void> | void;
   /** S-16 / S3-a — the declared Togo phone is written best-effort after a signup. */
   onClose: () => void;
   /** BRANCHES — open the legal sheet (confidentialité / conditions / mentions). */
@@ -109,7 +111,7 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose, onOpenLega
   // S-16 / S3-a : enregistre le numéro DÉCLARÉ (best-effort, jamais bloquant) puis adopte
   // la session. Le geste est partagé par la création, la connexion et la vérification du
   // code, pour qu'aucun chemin n'oublie d'adopter l'utilisateur pourtant authentifié.
-  const finishAuthenticated = useCallback(async (user: SessionUser, declaredPhone: string) => {
+  const finishAuthenticated = useCallback(async (user: SessionUser, declaredPhone: string, created = false) => {
     if (declaredPhone !== '') {
       try {
         const token = await getAuthToken();
@@ -118,7 +120,7 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose, onOpenLega
         /* best-effort : le numéro reste déclarable depuis le Compte */
       }
     }
-    await onAuthenticated(user);
+    await onAuthenticated(user, created);
   }, [onAuthenticated]);
 
 
@@ -158,7 +160,7 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose, onOpenLega
         // une session pourtant ouverte ne doit jamais faire boucler l'utilisateur.
         const createdUser = sessionUserFromAuthResult(result);
         if (createdUser) {
-          await finishAuthenticated(createdUser, phoneTrimmed);
+          await finishAuthenticated(createdUser, phoneTrimmed, true);
           return;
         }
       } else {
@@ -187,7 +189,7 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose, onOpenLega
       const session = await authClient.getSession();
       const user = sessionUserFromAuthResult(session);
       if (user) {
-        await finishAuthenticated(user, mode === 'signup' ? phoneTrimmed : '');
+        await finishAuthenticated(user, mode === 'signup' ? phoneTrimmed : '', mode === 'signup');
         return;
       }
       if (mode === 'signup') {
@@ -241,10 +243,10 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose, onOpenLega
         return;
       }
       const verifiedUser = sessionUserFromAuthResult(result);
-      if (verifiedUser) { await finishAuthenticated(verifiedUser, ''); return; }
+      if (verifiedUser) { await finishAuthenticated(verifiedUser, '', true); return; }
       const session = await authClient.getSession();
       const user = sessionUserFromAuthResult(session);
-      if (user) { await finishAuthenticated(user, ''); return; }
+      if (user) { await finishAuthenticated(user, '', true); return; }
       // Adresse confirmée mais aucune session ouverte : on l'ouvre par une connexion
       // explicite (le mot de passe est encore dans l'écran), jamais une impasse.
       const passwordNow = password;
@@ -252,7 +254,7 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose, onOpenLega
         try {
           const signedIn = await authClient.signIn.email({ email: awaitingConfirm, password: passwordNow });
           const signedInUser = sessionUserFromAuthResult(signedIn);
-          if (signedInUser) { await finishAuthenticated(signedInUser, ''); return; }
+          if (signedInUser) { await finishAuthenticated(signedInUser, '', true); return; }
         } catch {
           /* retombe sur la connexion manuelle ci-dessous */
         }

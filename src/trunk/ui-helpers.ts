@@ -279,6 +279,7 @@ export function sheetDismissTarget(sheet: string): 'none' | 'menu' | 'facility' 
       return 'home';
     case 'auth':
     case 'legal':
+    case 'welcome':
     case 'menu':
     case 'account':
     case 'admin':

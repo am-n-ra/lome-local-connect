@@ -43,7 +43,7 @@ describe('AUTH-CREATE — l\'écran auth permet réellement de créer un compte'
   });
 
   it('un compte créé/connecté ADOPTE la session (capacités), jamais un menu sec', () => {
-    expect(APP).toMatch(/onAuthenticated=\{async \(user\) => \{[\s\S]{0,120}await adoptSession\(user\)/);
+    expect(APP).toMatch(/onAuthenticated=\{async \(user, created\) => \{[\s\S]{0,140}await adoptSession\(user\)/);
     const start = APP.indexOf('const adoptSession = useCallback');
     const body = APP.slice(start, APP.indexOf('const activateBuyerProUI', start));
     expect(body).toContain('getAccountCapabilities({ token })');

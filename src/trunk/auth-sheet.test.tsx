@@ -138,7 +138,7 @@ describe('AUTH-CREATE — l\'écran auth permet de CRÉER un compte (bug fondate
     await act(async () => { submitButton()!.click(); });
     expect(signUp).toHaveBeenCalledWith({ email: 'ama@example.com', password: 'secret6', name: 'Ama' });
     expect(signIn).not.toHaveBeenCalled();
-    expect(onAuth).toHaveBeenCalledWith({ id: 'u1', email: 'ama@example.com', name: 'Ama' });
+    expect(onAuth).toHaveBeenCalledWith({ id: 'u1', email: 'ama@example.com', name: 'Ama' }, true);
   });
 });
 
@@ -169,7 +169,7 @@ describe('BRANCH-2 — confirmation e-mail par CODE (OTP), envoi automatique, re
     typeInto(container.querySelector<HTMLInputElement>('#v13-auth-code')!, '123456');
     await act(async () => { findButton('Confirmer mon adresse')!.click(); });
     expect(verifyEmail).toHaveBeenCalledWith({ email: 'ama@example.com', otp: '123456' });
-    expect(onAuth).toHaveBeenCalledWith({ id: 'u1', email: 'ama@example.com', name: 'Ama' });
+    expect(onAuth).toHaveBeenCalledWith({ id: 'u1', email: 'ama@example.com', name: 'Ama' }, true);
   });
 
   it('un code invalide est dit comme tel, et laisse l\'utilisateur réessayer', async () => {
@@ -235,7 +235,7 @@ describe('AUTH-LOOP — un succès qui porte l\'utilisateur n\'est JAMAIS transf
     const onAuth = renderUi('signup');
     fillSignup('Ama', 'ama@example.com', 'secret6');
     await act(async () => { submitButton()!.click(); });
-    expect(onAuth).toHaveBeenCalledWith(directUser);
+    expect(onAuth).toHaveBeenCalledWith(directUser, true);
     expect(text()).not.toContain('Confirmez votre e-mail.');
     expect(getSession).not.toHaveBeenCalled();
   });
@@ -247,7 +247,7 @@ describe('AUTH-LOOP — un succès qui porte l\'utilisateur n\'est JAMAIS transf
     typeInto(container.querySelector<HTMLInputElement>('#v13-auth-email')!, 'ama@example.com');
     typeInto(container.querySelector<HTMLInputElement>('#v13-auth-password')!, 'secret6');
     await act(async () => { submitButton()!.click(); });
-    expect(onAuth).toHaveBeenCalledWith(directUser);
+    expect(onAuth).toHaveBeenCalledWith(directUser, false);
     expect(text()).not.toContain('Confirmez votre e-mail.');
     expect(getSession).not.toHaveBeenCalled();
   });
@@ -263,7 +263,7 @@ describe('AUTH-LOOP — un succès qui porte l\'utilisateur n\'est JAMAIS transf
     typeInto(container.querySelector<HTMLInputElement>('#v13-auth-code')!, '123456');
     await act(async () => { findButton('Confirmer mon adresse')!.click(); });
     // le succès de vérification porte l'utilisateur → adopté, aucune impasse
-    expect(onAuth).toHaveBeenCalledWith(directUser);
+    expect(onAuth).toHaveBeenCalledWith(directUser, true);
   });
 
   it('un e-mail déjà pris bascule vers la connexion et le DIT (pas « réessayez » en boucle)', async () => {
