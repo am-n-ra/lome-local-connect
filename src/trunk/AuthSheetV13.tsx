@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
 import { normalizeTogoPhone, phoneDeclarationLabel } from '../domain/phone';
 import { setDeclaredPhone } from './api';
-import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
+import { authErrorOf, sessionUserFromAuthResult, type SessionUser } from './auth-session';
 import { trapDrawerFocus } from './ui-helpers';
 
 /** BRANCH-2 — délai (s) avant que « Renvoyer » ne redevienne disponible. */
@@ -37,6 +37,13 @@ function isBadCode(error: { message?: string; code?: string } | null | undefined
   if (!error) return false;
   const hay = `${error.code ?? ''} ${error.message ?? ''}`.toLowerCase();
   return hay.includes('invalid') || hay.includes('otp') || hay.includes('expired') || hay.includes('incorrect');
+}
+
+/** Un e-mail déjà utilisé à la création se dit avec ses mots (sinon « réessayez » boucle). */
+function isExistingAccount(error: { message?: string; code?: string } | null | undefined): boolean {
+  if (!error) return false;
+  const hay = `${error.code ?? ''} ${error.message ?? ''}`.toLowerCase();
+  return hay.includes('exist') || hay.includes('already');
 }
 
 /**
@@ -99,6 +106,21 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose, onOpenLega
     return () => window.clearInterval(id);
   }, [awaitingConfirm, resendIn]);
 
+  // S-16 / S3-a : enregistre le numéro DÉCLARÉ (best-effort, jamais bloquant) puis adopte
+  // la session. Le geste est partagé par la création, la connexion et la vérification du
+  // code, pour qu'aucun chemin n'oublie d'adopter l'utilisateur pourtant authentifié.
+  const finishAuthenticated = useCallback(async (user: SessionUser, declaredPhone: string) => {
+    if (declaredPhone !== '') {
+      try {
+        const token = await getAuthToken();
+        if (token) await setDeclaredPhone({ token, phone: declaredPhone });
+      } catch {
+        /* best-effort : le numéro reste déclarable depuis le Compte */
+      }
+    }
+    await onAuthenticated(user);
+  }, [onAuthenticated]);
+
 
   const submit = useCallback(async () => {
     if (busy || !email.trim() || password.length < 6) return;
@@ -119,16 +141,33 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose, onOpenLega
       }
       if (mode === 'signup') {
         const result = await authClient.signUp.email({ email: email.trim(), password, name: firstName.trim() });
-        if (result?.error) {
-          setError('Création impossible : cet e-mail est peut-être déjà utilisé.');
+        const failure = authErrorOf(result);
+        if (failure) {
+          // Un e-mail déjà pris n'est pas « réessayez » : on le DIT, et on ouvre le chemin
+          // de connexion pour que l'utilisateur ne reste pas à retenter la création.
+          if (isExistingAccount(failure)) {
+            setMode('signin');
+            setError('Cet e-mail a déjà un compte. Saisissez votre mot de passe pour vous connecter.');
+          } else {
+            setError('Création impossible. Vérifiez vos informations et réessayez.');
+          }
+          return;
+        }
+        // Le succès de création porte DÉJÀ l'utilisateur (`{ token, user }`) : on l'adopte
+        // sans re-fetcher. Une vérification serveur `get-session` qui échoue à confirmer
+        // une session pourtant ouverte ne doit jamais faire boucler l'utilisateur.
+        const createdUser = sessionUserFromAuthResult(result);
+        if (createdUser) {
+          await finishAuthenticated(createdUser, phoneTrimmed);
           return;
         }
       } else {
         const result = await authClient.signIn.email({ email: email.trim(), password });
-        if (result?.error) {
+        const failure = authErrorOf(result);
+        if (failure) {
           // Un e-mail non confirmé n'est PAS un mauvais mot de passe : dire « identifiants
           // incorrects » ferait réessayer un mot de passe pourtant juste, sans issue.
-          if (isUnverifiedEmail(result.error)) {
+          if (isUnverifiedEmail(failure)) {
             setAwaitingConfirm(email.trim());
             await sendConfirmation(email.trim());
           } else {
@@ -136,32 +175,44 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose, onOpenLega
           }
           return;
         }
-      }
-      const session = await authClient.getSession();
-      const user = sessionUserFromAuthResult(session);
-      if (!user) {
-        // La plateforme exige une confirmation par e-mail avant d'ouvrir une session.
-        // On n'invente pas une session : on montre l'étape suivante, clairement.
-        setAwaitingConfirm(email.trim());
-        if (mode === 'signup') await sendConfirmation(email.trim());
-        return;
-      }
-      // S-16 / S3-a : enregistre le numéro DÉCLARÉ (best-effort, jamais bloquant).
-      if (mode === 'signup' && phoneTrimmed !== '') {
-        try {
-          const token = await getAuthToken();
-          if (token) await setDeclaredPhone({ token, phone: phoneTrimmed });
-        } catch {
-          /* best-effort : le numéro reste déclarable depuis le Compte */
+        const signedInUser = sessionUserFromAuthResult(result);
+        if (signedInUser) {
+          await finishAuthenticated(signedInUser, '');
+          return;
         }
       }
-      await onAuthenticated(user);
-    } catch {
-      setError(mode === 'signup' ? 'Création impossible : cet e-mail est peut-être déjà utilisé.' : 'Connexion impossible. Vérifiez vos identifiants.');
+      // Dernier recours : le succès n'a pas porté d'utilisateur. On interroge la session
+      // UNE fois. Si elle est vide, on explique quoi faire — on ne renvoie jamais
+      // l'utilisateur vers un formulaire qui reboucle.
+      const session = await authClient.getSession();
+      const user = sessionUserFromAuthResult(session);
+      if (user) {
+        await finishAuthenticated(user, mode === 'signup' ? phoneTrimmed : '');
+        return;
+      }
+      if (mode === 'signup') {
+        setAwaitingConfirm(email.trim());
+        await sendConfirmation(email.trim());
+      } else {
+        setError('Connexion impossible pour le moment. Vérifiez votre connexion, puis réessayez.');
+      }
+    } catch (caught) {
+      // Le SDK est configuré `throw: false` pour les erreurs HTTP, mais un échec réseau ou
+      // un throw inattendu peut encore remonter ici : on le dit sans accuser les identifiants.
+      const failure = authErrorOf(caught);
+      if (mode === 'signup' && failure && isExistingAccount(failure)) {
+        setMode('signin');
+        setError('Cet e-mail a déjà un compte. Saisissez votre mot de passe pour vous connecter.');
+      } else if (mode === 'signin' && failure && isUnverifiedEmail(failure)) {
+        setAwaitingConfirm(email.trim());
+        await sendConfirmation(email.trim());
+      } else {
+        setError('Connexion impossible pour le moment. Vérifiez votre connexion, puis réessayez.');
+      }
     } finally {
       setBusy(false);
     }
-  }, [busy, nameOk, consent, email, password, phone, firstName, mode, onAuthenticated, sendConfirmation]);
+  }, [busy, nameOk, consent, email, password, phone, firstName, mode, onAuthenticated, sendConfirmation, finishAuthenticated]);
 
   const resend = useCallback(async () => {
     if (!awaitingConfirm || resending || resendIn > 0) return;
@@ -173,7 +224,8 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose, onOpenLega
   }, [awaitingConfirm, resending, resendIn, sendConfirmation]);
 
   // BRANCH-2 — l'utilisateur SAISIT le code reçu. Un code juste ouvre la session ; un code
-  // faux est dit comme tel. Un succès sans session (rare) retombe sur la connexion.
+  // faux est dit comme tel. Le succès de vérification porte DÉJÀ l'utilisateur : on l'adopte
+  // au lieu de re-fetcher une session qui peut échouer à se confirmer (ce qui faisait boucler).
   const verifyCode = useCallback(async () => {
     const trimmed = code.trim();
     if (!awaitingConfirm || verifying || trimmed.length === 0) return;
@@ -183,22 +235,38 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose, onOpenLega
     try {
       if (!authClient) { setError("L'authentification n'est pas configurée dans cet environnement."); return; }
       const result = await authClient.emailOtp.verifyEmail({ email: awaitingConfirm, otp: trimmed });
-      if (result?.error) {
-        setError(isBadCode(result.error) ? 'Code incorrect ou expiré. Vérifiez le code reçu, ou demandez-en un nouveau.' : 'La vérification a échoué. Réessayez.');
+      const failure = authErrorOf(result);
+      if (failure) {
+        setError(isBadCode(failure) ? 'Code incorrect ou expiré. Vérifiez le code reçu, ou demandez-en un nouveau.' : 'La vérification a échoué. Réessayez.');
         return;
       }
+      const verifiedUser = sessionUserFromAuthResult(result);
+      if (verifiedUser) { await finishAuthenticated(verifiedUser, ''); return; }
       const session = await authClient.getSession();
       const user = sessionUserFromAuthResult(session);
-      if (user) { await onAuthenticated(user); return; }
-      setNotice('Adresse confirmée. Vous pouvez maintenant vous connecter.');
+      if (user) { await finishAuthenticated(user, ''); return; }
+      // Adresse confirmée mais aucune session ouverte : on l'ouvre par une connexion
+      // explicite (le mot de passe est encore dans l'écran), jamais une impasse.
+      const passwordNow = password;
+      if (passwordNow.length >= 6) {
+        try {
+          const signedIn = await authClient.signIn.email({ email: awaitingConfirm, password: passwordNow });
+          const signedInUser = sessionUserFromAuthResult(signedIn);
+          if (signedInUser) { await finishAuthenticated(signedInUser, ''); return; }
+        } catch {
+          /* retombe sur la connexion manuelle ci-dessous */
+        }
+      }
+      setNotice('Adresse confirmée. Saisissez votre mot de passe pour vous connecter.');
       setAwaitingConfirm(null);
       setMode('signin');
-    } catch {
-      setError('La vérification a échoué. Réessayez.');
+    } catch (caught) {
+      const failure = authErrorOf(caught);
+      setError(failure && isBadCode(failure) ? 'Code incorrect ou expiré. Vérifiez le code reçu, ou demandez-en un nouveau.' : 'La vérification a échoué. Réessayez.');
     } finally {
       setVerifying(false);
     }
-  }, [awaitingConfirm, verifying, code, onAuthenticated]);
+  }, [awaitingConfirm, verifying, code, onAuthenticated, finishAuthenticated, password]);
 
   return (
     <section className="sheet h-mid" data-sheet="auth" role="dialog" aria-modal="true" aria-label={awaitingConfirm ? 'Confirmez votre e-mail' : isSignup ? 'Création de compte' : 'Connexion'} onKeyDown={trapDrawerFocus}>

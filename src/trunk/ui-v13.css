@@ -141,6 +141,15 @@ h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .cardbox.focused{border-color:var(--acc2,#2f6df6);box-shadow:0 0 0 1.5px color-mix(in srgb,var(--acc2,#2f6df6) 28%,transparent)}
 .field{width:100%;height:32px;margin-top:7px;border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:#fff;color:var(--ink);font-size:9px;min-width:0}
 .field.lg{min-height:44px}
+.input{width:100%;height:32px;border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:#fff;color:var(--ink);font-size:9px;min-width:0}
+/* BUG B — sur un appareil tactile, tout champ de saisie sous 16px déclenche le zoom
+   automatique d'iOS Safari (et de Chrome Android en mode « zoom au focus »), qui déforme
+   l'écran à chaque focus. On porte TOUS les champs de saisie à 16px dès que le pointeur
+   est grossier (tactile), sans toucher au rendu desktop. C'est le même garde que celui
+   déjà posé sur `.searchdock .fld input`, étendu aux champs qui le manquaient. */
+@media(pointer:coarse){
+  input,.field,.field.lg,.input,textarea,select{font-size:16px!important}
+}
 .label{font-size:8.5px;color:var(--ink-soft);margin-top:10px;font-weight:700}
 .seg{display:flex;gap:6px;margin-top:8px}
 .seg span{flex:1;text-align:center;padding:7px 0;border-radius:10px;font-size:8.5px;font-weight:800;border:1px solid var(--line);background:var(--panel);color:var(--ink-soft);cursor:pointer}

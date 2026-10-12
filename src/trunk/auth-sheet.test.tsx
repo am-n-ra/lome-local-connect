@@ -223,6 +223,60 @@ describe('BRANCH-2 — confirmation e-mail par CODE (OTP), envoi automatique, re
   });
 });
 
+describe('AUTH-LOOP — un succès qui porte l\'utilisateur n\'est JAMAIS transformé en boucle OTP', () => {
+  // Le bug fondateur : quand `get-session` échouait à confirmer une session pourtant
+  // ouverte, l'app ignorait l'utilisateur déjà renvoyé par sign-up/sign-in et renvoyait
+  // vers l'état de confirmation → « se connecter » ramenait à « confirmez votre e-mail ».
+  const directUser = { id: 'u1', email: 'ama@example.com', name: 'Ama' };
+
+  it('la création réussie adopte l\'utilisateur SANS dépendre de get-session', async () => {
+    signUp.mockResolvedValue({ data: { user: directUser } });
+    getSession.mockResolvedValue({ data: { user: null } }); // une session non confirmée ne doit rien casser
+    const onAuth = renderUi('signup');
+    fillSignup('Ama', 'ama@example.com', 'secret6');
+    await act(async () => { submitButton()!.click(); });
+    expect(onAuth).toHaveBeenCalledWith(directUser);
+    expect(text()).not.toContain('Confirmez votre e-mail.');
+    expect(getSession).not.toHaveBeenCalled();
+  });
+
+  it('la connexion réussie adopte l\'utilisateur au lieu de reboucler vers la confirmation', async () => {
+    signIn.mockResolvedValue({ data: { user: directUser } });
+    getSession.mockResolvedValue({ data: { user: null } });
+    const onAuth = renderUi('signin');
+    typeInto(container.querySelector<HTMLInputElement>('#v13-auth-email')!, 'ama@example.com');
+    typeInto(container.querySelector<HTMLInputElement>('#v13-auth-password')!, 'secret6');
+    await act(async () => { submitButton()!.click(); });
+    expect(onAuth).toHaveBeenCalledWith(directUser);
+    expect(text()).not.toContain('Confirmez votre e-mail.');
+    expect(getSession).not.toHaveBeenCalled();
+  });
+
+  it('un code juste ouvre la session même si get-session ne la confirme pas', async () => {
+    getSession.mockResolvedValue({ data: { user: null } });
+    verifyEmail.mockResolvedValue({ data: { user: directUser } });
+    const onAuth = renderUi('signup');
+    fillSignup('Ama', 'ama@example.com', 'secret6');
+    await act(async () => { submitButton()!.click(); });
+    // la création sans session ouvre l'étape de confirmation
+    expect(container.querySelector('#v13-auth-code')).toBeTruthy();
+    typeInto(container.querySelector<HTMLInputElement>('#v13-auth-code')!, '123456');
+    await act(async () => { findButton('Confirmer mon adresse')!.click(); });
+    // le succès de vérification porte l'utilisateur → adopté, aucune impasse
+    expect(onAuth).toHaveBeenCalledWith(directUser);
+  });
+
+  it('un e-mail déjà pris bascule vers la connexion et le DIT (pas « réessayez » en boucle)', async () => {
+    signUp.mockResolvedValue({ error: { message: 'User already exists', code: 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL' } });
+    renderUi('signup');
+    fillSignup('Ama', 'ama@example.com', 'secret6');
+    await act(async () => { submitButton()!.click(); });
+    expect(text()).toContain('déjà un compte');
+    expect(text()).toContain('Connectez-vous pour continuer.'); // mode connexion
+    expect(text()).not.toContain('Créez votre compte.');
+  });
+});
+
 describe('LEGAL — consentement au traitement et accès aux informations légales', () => {
   it('la création exige le consentement explicite (loi togolaise 2019-014)', () => {
     renderUi('signup');

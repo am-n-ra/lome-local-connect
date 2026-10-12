@@ -37,6 +37,8 @@
     "proof:s3a-declared-phone": "tsx scripts/prove-s3a-declared-phone.mjs",
     "proof:branches-legal": "node scripts/prove-branches-legal.mjs",
     "proof:branches-drag-otp-filter-search": "node scripts/prove-branches-drag-otp-filter-search.mjs",
+    "proof:branches-auth-loop": "node scripts/prove-branches-auth-loop.mjs",
+    "proof:branches-input-zoom": "node scripts/prove-branches-input-zoom.mjs",
     "proof:web-push": "node scripts/prove-web-push.mjs",
     "proof:map-transform-heal": "node scripts/prove-map-transform-heal.mjs",
     "proof:error-boundary": "node scripts/prove-error-boundary.mjs"
