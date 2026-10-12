@@ -120,6 +120,18 @@
 > **Prochaine action :** HQ présente la liste ordonnée au fondateur pour sélection de la **première
 > branche**. Aucune branche ne démarre avant ce choix. **Terrain toujours EN DERNIER.**
 
+### Branches — tranches livrées (2026-10-07)
+
+| Branche | Rattachement | Contenu | Preuve | Statut |
+|---|---|---|---|---|
+| `BRANCHES-LEGAL` | S-16 (auth), S-12 (transport honnête), S-04 | **Préparation juridique** : consentement explicite au traitement (obligatoire à la création), feuille légale (Confidentialité / Conditions / Mentions / Vos données + droits + attribution OSM), entrée menu **sans compte** ; **Prénom requis** ; **confirmation e-mail = état réel** (renvoyer + « J'ai confirmé ») au lieu d'une phrase en passant ; **surface morte `OnboardV13` retirée** ; chip `Transport (mobile)` → **`Ambulants`** (le filtre porte sur la **forme** du lieu, pas un service A→B qui n'existe pas). Dossier `omni-branches-legal-readiness-2026-10-07.md`. | `proof:branches-legal` (390+1280, **0 pageerror**, Prénom+consentement bloquants) · **1021/1021** · tsc + 8 gardes verts · prod `index-Cwz…` = local, chaînes vérifiées dans le **bundle servi** | **`verified`** — commit `a86e891` poussé, prod sert le nouveau bundle. **T-07d : hash prod === build local ✅** ; entrée GitHub `deployments` non lisible (jeton API `401` transitoire — le push a réussi). |
+
+> **Décision fondateur requise (suite `BRANCHES-LEGAL`)** : (a) faire **valider les textes** par un
+> conseil qualifié (Togo) ; (b) construire la **suppression de compte automatisée** avec une politique
+> de **rétention** (plusieurs FK `v2_accounts` sont `ON DELETE RESTRICT` : un DELETE naïf **échouera**).
+> Le reste des obligations (déclaration IPDCP, rétention chiffrée, catégories réglementées) exige un
+> humain qualifié — voir le dossier.
+
 ## Fermeture — items (mesurés 2026-10-07, entrants Heartwood)
 
 | # | Item | Mesure | Verdict |
