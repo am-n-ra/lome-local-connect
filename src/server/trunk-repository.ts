@@ -2497,8 +2497,16 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             on camp.facility_id = f.id
                and camp.status = 'active'
                and camp.starts_at <= now() and camp.ends_at > now()
-          where f.longitude between ${west} and ${east}
-            and f.latitude between ${south} and ${north}
+          where (${namePattern}::text is not null
+              -- A typed search is GLOBAL. The viewport bounds belong to map browsing
+              -- (the loadPublic discovery path); scoping a search to the visible box
+              -- made an offer that exists on the map unfindable when the viewport was
+              -- elsewhere, while the entity level of the SAME search searched the whole
+              -- corpus — two levels, two scopes (founder 2026-10-07: « pain » → 0 offers,
+              -- 6 places). Distance is expressed by the radius constraint, never by the
+              -- screen. The bounds still apply to the unfiltered browse below.
+              or (f.longitude between ${west} and ${east}
+                and f.latitude between ${south} and ${north}))
             and (${namePattern}::text is null
               or translate(lower(coalesce(f.name, '') || ' ' || coalesce(f.category, '')), ${ACCENT_FOLD_FROM}, ${ACCENT_FOLD_TO}) ~ ${namePattern}
               or exists (

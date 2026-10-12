@@ -133,6 +133,51 @@ await (async () => {
   }
 })();
 
+// A typed search is GLOBAL (founder 2026-10-07: « pain » found 0 offers while the entity
+// level of the SAME search found 6 places). The viewport bounds scoped the offer search to
+// the visible box, so an offer that exists on the map was unfindable when the map was
+// elsewhere — while the entity level searched the whole corpus. These two assertions pin
+// the rule: a search with far-off bounds equals the global search, and the unfiltered
+// browse (no query) still respects the viewport.
+await (async () => {
+  ran += 1;
+  try {
+    const global = await repository.listPublicFacilities(undefined, 'pain');
+    const farOff = await repository.listPublicFacilities([10, 10, 11, 11], 'pain');
+    const globalNames = global.map((f) => f.name).sort();
+    const farNames = farOff.map((f) => f.name).sort();
+    const same = globalNames.length > 0 && JSON.stringify(globalNames) === JSON.stringify(farNames);
+    if (!same) {
+      failures += 1;
+      console.log(`FAIL search is global :: bounds scoped a typed search (global=${globalNames.length}, far-off=${farNames.length})`);
+    } else {
+      console.log(`PASS search is global :: 'pain' with far-off bounds === global (${globalNames.length} rows)`);
+    }
+  } catch (error) {
+    failures += 1;
+    console.log(`FAIL search is global :: ${error instanceof Error ? error.message : String(error)}`);
+  }
+})();
+
+await (async () => {
+  ran += 1;
+  try {
+    // The unfiltered browse stays viewport-scoped: a far-off box shows no places at all.
+    const farBrowse = await repository.listPublicFacilities([10, 10, 11, 11]);
+    const lomeBrowse = await repository.listPublicFacilities([1.0, 6.0, 1.4, 6.4]);
+    const ok = farBrowse.length === 0 && lomeBrowse.length > 0;
+    if (!ok) {
+      failures += 1;
+      console.log(`FAIL browse is viewport-scoped :: far=${farBrowse.length}, lome=${lomeBrowse.length}`);
+    } else {
+      console.log(`PASS browse is viewport-scoped :: far=${farBrowse.length}, lome=${lomeBrowse.length}`);
+    }
+  } catch (error) {
+    failures += 1;
+    console.log(`FAIL browse is viewport-scoped :: ${error instanceof Error ? error.message : String(error)}`);
+  }
+})();
+
 const anyEntityId = await sql`select id from v2_entities limit 1`;
 const entityId = anyEntityId[0]?.id ? String(anyEntityId[0].id) : null;
 if (entityId) {
