@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { authErrorOf, sessionUserFromAuthResult } from './auth-session';
+import { authErrorOf, sessionUserFromAuthResult, authResultHasSession } from './auth-session';
 
 describe('Neon Auth session mapping', () => {
   it('maps the native Better Auth response from data.user', () => {
@@ -37,6 +37,25 @@ describe('Neon Auth session mapping', () => {
   it('maps the direct user carried by a sign-up/sign-in success ({ token, user })', () => {
     expect(sessionUserFromAuthResult({ data: { token: 'opaque', user: { id: 'auth-user', email: 'a@b.c', name: 'Ama' } } }))
       .toEqual({ id: 'auth-user', email: 'a@b.c', name: 'Ama' });
+  });
+});
+
+describe('AUTH-VERIFY — « session ouverte » n\'est pas « utilisateur présent »', () => {
+  it('a success WITH a session token opened a real session', () => {
+    expect(authResultHasSession({ data: { token: 'opaque', user: { id: 'u1' } } })).toBe(true);
+  });
+
+  it('a success carrying a session object opened a real session', () => {
+    expect(authResultHasSession({ data: { session: { id: 's1' }, user: { id: 'u1' } } })).toBe(true);
+  });
+
+  it('the verification-required shape ({ user } with NO session/token) did NOT open one', () => {
+    // C'est le comportement de Neon quand la vérification d'e-mail est ACTIVÉE : un compte
+    // est créé, la session non — l'utilisateur ne doit pas pouvoir entrer.
+    expect(authResultHasSession({ data: { user: { id: 'u1', emailVerified: false } } })).toBe(false);
+    expect(authResultHasSession({ data: { session: null, user: { id: 'u1' } } })).toBe(false);
+    expect(authResultHasSession({ data: null })).toBe(false);
+    expect(authResultHasSession(null)).toBe(false);
   });
 });
 

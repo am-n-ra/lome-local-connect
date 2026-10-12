@@ -58,6 +58,12 @@ const RULES = [
     const names = ['Accueil', 'Mes demandes', 'Historique des transactions', 'Favoris', 'Recherches sauvegardées', 'Notifications', 'Portefeuille & Plans', 'Mon compte'];
     return start > menuStart && names.every((n) => block.includes(`<b>${n}</b>`)) && !block.includes('Reprendre où j');
   }],
+  ['menu-02-no-dup', 'the account entry appears EXACTLY once per role (buyer keeps « Mon compte », the generic « Compte » button is not rendered for buyers)', (s) => {
+    const menuStart = s[APP].indexOf('data-sheet="menu"');
+    const buyer = s[APP].slice(s[APP].indexOf("role === 'buyer' && (", menuStart), s[APP].indexOf("role === 'seller' && (", menuStart));
+    // the generic account button is guarded so buyers never see it a second time
+    return buyer.includes('<b>Mon compte</b>') && /role !== 'buyer' && \(/.test(s[APP]) && !/<b>Compte<\/b><small>profil & rôles<\/small>/.test(s[APP]);
+  }],
   ['search-03-saved-link', 'the search header offers a "Recherches sauvegardées" link (maquette L466)', (s) =>
     /className="linkbtn"[^\n]*>Recherches sauvegardées<\/button>/.test(s[APP]) && /void openSaved\(\)/.test(s[APP])],
   ['vocab-linkbtn-defined', 'the .linkbtn and .textbtn classes are actually defined in the stylesheet', (s) =>
@@ -132,6 +138,7 @@ if (process.argv.includes('--selftest')) {
     [APP, "Scanner le code d'un acheteur", 'Scanner le code'],
     [APP, "sheet !== 'home' && sheet !== 'auth' && !homeLike;", "sheet !== 'home' && sheet !== 'auth' && sheet !== 'account' && sheet !== 'wallet' && !homeLike;"],
     [APP, '<span><b>Mon compte</b><small>identité & réglages</small></span>', '<span><b>Compte</b><small>identité & réglages</small></span>'],
+    [APP, "role !== 'buyer' && (", 'true && ('],
     [APP, 'Recherches sauvegardées</button>', 'Recherches</button>'],
     [CSS, '.linkbtn{', '.linkbtn-x{'],
     [APP, '</div>\n          </div>\n          {constraintsOpen &&', '</div>\n          {constraintsOpen &&'],

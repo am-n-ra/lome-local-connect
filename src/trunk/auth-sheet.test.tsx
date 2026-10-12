@@ -133,6 +133,8 @@ describe('AUTH-CREATE — l\'écran auth permet de CRÉER un compte (bug fondate
   });
 
   it('soumettre en mode création appelle la VRAIE création de compte puis onAuthenticated', async () => {
+    // Une création qui OUVRE une session (vérification non requise) entre directement.
+    signUp.mockResolvedValue({ data: { token: 'opaque-session-token', user: { id: 'u1', email: 'ama@example.com', name: 'Ama' } } });
     const onAuth = renderUi('signup');
     fillSignup('Ama', 'ama@example.com', 'secret6');
     await act(async () => { submitButton()!.click(); });
@@ -230,7 +232,9 @@ describe('AUTH-LOOP — un succès qui porte l\'utilisateur n\'est JAMAIS transf
   const directUser = { id: 'u1', email: 'ama@example.com', name: 'Ama' };
 
   it('la création réussie adopte l\'utilisateur SANS dépendre de get-session', async () => {
-    signUp.mockResolvedValue({ data: { user: directUser } });
+    // AUTH-VERIFY — une session OUVERTE (le token Better Auth) est la preuve que la
+    // création a bien ouvert la session ; on adopte alors l'utilisateur sans re-fetch.
+    signUp.mockResolvedValue({ data: { token: 'opaque-session-token', user: directUser } });
     getSession.mockResolvedValue({ data: { user: null } }); // une session non confirmée ne doit rien casser
     const onAuth = renderUi('signup');
     fillSignup('Ama', 'ama@example.com', 'secret6');
@@ -238,6 +242,20 @@ describe('AUTH-LOOP — un succès qui porte l\'utilisateur n\'est JAMAIS transf
     expect(onAuth).toHaveBeenCalledWith(directUser, true);
     expect(text()).not.toContain('Confirmez votre e-mail.');
     expect(getSession).not.toHaveBeenCalled();
+  });
+
+  it('AUTH-VERIFY — une création SANS session (vérification requise) exige le CODE, jamais un accès direct', async () => {
+    // Le comportement exact de Neon quand la vérification d'e-mail est ACTIVÉE :
+    // `{ user }` sans session. Adopter l'utilisateur sur sa seule présence laisserait
+    // un compte non vérifié entrer dans l'app — c'est précisément ce qu'on refuse.
+    signUp.mockResolvedValue({ data: { user: directUser } });
+    getSession.mockResolvedValue({ data: { user: null } });
+    const onAuth = renderUi('signup');
+    fillSignup('Ama', 'ama@example.com', 'secret6');
+    await act(async () => { submitButton()!.click(); });
+    expect(onAuth).not.toHaveBeenCalled();
+    expect(text()).toContain('Confirmez votre e-mail.');
+    expect(sendVerificationOtp).toHaveBeenCalledWith({ email: 'ama@example.com', type: 'email-verification' });
   });
 
   it('la connexion réussie adopte l\'utilisateur au lieu de reboucler vers la confirmation', async () => {

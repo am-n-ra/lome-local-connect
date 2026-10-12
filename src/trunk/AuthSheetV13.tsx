@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
 import { normalizeTogoPhone, phoneDeclarationLabel } from '../domain/phone';
 import { setDeclaredPhone } from './api';
-import { authErrorOf, sessionUserFromAuthResult, type SessionUser } from './auth-session';
+import { authErrorOf, sessionUserFromAuthResult, authResultHasSession, type SessionUser } from './auth-session';
 import { trapDrawerFocus } from './ui-helpers';
 
 /** BRANCH-2 — délai (s) avant que « Renvoyer » ne redevienne disponible. */
@@ -155,14 +155,20 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose, onOpenLega
           }
           return;
         }
-        // Le succès de création porte DÉJÀ l'utilisateur (`{ token, user }`) : on l'adopte
-        // sans re-fetcher. Une vérification serveur `get-session` qui échoue à confirmer
-        // une session pourtant ouverte ne doit jamais faire boucler l'utilisateur.
+        // AUTH-VERIFY (option 2) — avec la vérification d'e-mail ACTIVÉE côté Neon (S3-0),
+        // la création renvoie l'utilisateur MAIS SANS session : le compte existe, pas la
+        // session. On ne peut donc plus adopter l'utilisateur sur sa seule présence — on
+        // exige une session réelle. Tant qu'elle manque, on demande le CODE reçu. Si Neon
+        // est en mode « vérification optionnelle », la session est déjà là et le chemin
+        // reste fluide (jamais de mur gratuit).
         const createdUser = sessionUserFromAuthResult(result);
-        if (createdUser) {
+        if (authResultHasSession(result) && createdUser) {
           await finishAuthenticated(createdUser, phoneTrimmed, true);
           return;
         }
+        setAwaitingConfirm(email.trim());
+        await sendConfirmation(email.trim());
+        return;
       } else {
         const result = await authClient.signIn.email({ email: email.trim(), password });
         const failure = authErrorOf(result);
@@ -183,21 +189,17 @@ export function AuthSheetV13({ initialMode, onAuthenticated, onClose, onOpenLega
           return;
         }
       }
-      // Dernier recours : le succès n'a pas porté d'utilisateur. On interroge la session
-      // UNE fois. Si elle est vide, on explique quoi faire — on ne renvoie jamais
-      // l'utilisateur vers un formulaire qui reboucle.
+      // Dernier recours (connexion seulement — la création a toujours conclu plus haut) :
+      // le succès n'a pas porté d'utilisateur. On interroge la session UNE fois. Si elle
+      // est vide, on explique quoi faire — on ne renvoie jamais l'utilisateur vers un
+      // formulaire qui reboucle.
       const session = await authClient.getSession();
       const user = sessionUserFromAuthResult(session);
       if (user) {
-        await finishAuthenticated(user, mode === 'signup' ? phoneTrimmed : '', mode === 'signup');
+        await finishAuthenticated(user, '');
         return;
       }
-      if (mode === 'signup') {
-        setAwaitingConfirm(email.trim());
-        await sendConfirmation(email.trim());
-      } else {
-        setError('Connexion impossible pour le moment. Vérifiez votre connexion, puis réessayez.');
-      }
+      setError('Connexion impossible pour le moment. Vérifiez votre connexion, puis réessayez.');
     } catch (caught) {
       // Le SDK est configuré `throw: false` pour les erreurs HTTP, mais un échec réseau ou
       // un throw inattendu peut encore remonter ici : on le dit sans accuser les identifiants.

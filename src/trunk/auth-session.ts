@@ -15,6 +15,19 @@ export function sessionUserFromAuthResult(result: unknown): SessionUser | null {
   return user?.id ? { id: user.id, email: user.email ?? null, name: user.name ?? null } : null;
 }
 
+/**
+ * A sign-up/sign-in that actually OPENED a session carries a session (or the opaque session
+ * token Better Auth returns alongside it). When email verification is REQUIRED, Neon returns
+ * `{ user }` (unverified) but NO session — the account exists, the session does not. Reading
+ * the user alone would therefore let an unverified signup skip verification.
+ */
+export function authResultHasSession(result: unknown): boolean {
+  const data = (result as { data?: { token?: unknown; session?: unknown } | null } | null | undefined)?.data;
+  if (!data) return false;
+  if (typeof data.token === 'string' && data.token.length > 0) return true;
+  return data.session != null;
+}
+
 type AuthErrorLike = { message?: string; code?: string; status?: number };
 
 /**

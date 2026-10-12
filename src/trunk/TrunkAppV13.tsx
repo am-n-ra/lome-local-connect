@@ -2883,7 +2883,14 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Portefeuille</b><small>solde & recharges</small></span></button>
                   </>
                 )}
-                <button className="menuitem" type="button" onClick={() => setSheet('account')}><span className="mi"><User size={15} /></span><span><b>Compte</b><small>profil & rôles</small></span></button>
+                {/* MENU-02 — le maquette ne nomme l'entrée de compte qu'UNE fois par rôle ;
+                    l'acheteur a déjà « Mon compte » dans son bloc. Ce bouton générique (rendu
+                    pour tout rôle) créait un DOUBLON « Mon compte » + « Compte » côté acheteur.
+                    On le réserve aux rôles sans entrée propre et on suit le maquette :
+                    vendeur → « Compte vendeur », admin/opérateur → « Mon compte ». */}
+                {role !== 'buyer' && (
+                  <button className="menuitem" type="button" onClick={() => setSheet('account')}><span className="mi"><User size={15} /></span><span><b>{role === 'seller' ? 'Compte vendeur' : 'Mon compte'}</b><small>{role === 'seller' ? 'entités & équipe' : 'identité & réglages'}</small></span></button>
+                )}
                 <button className="menuitem" type="button" onClick={async () => { await authClient?.signOut?.().catch(() => undefined); setSessionUser(null); setAdminTools(false); setSellerAvailable(false); setAccountRoles([]); setRole('buyer'); setSheet('none'); }}><span className="mi"><LogOut size={15} /></span><span><b>Se déconnecter</b></span></button>
               </>
             )}
