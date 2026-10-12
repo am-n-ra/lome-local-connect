@@ -7,6 +7,7 @@ import { isWebPushConfigured, sendWebPush, vapidConfig } from './web-push-provid
 import { AvailabilityPolicyError, AvailabilityResponsePolicyError, BuyerSearchPolicyError, createTrunkRepository, ExternalPaymentMethod, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SellerCataloguePolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration } from './evidence-contract';
 import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, handleVisitEvidenceUpload, readPrivateEvidence } from './evidence-storage';
+import { NeonWebhookError, parseNeonWebhookBody, readNeonWebhookHeaders, routeNeonWebhookEvent, verifyNeonWebhookSignature } from './neon-webhooks';
 import { handleOfferMediaUpload, verifyOfferMediaObjects, OfferMediaPolicyError, OfferMediaStorageError, OfferMediaAuthError, OfferMediaRequestError } from './offer-media-storage';
 import type { TransactionState } from '../domain/contracts';
 import type { OfferOwnerKind } from '../domain/contracts';
@@ -1851,6 +1852,31 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         now: new Date().toISOString(),
       });
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    // Neon Auth webhooks (Managed Better Auth) — voir src/server/neon-webhooks.ts.
+    // URL canonique : /api/v2/auth/webhook (catch-all existant, pas de 13e
+    // fonction). Le nu `/webhook` rend 404 (même leçon que FedaPay 2026-09-09) :
+    // le changer dans Neon Console → Auth → Configuration → Webhooks.
+    if (req.method === 'POST' && pathname === '/api/v2/auth/webhook') {
+      const rawBody = await readRawBody(req);
+      try {
+        const headers = readNeonWebhookHeaders(req.headers);
+        await verifyNeonWebhookSignature({ rawBody, headers });
+        const event = parseNeonWebhookBody(rawBody);
+        if (headers.eventType && headers.eventType !== event.eventType) {
+          throw new NeonWebhookError('EVENT_MISMATCH', 'Neon webhook event type mismatch.');
+        }
+        const routed = routeNeonWebhookEvent(event);
+        json(res, routed.status, { ok: routed.status === 200, correlationId, data: { code: routed.code, eventId: routed.audit.eventId, eventType: routed.audit.eventType } });
+      } catch (error) {
+        if (error instanceof NeonWebhookError) {
+          const status = error.code === 'DELIVERY_NOT_CONFIGURED' || error.code === 'DELIVERY_NOT_IMPLEMENTED' || error.code === 'SIGNUP_GATE_REFUSED' ? 500 : 400;
+          json(res, status, errorBody(correlationId, error.code, error.message));
+          return true;
+        }
+        throw error;
+      }
       return true;
     }
     if (req.method === 'POST' && pathname === '/api/v2/wallet/recharges') {

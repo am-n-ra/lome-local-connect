@@ -7603,6 +7603,117 @@ async function readPrivateEvidence(objectKey) {
   return { body, contentType: result.blob.contentType ?? "application/octet-stream", size: body.length };
 }
 
+// src/server/neon-webhooks.ts
+import { generateKeyPair } from "jose";
+var NeonWebhookError = class extends Error {
+  code;
+  constructor(code, message) {
+    super(message);
+    this.name = "NeonWebhookError";
+    this.code = code;
+  }
+};
+function readNeonWebhookHeaders(headers) {
+  const first = (value) => typeof value === "string" ? value : Array.isArray(value) && typeof value[0] === "string" ? value[0] : null;
+  return {
+    signature: first(headers["x-neon-signature"]),
+    kid: first(headers["x-neon-signature-kid"]),
+    timestamp: first(headers["x-neon-timestamp"]),
+    eventType: first(headers["x-neon-event-type"]),
+    eventId: first(headers["x-neon-event-id"])
+  };
+}
+var TIMESTAMP_TOLERANCE_MS = 5 * 60 * 1e3;
+var DEFAULT_NEON_AUTH_JWKS_URL2 = "https://ep-purple-fog-amwsyc3j.neonauth.c-5.us-east-1.aws.neon.tech/neondb/auth/.well-known/jwks.json";
+async function verifyNeonWebhookSignature(input) {
+  const { rawBody, headers } = input;
+  if (!headers.signature || !headers.kid || !headers.timestamp) {
+    throw new NeonWebhookError("SIGNATURE_REQUIRED", "Neon webhook signature headers are required.");
+  }
+  const jwksUrl = (input.jwksUrl ?? (process.env.NEON_AUTH_WEBHOOK_JWKS_URL ?? "").trim()) || DEFAULT_NEON_AUTH_JWKS_URL2;
+  let jwks;
+  try {
+    const response = await fetch(jwksUrl, { headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error(`jwks ${response.status}`);
+    jwks = await response.json();
+  } catch {
+    throw new NeonWebhookError("JWKS_UNAVAILABLE", "Neon webhook signing keys are unavailable.");
+  }
+  const jwk = Array.isArray(jwks.keys) ? jwks.keys.find((key) => key.kid === headers.kid) : void 0;
+  if (!jwk) throw new NeonWebhookError("KEY_UNKNOWN", "Neon webhook signing key is unknown.");
+  const [headerB64, emptyPayload, signatureB64] = headers.signature.split(".");
+  if (!headerB64 || emptyPayload !== "" || !signatureB64) {
+    throw new NeonWebhookError("SIGNATURE_MALFORMED", "Neon webhook signature is malformed.");
+  }
+  const { default: crypto2 } = await import("node:crypto");
+  let publicKey;
+  try {
+    publicKey = crypto2.createPublicKey({ key: jwk, format: "jwk" });
+  } catch {
+    throw new NeonWebhookError("KEY_INVALID", "Neon webhook signing key is invalid.");
+  }
+  const payloadB64 = Buffer.from(rawBody, "utf8").toString("base64url");
+  const signaturePayloadB64 = Buffer.from(`${headers.timestamp}.${payloadB64}`, "utf8").toString("base64url");
+  const signingInput = Buffer.from(`${headerB64}.${signaturePayloadB64}`, "utf8");
+  let signatureBytes;
+  try {
+    signatureBytes = Buffer.from(signatureB64, "base64url");
+  } catch {
+    throw new NeonWebhookError("SIGNATURE_MALFORMED", "Neon webhook signature is malformed.");
+  }
+  const valid = crypto2.verify(null, signingInput, publicKey, signatureBytes);
+  if (!valid) {
+    throw new NeonWebhookError("SIGNATURE_INVALID", "Neon webhook signature is invalid.");
+  }
+  const ageMs = (input.now ?? Date.now()) - Number.parseInt(headers.timestamp, 10);
+  if (!Number.isFinite(ageMs) || ageMs > TIMESTAMP_TOLERANCE_MS) {
+    throw new NeonWebhookError("TIMESTAMP_STALE", "Neon webhook timestamp is too old.");
+  }
+}
+function parseNeonWebhookBody(rawBody) {
+  let parsed;
+  try {
+    parsed = JSON.parse(rawBody);
+  } catch {
+    throw new NeonWebhookError("BODY_INVALID", "Neon webhook body must be valid JSON.");
+  }
+  if (!parsed || typeof parsed !== "object") throw new NeonWebhookError("BODY_INVALID", "Neon webhook body must be valid JSON.");
+  const record = parsed;
+  const eventType = typeof record.event_type === "string" ? record.event_type : "";
+  if (!eventType) throw new NeonWebhookError("EVENT_REQUIRED", "Neon webhook event type is required.");
+  const eventData = record.event_data && typeof record.event_data === "object" ? record.event_data : {};
+  const user = record.user && typeof record.user === "object" ? record.user : {};
+  return {
+    eventId: typeof record.event_id === "string" ? record.event_id : null,
+    eventType,
+    eventData,
+    user
+  };
+}
+function hasOtpDeliveryConfiguration() {
+  const emailReady = (process.env.OTP_EMAIL_API_KEY ?? "").trim() !== "" && (process.env.OTP_EMAIL_FROM ?? "").trim() !== "";
+  const smsReady = (process.env.OTP_SMS_ACCOUNT_SID ?? "").trim() !== "" && (process.env.OTP_SMS_AUTH_TOKEN ?? "").trim() !== "" && (process.env.OTP_SMS_FROM_NUMBER ?? "").trim() !== "";
+  return emailReady || smsReady;
+}
+function routeNeonWebhookEvent(event) {
+  const audit = { eventId: event.eventId, eventType: event.eventType };
+  switch (event.eventType) {
+    case "send.otp":
+    case "send.magic_link":
+      if (!hasOtpDeliveryConfiguration()) {
+        throw new NeonWebhookError("DELIVERY_NOT_CONFIGURED", "OTP delivery is not configured.");
+      }
+      throw new NeonWebhookError("DELIVERY_NOT_IMPLEMENTED", "OTP delivery provider is not implemented.");
+    case "user.before_create":
+      throw new NeonWebhookError("SIGNUP_GATE_REFUSED", "Signup gating is not operated by this endpoint.");
+    case "phone_number.verified":
+    case "user.created":
+      return { status: 200, code: "IGNORED", audit };
+    default:
+      return { status: 200, code: "IGNORED_UNKNOWN", audit };
+  }
+}
+
 // src/server/offer-media-storage.ts
 import { head as head2 } from "@vercel/blob";
 import { handleUpload as handleUpload2 } from "@vercel/blob/client";
@@ -9604,6 +9715,27 @@ async function handleApi(req, res, pathname, url) {
         now: (/* @__PURE__ */ new Date()).toISOString()
       });
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/auth/webhook") {
+      const rawBody = await readRawBody(req);
+      try {
+        const headers = readNeonWebhookHeaders(req.headers);
+        await verifyNeonWebhookSignature({ rawBody, headers });
+        const event = parseNeonWebhookBody(rawBody);
+        if (headers.eventType && headers.eventType !== event.eventType) {
+          throw new NeonWebhookError("EVENT_MISMATCH", "Neon webhook event type mismatch.");
+        }
+        const routed = routeNeonWebhookEvent(event);
+        json(res, routed.status, { ok: routed.status === 200, correlationId, data: { code: routed.code, eventId: routed.audit.eventId, eventType: routed.audit.eventType } });
+      } catch (error) {
+        if (error instanceof NeonWebhookError) {
+          const status = error.code === "DELIVERY_NOT_CONFIGURED" || error.code === "DELIVERY_NOT_IMPLEMENTED" || error.code === "SIGNUP_GATE_REFUSED" ? 500 : 400;
+          json(res, status, errorBody(correlationId, error.code, error.message));
+          return true;
+        }
+        throw error;
+      }
       return true;
     }
     if (req.method === "POST" && pathname === "/api/v2/wallet/recharges") {
