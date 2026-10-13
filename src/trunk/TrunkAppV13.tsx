@@ -926,6 +926,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   }, [compareResults, results, bulkDetails, buyerProStatus]);
 
   const openHome = useCallback(async (focus: 'top' | 'historique' = 'top') => {
+    // « Mon espace » est l'espace ACHETEUR. Un vendeur qui arrive ici (reprise, reçu,
+    // geste de fermeture) doit voir SON espace, pas les demandes d'un acheteur.
+    if (role === 'seller') { setSheet('seller'); if (sessionUser) void loadSellerWorkspace(); return; }
     const token = await requireAuth({ kind: 'home', returnTo: 'home' });
     if (!token) return;
     setHomeFocus(focus);
@@ -953,7 +956,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       setBuyerRequestsState('error');
       setBuyerRequestsError(caught instanceof Error ? caught.message : 'Vos demandes ne peuvent pas être chargées pour le moment.');
     }
-  }, [requireAuth]);
+  }, [requireAuth, role, sessionUser, loadSellerWorkspace]);
 
   // FF-2 — reprendre une transaction en cours : recharge son état (l'intention reste
   // verrouillée côté serveur, jamais annulée) sans repasser par la dispo.
@@ -2117,6 +2120,13 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     () => (selectedFacility ? cartProductsFor(carts, selectedFacility.id) : []),
     [carts, selectedFacility],
   );
+
+  // Une fiche facilité n'est pas un poste d'achat pour tout le monde : le vendeur qui
+  // touche son propre lieu gère, il ne « commande » pas (Seed : le lieu dit *où*, l'entité
+  // dit *à qui*). On masque les gestes d'ACHETEUR (demande de dispo, itinéraire, signaler)
+  // sur son propre lieu et on lui donne le geste de GESTION. L'admin garde sa fiche de revue.
+  const isOwnFacility = !!selectedFacility && ownedFacilityIds.includes(selectedFacility.id);
+  const buyerControlsVisible = role === 'buyer' && !isOwnFacility;
   const highlightedProductId = useMemo(
     () => (selectedFacility ? highlightSearchedProduct(selectedFacility.products, searchedTerm) : null),
     [selectedFacility, searchedTerm],
@@ -2647,7 +2657,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 </div>
                 </>
               )}
-              {selectedFacility.latitude != null && selectedFacility.longitude != null && (
+              {buyerControlsVisible && selectedFacility.latitude != null && selectedFacility.longitude != null && (
                 <div className="cardbox" style={{ marginTop: 8 }}>
                   <div className="kv"><span>Localisation</span><b>{selectedFacility.latitude.toFixed(5)}, {selectedFacility.longitude.toFixed(5)}</b></div>
                   <button
@@ -2666,6 +2676,18 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                   )}
                 </div>
               )}
+              {isOwnFacility && (
+                <div className="cardbox" style={{ marginTop: 8 }}>
+                  <p className="sub">Vous gérez ce lieu. Pour ses offres, son stock et sa disponibilité, ouvrez votre espace vendeur.</p>
+                  <button className="btn" type="button" style={{ marginTop: 8, width: '100%' }} onClick={() => { setRole('seller'); setSheet('seller'); if (sessionUser) void loadSellerWorkspace(); }}>Gérer ce lieu dans mon espace</button>
+                </div>
+              )}
+              {(role === 'admin' || role === 'operator') && adminTools && (
+                <div className="cardbox" style={{ marginTop: 8 }}>
+                  <p className="sub">Un pin d'équipe ouvre un objet de revue, jamais une fiche d'achat.</p>
+                  <button className="btn" type="button" style={{ marginTop: 8, width: '100%' }} onClick={() => setSheet('admin')}>Ouvrir la console de revue</button>
+                </div>
+              )}
               {claimState === 'error' && <p className="sub" role="alert">{claimError}</p>}
               {selectedFacility.products.length === 0 && selectedFacility.trust !== 'unclaimed' && (
                 <div className="cardbox" style={{ marginTop: 8 }}>
@@ -2673,7 +2695,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                   <p className="tiny muted">Sans offre publiée, il n’y a rien dont Omni puisse demander la disponibilité. On ne vous propose donc pas de faux bouton. Vous pouvez signaler ce lieu pour qu’Omni le complète.</p>
                 </div>
               )}
-              {selectedFacility.trust !== 'unclaimed' && selectedFacility.products.length > 0 && <div className="label" style={{ marginTop: 8 }}>Produits · sélectionnez (panier de demande propre à cette facilité)</div>}
+              {selectedFacility.trust !== 'unclaimed' && selectedFacility.products.length > 0 && <div className="label" style={{ marginTop: 8 }}>{buyerControlsVisible ? 'Produits · sélectionnez (panier de demande propre à cette facilité)' : 'Produits de ce lieu'}</div>}
               {highlightedProductId && <p className="tiny" style={{ marginTop: 4 }}><span className="status ink">Produit recherché</span> mis en avant pour « {searchedTerm} ».</p>}
               {typeof selectedFacility.existenceLevel === 'number' && (
                 <div style={{ marginTop: 8 }}>
@@ -2683,23 +2705,25 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 </div>
               )}
               {rankedFacilityProducts.map((product) => {
-                const on = facProductSel.includes(product.id);
+                const on = buyerControlsVisible && facProductSel.includes(product.id);
                 const highlighted = product.id === highlightedProductId;
                 const carac = offerCharacteristics(product);
                 const trust = offerTrustLabel({ integrity: product.integrity, reputation: product.reputation });
                 return (
-                  <div className={`pitem${on ? ' sel' : ''}${highlighted ? ' searched' : ''}`} key={product.id} role="button" tabIndex={0} style={{ cursor: 'pointer', ...(highlighted ? { boxShadow: 'inset 0 0 0 1.5px var(--ink-faint)', borderRadius: 12 } : {}) }} onClick={() => setCarts((current) => toggleCartProduct(current, selectedFacility.id, product.id))}>
-                    <span className={`chk${on ? ' on' : ''}`} aria-hidden="true">{on ? '✓' : ''}</span>
+                  <div className={`pitem${on ? ' sel' : ''}${highlighted ? ' searched' : ''}`} key={product.id} role={buyerControlsVisible ? 'button' : undefined} tabIndex={buyerControlsVisible ? 0 : undefined} style={{ cursor: buyerControlsVisible ? 'pointer' : 'default', ...(highlighted ? { boxShadow: 'inset 0 0 0 1.5px var(--ink-faint)', borderRadius: 12 } : {}) }} onClick={buyerControlsVisible ? () => setCarts((current) => toggleCartProduct(current, selectedFacility.id, product.id)) : undefined}>
+                    {buyerControlsVisible && <span className={`chk${on ? ' on' : ''}`} aria-hidden="true">{on ? '✓' : ''}</span>}
                     <span className="pthumb" />
                     <span><b>{product.name}</b>{highlighted && <span className="status ink" style={{ marginLeft: 6 }}>Recherché</span>}<small>{product.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small>{carac.length > 0 && <small style={{ display: 'block', marginTop: 2 }}>{carac.map((c) => c.value).join(' · ')}</small>}
                       <span className={`trust${trust.ok ? ' ok' : ''}${trust.muted ? ' muted' : ''}`}>{trust.text}{trust.missing.length > 0 && <span className="miss"> · {trust.missing.join(', ')}</span>}</span>
                     </span>
                     <span className="pr">{formatMoney(product.prixReduit, currencyFor(product.currency).currency)}</span>
-                    <button className="btn ghost sm" type="button" style={{ width: 'auto', minHeight: 26, fontSize: 11 }} title="Signaler un problème sur cette offre" onClick={(e) => { e.stopPropagation(); openSignal(product.id, product.name); }}>Signaler</button>
+                    {buyerControlsVisible && (
+                      <button className="btn ghost sm" type="button" style={{ width: 'auto', minHeight: 26, fontSize: 11 }} title="Signaler un problème sur cette offre" onClick={(e) => { e.stopPropagation(); openSignal(product.id, product.name); }}>Signaler</button>
+                    )}
                   </div>
                 );
               })}
-              {selectedFacility.products.length > 0 && selectedFacility.trust !== 'unclaimed' && (
+              {buyerControlsVisible && selectedFacility.products.length > 0 && selectedFacility.trust !== 'unclaimed' && (
                 <div className="selbar" style={{ marginTop: 10 }}>
                   <button className="btn ok" type="button" disabled={facProductSel.length === 0} onClick={() => {
                     const picked = selectedFacility.products.filter((p) => facProductSel.includes(p.id));
@@ -2846,9 +2870,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 )}
                 {role === 'seller' && (
                   <>
-                    <button className="menuitem" type="button" onClick={() => void openHome()}><span className="mi"><Home size={15} /></span><span><b>Mon espace</b><small>demandes & transactions</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => { setSheet('seller'); if (sessionUser) void loadSellerWorkspace(); }}><span className="mi"><Home size={15} /></span><span><b>Mon espace</b><small>demandes & transactions</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openNotifs()}><span className="mi"><Bell size={15} /></span><span><b>Notifications</b><small>réponses, vérifications, tours</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => setSheet('seller')}><span className="mi"><PackageSearch size={15} /></span><span><b>Produits & stock</b><small>catalogue vendeur</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => setSheet('products')}><span className="mi"><PackageSearch size={15} /></span><span><b>Produits & stock</b><small>catalogue vendeur</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('seller-reply')}><span className="mi"><Inbox size={15} /></span><span><b>Demandes entrantes</b><small>à répondre</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('freshness')}><span className="mi"><Clock3 size={15} /></span><span><b>Fraîcheur de la dispo</b><small>4 h frais · 24 h expiré</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('verification')}><span className="mi"><ShieldCheck size={15} /></span><span><b>Vérification</b><small>où en est mon badge</small></span></button>
