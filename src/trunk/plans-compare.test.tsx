@@ -23,19 +23,24 @@ afterEach(() => {
 });
 
 describe('PlansCompareV13 — comparatif Free vs Pro adossé au réel', () => {
-  it('acheteur : comparateur 1 contre 5, bulk 3 contre 100', () => {
+  it('acheteur : comparateur 3 contre 10 (Seed V2), bulk 3 contre 100', () => {
     act(() => { root.render(<PlansCompareV13 role="buyer" currency={currency} />); });
     const text = container.textContent || '';
-    expect(text).toContain('1 établissement');
-    expect(text).toContain('5 établissements');
-    expect(text).toMatch(/3\s*·\s*100|3.*100/);
+    expect(text).toContain('3 établissements');
+    expect(text).toContain('10 établissements');
+    const bulk = [...container.querySelectorAll('.plans-row')].find((r) => (r.textContent || '').includes('groupées'));
+    expect(bulk, 'ligne bulk introuvable').toBeTruthy();
+    const cells = [...(bulk as Element).querySelectorAll('.plans-cell')].map((c) => c.textContent);
+    expect(cells).toEqual(['3', '100']);
   });
 
-  it('vendeur : 20 max contre illimitées, dispo en direct et campagnes côté Pro', () => {
+  it('vendeur : 20 max contre illimitées, emplacements, analytics et campagnes côté Pro', () => {
     act(() => { root.render(<PlansCompareV13 role="seller" currency={currency} />); });
     const text = container.textContent || '';
     expect(text).toContain('20 max');
     expect(text).toContain('Illimitées');
+    expect(text).toContain('Emplacements');
+    expect(text).toContain('Analytics');
     expect(text).toContain('Campagnes sponsorisées');
     expect(text).toContain('Bonus confiance 20 $');
   });
@@ -47,6 +52,27 @@ describe('PlansCompareV13 — comparatif Free vs Pro adossé au réel', () => {
     act(() => { root.render(<PlansCompareV13 role="seller" currency={currency} />); });
     expect(container.textContent).toMatch(/10\s\$US/);
     expect(container.textContent).toMatch(/5\s000/);
+  });
+
+  it('deux colonnes distinctes (Gratuit | Pro) — pas une ligne `free · pro` ambiguë', () => {
+    act(() => { root.render(<PlansCompareV13 role="seller" currency={currency} />); });
+    const rows = [...container.querySelectorAll('.plans-row')];
+    expect(rows.length).toBeGreaterThanOrEqual(5);
+    // Chaque ligne a un libellé + 2 cellules séparées (une par plan).
+    for (const row of rows) {
+      expect(row.querySelectorAll('.plans-label').length).toBe(1);
+      expect(row.querySelectorAll('.plans-cell').length).toBe(2);
+    }
+    expect(container.querySelectorAll('.plans-head').length).toBe(1);
+  });
+
+  it('le comparateur de l’app lit la MÊME constante que le tableau (3/10, plus de dérive)', () => {
+    const app = readFileSync(resolve(__dirname, 'TrunkAppV13.tsx'), 'utf8');
+    expect(app).toContain('compareQuotaFor');
+    expect(app).not.toMatch(/pro_active'\s*\?\s*5\s*:\s*1/);
+    const inv = readFileSync(resolve(__dirname, '../domain/invariants.ts'), 'utf8');
+    expect(inv).toMatch(/COMPARE_QUOTA_FREE\s*=\s*3/);
+    expect(inv).toMatch(/COMPARE_QUOTA_PRO\s*=\s*10/);
   });
 
   it('ne gate rien : aucun bouton d’achat ni verrou dans le tableau', () => {

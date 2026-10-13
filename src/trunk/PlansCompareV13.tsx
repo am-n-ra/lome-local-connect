@@ -1,24 +1,21 @@
 import { planPriceLabel } from '../domain/plan-labels';
+import { COMPARE_QUOTA_FREE, COMPARE_QUOTA_PRO, FREE_OFFER_LIMIT } from '../domain/invariants';
 import type { ResolvedCurrency } from '../domain/currency';
 
 /**
- * Comparatif Free vs Pro, acheteur ET vendeur (fondateur 2026-10-07 : aucun
- * endroit ne détaillait tous les plans).
+ * Comparatif Free vs Pro, acheteur ET vendeur.
  *
- * Chaque ligne est adossée au comportement appliqué Non jamais une promesse :
- *  - comparateur 1/5 : `TrunkAppV13.openCompare` (`quota = pro_active ? 5 : 1`) ;
- *  - bulk 3/100 par mois : `v2_buyer_credit_accounts.monthly_quota` (free 3, pro 100) ;
- *  - offres 20 max / illimitées : `FREE_OFFER_LIMIT` + bypass `is_pro`
- *    (`trunk-repository.ts`, publication draft → published) ;
- *  - dispo en direct Pro : entitlement `facility_pro` vivant exigé (D-04) ;
- *  - vérifications manuelles gratuites des deux côtés (coût bulk 0) ;
- *  - campagnes sponsorisées Pro : garde `commercial_plan = 'pro_active'` ;
- *  - bonus confiance 20 $ : D-H, pas gaté par le plan (3 ventes distinctes) ;
- *  - recherche/favoris/alertes : sans gate Pro (authentifié suffit).
- * Prix : source unique `pricing.ts` via `planPriceLabel` (sticker USD + local).
- * Ce composant est une TABLE (présentation) : les états (actif/expiré/boutons)
- * restent aux cartes existantes de la sheet Plans. Pas de mur : informer,
- * jamais gater.
+ * Deux exigences fondateur (2026-10-07) :
+ *  1. « que le tableau comparatif soit clair … qu'il comprenne dans quoi il s'engage et ce
+ *     que ça peut lui apporter » — donc **deux colonnes distinctes** (Gratuit | Pro), pas
+ *     une seule ligne `free · pro` où l'on ne sait plus quel chiffre appartient à quel plan.
+ *  2. **S'adapter au réel** : chaque ligne est adossée au comportement appliqué, jamais une
+ *     promesse. Les valeurs chiffrées viennent des constantes du domaine (`invariants.ts`)
+ *     pour que le tableau et le code ne puissent plus diverger (le comparateur affichait
+ *     1/5 alors que le Seed porte 3/10).
+ *
+ * Ce composant est une TABLE (présentation) : les états (actif/expiré/boutons) restent aux
+ * cartes existantes de la sheet Plans. Pas de mur : informer, jamais gater.
  */
 
 type PlanRole = 'buyer' | 'seller';
@@ -30,16 +27,17 @@ interface PlanRow {
 }
 
 const BUYER_ROWS: PlanRow[] = [
-  { label: 'Recherche & favoris', free: '✓', pro: '✓' },
-  { label: 'Comparateur', free: '1 établissement', pro: '5 établissements' },
-  { label: 'Demandes bulk / mois', free: '3', pro: '100' },
-  { label: 'Alertes de recherche', free: '✓', pro: '✓' },
+  { label: 'Recherche, favoris & alertes', free: 'Illimités', pro: 'Illimités' },
+  { label: 'Comparateur', free: `${COMPARE_QUOTA_FREE} établissements`, pro: `${COMPARE_QUOTA_PRO} établissements` },
+  { label: 'Demandes groupées (bulk) / mois', free: '3', pro: '100' },
 ];
 
 const SELLER_ROWS: PlanRow[] = [
-  { label: 'Offres publiées', free: '20 max', pro: 'Illimitées' },
-  { label: 'Disponibilité en direct', free: 'Non', pro: '✓' },
+  { label: 'Offres publiées', free: `${FREE_OFFER_LIMIT} max`, pro: 'Illimitées' },
+  { label: 'Emplacements (facilités)', free: '1 inclus', pro: 'Additionnels (payants)' },
+  { label: 'Disponibilité en direct', free: 'Manuelle', pro: 'Automatique' },
   { label: 'Vérifications manuelles', free: 'Gratuites', pro: 'Gratuites' },
+  { label: 'Analytics', free: 'Non', pro: '✓' },
   { label: 'Campagnes sponsorisées', free: 'Non', pro: '✓' },
   { label: 'Bonus confiance 20 $', free: '✓', pro: '✓' },
 ];
@@ -49,16 +47,18 @@ export function PlansCompareV13({ role, currency }: { role: PlanRole; currency: 
   const proKey = role === 'buyer' ? 'buyerPro' : 'sellerPro';
   return (
     <div className="cardbox" style={{ marginTop: 10 }}>
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <span className="tiny muted">Gratuit</span>
-        <b className="tiny">Pro · {planPriceLabel(proKey, currency)}/mois</b>
-      </div>
+      <div className="plans-head" aria-hidden="true"><span /><span>Gratuit</span><span>Pro · {planPriceLabel(proKey, currency)}/mois</span></div>
       {rows.map((row) => (
-        <div className="kv" key={row.label}>
-          <span>{row.label}</span>
-          <b>{row.free} · {row.pro}</b>
+        <div className="plans-row" key={row.label}>
+          <span className="plans-label">{row.label}</span>
+          <span className="plans-cell">{row.free}</span>
+          <span className="plans-cell plans-pro">{row.pro}</span>
         </div>
       ))}
+      <p className="tiny muted" style={{ marginTop: 8 }}>
+        Les deux colonnes disent ce que chaque plan <b>permet</b>. Aucune ligne ne masque une
+        offre : le gratuit reste utilisable, le Pro lève les plafonds.
+      </p>
     </div>
   );
 }

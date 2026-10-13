@@ -35,6 +35,7 @@ import { relativeAge, transactionStateLabel } from './transaction-time';
 import { viewportMovedSignificantly, isUsableViewportBounds } from './viewport-bounds';
 import { resolveTilePlace, type ResolvedTilePlace, type TileTapPoint } from './tile-place-resolve';
 import { TransactionReceiptV13 } from './TransactionReceiptV13';
+import { compareQuotaFor, COMPARE_QUOTA_PRO } from '../domain/invariants';
 import { NotificationCenterV13 } from './NotificationCenterV13';
 import { RecoveryCartRow, RecoverySearchRow, RecoveryTxnsRow } from './RecoveryV13';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
@@ -1056,7 +1057,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       const status = await getBuyerProStatus({ token });
       if (status.ok && status.data) setBuyerProStatus(status.data);
     }
-    const quota = buyerProStatus?.plan === 'pro_active' ? 5 : 1;
+    const quota = compareQuotaFor(buyerProStatus?.plan);
     if (facilities.length > quota) {
       setCompareResults(facilities.slice(0, quota));
       setCompareBlocked(facilities.length - quota);
@@ -2757,7 +2758,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           {compareBlocked > 0 && (
             <div className="cardbox" style={{ marginTop: 8 }}>
               <div className="row" style={{ justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-                <p className="sub" style={{ flex: 1, minWidth: 0 }}><b>Acheteur Pro</b> · vous ne voyez que {buyerProStatus?.plan === 'pro_active' ? 5 : 1} de {compareBlocked + (buyerProStatus?.plan === 'pro_active' ? 5 : 1)} établissements. Passez Pro pour comparer jusqu’à 5.</p>
+                <p className="sub" style={{ flex: 1, minWidth: 0 }}><b>Acheteur Pro</b> · vous ne voyez que {compareQuotaFor(buyerProStatus?.plan)} de {compareBlocked + compareQuotaFor(buyerProStatus?.plan)} établissements. Passez Pro pour comparer jusqu’à {COMPARE_QUOTA_PRO}.</p>
                 <button className="btn sm" style={{ width: 'auto', minHeight: 28, flexShrink: 0 }} onClick={() => { setSheet('plans'); }}>Passer Pro</button>
               </div>
             </div>

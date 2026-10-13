@@ -23,6 +23,19 @@ export const INDIVIDUAL_CONFIRMED_SALES_THRESHOLD = 1;
 export const SELLER_PRO_PRICE_USD_MINOR = 1_000;
 export const SELLER_PRO_TERM_DAYS = 30;
 export const SELLER_PRO_ANNUAL_PRICE_USD_MINOR = 10_000;
+
+// D-K / Seed V2 (confirmé fondateur) : le comparateur est borné par le plan — **3 en
+// gratuit, 10 en Buyer Pro**. La constitution 2026-09-28 et la maquette portent 3/10 ; le
+// code avait dérivé à 1/5. Source UNIQUE ici : le gate serveur/UI et le tableau des plans
+// lisent la même constante, donc ils ne peuvent plus diverger (leçon : deux lectures d'une
+// même promesse finissent par se contredire).
+export const COMPARE_QUOTA_FREE = 3;
+export const COMPARE_QUOTA_PRO = 10;
+
+/** Quota du comparateur selon le plan acheteur (`pro_active` sinon gratuit). */
+export function compareQuotaFor(plan: string | null | undefined): number {
+  return plan === 'pro_active' ? COMPARE_QUOTA_PRO : COMPARE_QUOTA_FREE;
+}
 export const SUPPORTED_DISPLAY_CURRENCIES: readonly SupportedCurrency[] = ['XOF', 'GHS', 'EUR', 'USD'];
 
 export function displayCurrencyForCountry(countryCode: string | null | undefined): SupportedCurrency {

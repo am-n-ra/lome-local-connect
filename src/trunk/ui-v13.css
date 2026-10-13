@@ -381,4 +381,16 @@ body{background:#dadad7;padding:0}
   .filterrail{top:calc(var(--safe-top,12px) + 72px)}
   .omni-v13-stage:has(.installbanner) .filterrail{top:calc(var(--safe-top,12px) + 118px)}
 }
+/* Plans — comparatif Free vs Pro en DEUX colonnes distinctes (fondateur 2026-10-07 :
+   « il faut que ça se distingue »). Le libellé porte la ligne, chaque plan a SA colonne ;
+   l'en-tête s'aligne sur la même grille pour qu'aucune valeur ne soit ambiguë. */
+.plans-head,.plans-row{display:grid;grid-template-columns:1fr 72px 96px;gap:6px;align-items:baseline}
+.plans-head{padding:6px 0 3px;border-bottom:1px solid var(--line);font-size:8px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--ink-soft)}
+.plans-head span:nth-child(2),.plans-head span:nth-child(3){text-align:right}
+.plans-row{padding:6px 0;border-top:1px solid var(--line);font-size:9px}
+.plans-row:first-of-type{border-top:none}
+.plans-label{color:var(--ink-soft);min-width:0}
+.plans-cell{text-align:right;font-weight:800;color:var(--ink-soft)}
+.plans-pro{color:var(--ink)}
+@media (max-width:360px){.plans-head,.plans-row{grid-template-columns:1fr 60px 84px;font-size:8.5px}}
 
