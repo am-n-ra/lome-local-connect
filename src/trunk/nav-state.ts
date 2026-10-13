@@ -6,9 +6,12 @@
  * nue, pas l'écran d'accueil.
  *
  * On restaure une **surface** (feuille + rôle + id de lieu), jamais une donnée volatile qui
- * doit se recharger (les détails du lieu sont re-fetchés). `sessionStorage` : la mémoire vit
- * le temps de l'onglet/PWA et est oubliée à la fermeture de session — cohérent avec le
- * panier par vendeur.
+ * doit se recharger (les détails du lieu sont re-fetchés).
+ *
+ * `localStorage` (et non `sessionStorage`) : le cas visé est « fermer Omni puis le rouvrir »
+ * — un onglet/PWA fermé vide `sessionStorage`, donc la mémoire doit survivre à la fermeture.
+ * Aucune donnée sensible ici (nom de feuille + id public de lieu) ; l'autorisation est
+ * re-vérifiée au démarrage (une surface dont le rôle n'est plus éligible retombe sur Acheteur).
  */
 
 export const NAV_STATE_STORAGE_KEY = 'omni-nav-state';

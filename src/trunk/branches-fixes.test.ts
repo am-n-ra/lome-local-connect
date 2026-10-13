@@ -77,3 +77,12 @@ describe('BRANCHES-QUANTITY (founder report #3) — le champ quantité est effa�
     expect(FLOW).not.toMatch(/onChange=\{\(event\) => setQuantity\(Math\.max\(1, Number\(event\.target\.value \|\| 1\)\)\)\}/);
   });
 });
+
+describe('BRANCHES-NAV-MEMORY (founder report #3) — la mémoire survit à la fermeture', () => {
+  it('persists the surface in localStorage (survives closing the tab/PWA)', () => {
+    // Le cas visé est « fermer Omni puis le rouvrir » : sessionStorage serait vidé.
+    expect(APP).toMatch(/window\.localStorage\.setItem\(NAV_STATE_STORAGE_KEY/);
+    expect(APP).toMatch(/window\.localStorage\.getItem\(NAV_STATE_STORAGE_KEY\)/);
+    expect(APP).not.toMatch(/window\.sessionStorage\.(get|set)Item\(NAV_STATE_STORAGE_KEY/);
+  });
+});

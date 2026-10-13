@@ -727,14 +727,14 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     if (restoringRef.current) return;
     try {
       const surface: NavSurfaceState = { role, sheet, selectedId, selVisitId };
-      window.sessionStorage.setItem(NAV_STATE_STORAGE_KEY, serializeNavState(surface));
+      window.localStorage.setItem(NAV_STATE_STORAGE_KEY, serializeNavState(surface));
     } catch { /* stockage indisponible */ }
   }, [role, sheet, selectedId, selVisitId]);
 
   // BRANCH-2 — restaurer la surface au premier montage (avant que la persistance n'écrive).
   useEffect(() => {
     let restored: NavSurfaceState | null = null;
-    try { restored = parseNavState(window.sessionStorage.getItem(NAV_STATE_STORAGE_KEY)); } catch { restored = null; }
+    try { restored = parseNavState(window.localStorage.getItem(NAV_STATE_STORAGE_KEY)); } catch { restored = null; }
     if (restored) {
       const validRoles = ['buyer', 'seller', 'admin', 'operator'];
       setRole(validRoles.includes(restored.role) ? (restored.role as Role) : 'buyer');
