@@ -217,23 +217,29 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
   }, [ws.selFacilityId, offerName, offerUnit, offerPrice, offerDiscount, offerQty, offerPosition, offerUniqueness, offerHandover, offerPriceKind, offerCondition, onRefresh, load]);
 
   const activeFacility = (propsCatalogue ?? catalogue)?.facilities?.find((f) => f.id === ws.selFacilityId) ?? null;
-  const opState: FacilityOperationalState = activeFacility?.operationalState ?? 'ouvert';
+  // Retour visuel immédiat du ON/OFF : la pastille bascule AU TAP, le backend rattrape.
+  // `null` = pas de geste en cours → l'état vient de la donnée réelle.
+  const [opStateOverride, setOpStateOverride] = useState<FacilityOperationalState | null>(null);
+  useEffect(() => { setOpStateOverride(null); }, [ws.selFacilityId]);
+  const opState: FacilityOperationalState = opStateOverride ?? activeFacility?.operationalState ?? 'ouvert';
 
   const toggleOpState = useCallback(async (next: FacilityOperationalState) => {
     const token = await getAuthToken();
     if (!token || !ws.selFacilityId) return;
-    setToogleBusy(true); setError('');
+    const previous = opStateOverride ?? activeFacility?.operationalState ?? 'ouvert';
+    setOpStateOverride(next); setToogleBusy(true); setError('');
     try {
       const result = await setSellerFacilityOperationalState({ token, facilityId: ws.selFacilityId, state: next });
       if (result.ok && result.data) {
         setToast(next === 'ouvert' ? 'Votre commerce est ouvert.' : 'Votre commerce est fermé : indisponible dans la recherche.');
         if (onRefresh) onRefresh(); else void load();
       } else {
+        setOpStateOverride(previous);
         setError(result.error?.message ?? 'Changement d’état non enregistré.');
       }
-    } catch { setError('Changement d’état non enregistré.'); }
+    } catch { setOpStateOverride(previous); setError('Changement d’état non enregistré.'); }
     finally { setToogleBusy(false); }
-  }, [ws.selFacilityId, onRefresh, load]);
+  }, [ws.selFacilityId, opStateOverride, activeFacility, onRefresh, load]);
 
   const [bonusStatus, setBonusStatus] = useState<FacilityBonusStatus | null>(null);
   const [bonusBusy, setBonusBusy] = useState(false);
@@ -342,9 +348,14 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
   const facilityProducts = (propsCatalogue ?? catalogue)?.products?.filter((p) => p.facilityId === ws.selFacilityId) ?? [];
   const autoEligible = facilityProducts.some((p) => p.availabilityProEligible);
   const [autoBusyId, setAutoBusyId] = useState<string | null>(null);
+  // Retour visuel immédiat du badge Auto ON/OFF : bascule AU TAP, revert si l'appel échoue.
+  const [autoOverride, setAutoOverride] = useState<Record<string, boolean>>({});
+  useEffect(() => { setAutoOverride({}); }, [ws.selFacilityId]);
   const toggleAuto = useCallback(async (productId: string, enabled: boolean) => {
     const token = await getAuthToken();
     if (!token) return;
+    // Retour visuel immédiat : badge + libellé basculent AU TAP ; revert si l'appel échoue.
+    setAutoOverride((cur) => ({ ...cur, [productId]: enabled }));
     setAutoBusyId(productId); setError('');
     try {
       const result = await setProductAutoAvailability({ token, productId, enabled });
@@ -352,9 +363,13 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
         setToast(enabled ? 'Disponibilité automatique activée. Le badge suit votre stock alloué.' : 'Disponibilité automatique désactivée.');
         if (onRefresh) onRefresh(); else void load();
       } else {
+        setAutoOverride((cur) => { const next = { ...cur }; delete next[productId]; return next; });
         setError(result.error?.message ?? 'Impossible de changer la disponibilité automatique.');
       }
-    } catch { setError('Impossible de changer la disponibilité automatique.'); }
+    } catch {
+      setAutoOverride((cur) => { const next = { ...cur }; delete next[productId]; return next; });
+      setError('Impossible de changer la disponibilité automatique.');
+    }
     finally { setAutoBusyId(null); }
   }, [onRefresh, load]);
   const refreshAuto = useCallback(async (productId: string) => {
@@ -387,16 +402,24 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
   const toggleRenewalOptIn = useCallback(async () => {
     const token = await getAuthToken();
     if (!token || !ws.selFacilityId || !renewalStatus) return;
+    const previous = renewalStatus.renewalOptIn;
+    const next = !previous;
+    // Retour visuel immédiat : ON/OFF bascule AU TAP ; revert si l'appel échoue.
+    setRenewalStatus((cur) => cur ? { ...cur, renewalOptIn: next } : cur);
     setRenewalBusy(true); setError('');
     try {
-      const result = await setFacilityRenewalOptIn({ token, facilityId: ws.selFacilityId, optIn: !renewalStatus.renewalOptIn });
+      const result = await setFacilityRenewalOptIn({ token, facilityId: ws.selFacilityId, optIn: next });
       if (result.ok && result.data) {
-        setRenewalStatus((cur) => cur ? { ...cur, renewalOptIn: result.data?.renewalOptIn ?? !cur.renewalOptIn } : cur);
+        setRenewalStatus((cur) => cur ? { ...cur, renewalOptIn: result.data?.renewalOptIn ?? next } : cur);
         setToast(result.data.renewalOptIn ? 'Renouvellement automatique activé.' : 'Renouvellement automatique désactivé.');
       } else {
+        setRenewalStatus((cur) => cur ? { ...cur, renewalOptIn: previous } : cur);
         setError(result.error?.message ?? 'Impossible de changer le renouvellement automatique.');
       }
-    } catch { setError('Impossible de changer le renouvellement automatique.'); }
+    } catch {
+      setRenewalStatus((cur) => cur ? { ...cur, renewalOptIn: previous } : cur);
+      setError('Impossible de changer le renouvellement automatique.');
+    }
     finally { setRenewalBusy(false); }
   }, [ws.selFacilityId, renewalStatus]);
   const runRenewNow = useCallback(async () => {
@@ -728,16 +751,19 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
             <p className="tiny muted" style={{ marginTop: 6 }}>Aucune offre publiée sur cette facilité.</p>
           ) : (
             <div style={{ marginTop: 6 }}>
-              {facilityProducts.map((p) => (
+              {facilityProducts.map((p) => {
+                const autoOn = autoOverride[p.id] ?? p.autoAvailability;
+                return (
                 <div key={p.id} className="row" style={{ justifyContent: 'space-between', gap: 8, padding: '4px 0' }}>
                   <span className="tiny" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name} · {availabilityLabel(String(p.availabilityState))}</span>
-                  <span className="tiny muted">{p.autoAvailability ? 'Auto ON' : 'Auto OFF'}</span>
-                  <button className={`btn sm ${p.autoAvailability ? '' : 'ghost'}`} style={{ width: 'auto', minHeight: 26 }} type="button" disabled={autoBusyId === p.id} onClick={() => void toggleAuto(p.id, !p.autoAvailability)}>{autoBusyId === p.id ? '…' : p.autoAvailability ? 'Désactiver' : 'Activer'}</button>
-                  {p.autoAvailability && (
+                  <span className="tiny muted">{autoOn ? 'Auto ON' : 'Auto OFF'}</span>
+                  <button className={`btn sm ${autoOn ? '' : 'ghost'}`} style={{ width: 'auto', minHeight: 26 }} type="button" disabled={autoBusyId === p.id} onClick={() => void toggleAuto(p.id, !autoOn)}>{autoBusyId === p.id ? '…' : autoOn ? 'Désactiver' : 'Activer'}</button>
+                  {autoOn && (
                     <button className="btn ghost sm" style={{ width: 'auto', minHeight: 26 }} type="button" disabled={autoBusyId === p.id} onClick={() => void refreshAuto(p.id)}>Actualiser</button>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
           <p className="tiny muted" style={{ marginTop: 6 }}>« À valider / En stock » dérivent du stock (alloué − réservé). « Vérifié » reste un palier de confiance, jamais automatique.</p>

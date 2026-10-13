@@ -1051,12 +1051,10 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const openNotification = useCallback(async (notification: NotificationSummary, target: NotificationTarget) => {
     const token = await requireAuth();
     if (!token) return;
-    // Marquer vue d'abord (best-effort), naviguer ensuite : un échec réseau ne doit
-    // jamais avaler le tap, et la navigation ne doit jamais précéder le marquage.
-    try {
-      const seen = await markNotificationSeen({ notificationId: notification.id, token });
-      if (seen.ok) setNotifs((current) => current.map((item) => item.id === notification.id ? { ...item, seenAt: new Date().toISOString() } : item));
-    } catch { /* marquage best-effort : la navigation suit quand même */ }
+    // Retour visuel immédiat : la ligne passe en « lue » AU TAP, le serveur rattrape
+    // en tâche de fond (best-effort). Naviguer n'attend plus l'aller-retour réseau.
+    setNotifs((current) => current.map((item) => item.id === notification.id && item.seenAt === null ? { ...item, seenAt: new Date().toISOString() } : item));
+    void markNotificationSeen({ notificationId: notification.id, token }).catch(() => { /* best-effort */ });
     try {
       if (target.kind === 'flow') {
         await resumeTransaction({ transactionId: target.transactionId });
@@ -1295,25 +1293,25 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     const token = await requireAuth();
     if (!token) return;
     const isStarred = favoriteFacilityIds.has(facilityId);
+    // Retour visuel immédiat : l'étoile se remplit/vide AU TAP, le backend rattrape.
+    // Si l'appel échoue, on revient à l'état réel — jamais de favori fantôme.
+    const setStar = (starred: boolean) => setFavoriteFacilityIds((current) => {
+      const next = new Set(current);
+      if (starred) next.add(facilityId); else next.delete(facilityId);
+      return next;
+    });
+    setStar(!isStarred);
     try {
-      if (isStarred) {
-        const result = await removeFavorite({ token, facilityId });
-        if (result.ok) {
-          setFavoriteFacilityIds((current) => {
-            const next = new Set(current);
-            next.delete(facilityId);
-            return next;
-          });
-          setFavorites((current) => current.filter((item) => item.facilityId !== facilityId));
-        }
-      } else {
-        const result = await addFavorite({ token, facilityId });
-        if (result.ok) {
-          setFavoriteFacilityIds((current) => new Set(current).add(facilityId));
-        }
+      const result = isStarred
+        ? await removeFavorite({ token, facilityId })
+        : await addFavorite({ token, facilityId });
+      if (result.ok && isStarred) {
+        setFavorites((current) => current.filter((item) => item.facilityId !== facilityId));
+      } else if (!result.ok) {
+        setStar(isStarred);
       }
     } catch {
-      // Networking errors are surfaced on the next favorites sheet open.
+      setStar(isStarred);
     }
   }, [requireAuth, favoriteFacilityIds]);
 
@@ -1391,14 +1389,20 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     const token = await requireAuth();
     if (!token) return;
     setBuyerProError('');
+    const previous = buyerProStatus.renewalOptIn;
+    const next = !previous;
+    // Retour visuel immédiat : le bouton bascule AU TAP ; si l'appel échoue, on revient.
+    setBuyerProStatus((current) => current ? { ...current, renewalOptIn: next } : current);
     try {
-      const result = await setBuyerProRenewalOptIn({ token, optIn: !buyerProStatus.renewalOptIn });
+      const result = await setBuyerProRenewalOptIn({ token, optIn: next });
       if (result.ok && result.data) {
         setBuyerProStatus((current) => current ? { ...current, renewalOptIn: result.data!.renewalOptIn } : current);
       } else {
+        setBuyerProStatus((current) => current ? { ...current, renewalOptIn: previous } : current);
         setBuyerProError(result.error?.message ?? 'Le renouvellement automatique n’a pas pu être mis à jour.');
       }
     } catch (caught) {
+      setBuyerProStatus((current) => current ? { ...current, renewalOptIn: previous } : current);
       setBuyerProError(caught instanceof Error ? caught.message : 'Le renouvellement automatique n’a pas pu être mis à jour.');
     }
   }, [requireAuth, buyerProStatus]);
