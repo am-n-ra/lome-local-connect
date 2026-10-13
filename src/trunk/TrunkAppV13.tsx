@@ -454,6 +454,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const [notifsState, setNotifsState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [notifsError, setNotifsError] = useState('');
   const [pendingResumeTxnId, setPendingResumeTxnId] = useState<string | null>(null);
+  const [pendingResumeRequestId, setPendingResumeRequestId] = useState<string | null>(null);
+  const [homeFocus, setHomeFocus] = useState<'top' | 'historique'>('top');
+  const homeHistoriqueRef = useRef<HTMLDivElement | null>(null);
   // Wallet
   const [wallet, setWallet] = useState<WalletOverviewResult | null>(null);
   const [walletState, setWalletState] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -922,9 +925,10 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     }));
   }, [compareResults, results, bulkDetails, buyerProStatus]);
 
-  const openHome = useCallback(async () => {
+  const openHome = useCallback(async (focus: 'top' | 'historique' = 'top') => {
     const token = await requireAuth({ kind: 'home', returnTo: 'home' });
     if (!token) return;
+    setHomeFocus(focus);
     setSheet('home'); setBuyerRequestsState('loading'); setBuyerRequestsError('');
     setOpenTxnState('loading');
     void listOpenTransactions({ token }).then((res) => {
@@ -967,6 +971,26 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     setPendingResumeTxnId(transaction.transactionId);
     setSheet('flow');
   }, [requireAuth]);
+
+  // BRANCHES — « Historique des transactions » ouvre Mon espace déjà positionné sur la
+  // section « Terminées » (le titre ne ment pas sur la destination), au lieu de répéter
+  // exactement la même vue que « Mes demandes ».
+  useEffect(() => {
+    if (sheet !== 'home' || homeFocus !== 'historique') return;
+    const id = window.setTimeout(() => homeHistoriqueRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 60);
+    return () => window.clearTimeout(id);
+  }, [sheet, homeFocus, closedTxnState]);
+
+  // BRANCHES — reprendre une DEMANDE DE DISPONIBILITÉ : « Revoir » depuis Mes demandes
+  // rouvre le suivi de cette demande (attente de réponse ou résultat), jamais la fiche de
+  // l'entité. Même lecture que le flux (getAvailabilityResponses via BuyerFlowV13).
+  const resumeAvailabilityRequest = useCallback((request: { requestId: string; facilityId: string; facilityName: string; productId: string; productName: string }) => {
+    setFlowFacility({ id: request.facilityId, name: request.facilityName });
+    setFlowProduct({ id: request.productId, name: request.productName });
+    setPendingResumeTxnId(null);
+    setPendingResumeRequestId(request.requestId);
+    setSheet('flow');
+  }, []);
 
   // X3 — ouvrir la Room dédiée d'une transaction (S-27) : suivi + chat complet + actions.
   // Réutilise le token de session et la ligne de liste ; aucune lecture neuve.
@@ -1069,6 +1093,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // Démarre un flux d'achat NEUF (pas une reprise) : on purge tout id de reprise résiduel.
   const startFlow = useCallback((facility: { id: string; name: string; latitude?: number | null; longitude?: number | null }, product: { id: string; name: string; priceKind?: string | null; listedPriceMinor?: number | null }) => {
     setPendingResumeTxnId(null);
+    setPendingResumeRequestId(null);
     setFlowFacility(facility);
     setFlowProduct(product);
     setSheet('flow');
@@ -2466,8 +2491,8 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 const products = detail?.products ?? [];
                 const selected = bulkSelection[facility.id] ?? false;
                 return (
-                  <button key={facility.id} type="button" className="pitem" style={{ alignItems: 'center', width: '100%', textAlign: 'left' }} onClick={() => setBulkSelection((current) => ({ ...current, [facility.id]: !current[facility.id] }))}>
-                    <span className="chk" aria-hidden="true">{selected ? '✓' : ''}</span>
+                  <button key={facility.id} type="button" className={`pitem${selected ? ' sel' : ''}`} aria-pressed={selected} style={{ alignItems: 'center', width: '100%', textAlign: 'left' }} onClick={() => setBulkSelection((current) => ({ ...current, [facility.id]: !current[facility.id] }))}>
+                    <span className={`chk${selected ? ' on' : ''}`} aria-hidden="true">{selected ? '✓' : ''}</span>
                     <span style={{ flex: 1 }}>
                       <b>{facility.name}</b><br /><span className="tiny muted">{facility.category} · {facility.plan} · {facility.productCount} produits</span>
                       {products.filter((p) => p.stockLoueOmni > 0).length > 0 && <span className="tiny muted" style={{ display: 'block', marginTop: 2 }}>ex. {products.filter((p) => p.stockLoueOmni > 0)[0].name} · {moneyOrQty(products.filter((p) => p.stockLoueOmni > 0)[0].stockLoueOmni)} dispo</span>}
@@ -2659,7 +2684,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 const carac = offerCharacteristics(product);
                 const trust = offerTrustLabel({ integrity: product.integrity, reputation: product.reputation });
                 return (
-                  <div className={`pitem${highlighted ? ' searched' : ''}`} key={product.id} role="button" tabIndex={0} style={{ cursor: 'pointer', ...(highlighted ? { boxShadow: 'inset 0 0 0 1.5px var(--ink-faint)', borderRadius: 12 } : {}) }} onClick={() => setCarts((current) => toggleCartProduct(current, selectedFacility.id, product.id))}>
+                  <div className={`pitem${on ? ' sel' : ''}${highlighted ? ' searched' : ''}`} key={product.id} role="button" tabIndex={0} style={{ cursor: 'pointer', ...(highlighted ? { boxShadow: 'inset 0 0 0 1.5px var(--ink-faint)', borderRadius: 12 } : {}) }} onClick={() => setCarts((current) => toggleCartProduct(current, selectedFacility.id, product.id))}>
                     <span className={`chk${on ? ' on' : ''}`} aria-hidden="true">{on ? '✓' : ''}</span>
                     <span className="pthumb" />
                     <span><b>{product.name}</b>{highlighted && <span className="status ink" style={{ marginLeft: 6 }}>Recherché</span>}<small>{product.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small>{carac.length > 0 && <small style={{ display: 'block', marginTop: 2 }}>{carac.map((c) => c.value).join(' · ')}</small>}
@@ -2773,7 +2798,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         <CompanyV13 onClose={() => setSheet('seller')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} catalogue={sellerCatalogue} />
       )}
       {sheet === 'flow' && flowFacility && flowProduct && (
-        <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => { setPendingResumeTxnId(null); setSheet('facility'); }} resumeTxnId={pendingResumeTxnId} onGate={gateRequest} onRoute={(longitude: number, latitude: number, name: string) => { setRouteTarget({ longitude, latitude, name }); setSheet('none'); }} walletBalanceMinor={wallet?.balanceMinor ?? null} />
+        <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => { setPendingResumeTxnId(null); setPendingResumeRequestId(null); setSheet('facility'); }} resumeTxnId={pendingResumeTxnId} resumeRequestId={pendingResumeRequestId} onGate={gateRequest} onRoute={(longitude: number, latitude: number, name: string) => { setRouteTarget({ longitude, latitude, name }); setSheet('none'); }} walletBalanceMinor={wallet?.balanceMinor ?? null} />
       )}
       {sheet === 'admin' && adminTools && (
         <AdminV13 onClose={() => setSheet('menu')} onFocusFacility={(latitude: number, longitude: number, key: string) => { setFocusTarget({ latitude, longitude, key }); setSheet('none'); }} />
@@ -2806,7 +2831,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                         (extra app) reste atteignable depuis l'Accueil, jamais supprimé en silence. */}
                     <button className="menuitem" type="button" onClick={() => { setSelectedId(null); setSheet('none'); }}><span className="mi"><Home size={15} /></span><span><b>Accueil</b><small>carte & compteur</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openHome()}><span className="mi"><Inbox size={15} /></span><span><b>Mes demandes</b><small>suivi & code validé</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => void openHome()}><span className="mi"><Clock3 size={15} /></span><span><b>Historique des transactions</b><small>vos achats passés</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openHome('historique')}><span className="mi"><Clock3 size={15} /></span><span><b>Historique des transactions</b><small>vos achats passés</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openFavorites()}><span className="mi"><Star size={15} /></span><span><b>Favoris</b><small>entités & offres suivies</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openSaved()}><span className="mi"><Compass size={15} /></span><span><b>Recherches sauvegardées</b><small>vos alertes</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openNotifs()}><span className="mi"><Bell size={15} /></span><span><b>Notifications</b><small>tout ce qui a bougé</small></span></button>
@@ -3019,7 +3044,10 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             const cancellable = request.requestStatus === 'submitted' || request.requestStatus === 'responding';
             return (
             <div key={request.id} className="cardbox" style={{ width: '100%', marginTop: 6 }}>
-              <button type="button" style={{ textAlign: 'left', width: '100%', background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', cursor: 'pointer' }} onClick={() => { setSelectedId(request.facilityId); setSheet('facility'); void handlePinSelect({ id: request.facilityId, name: request.facilityName, category: request.facilityCategory, address: null, latitude: request.latitude, longitude: request.longitude, trust: 'unclaimed', plan: 'free', productCount: 0 } as PublicFacility); }}>
+              {/* BRANCHES — la ligne « Mes demandes » ROUVRE LE SUIVI DE LA DEMANDE (attente
+                  de réponse ou résultat), pas la fiche de l'entité. Voir le vendeur reste
+                  une action secondaire explicite. */}
+              <button type="button" style={{ textAlign: 'left', width: '100%', background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', cursor: 'pointer' }} onClick={() => resumeAvailabilityRequest({ requestId: request.id, facilityId: request.facilityId, facilityName: request.facilityName, productId: request.productId, productName: request.productName })}>
                 <div className="row" style={{ justifyContent: 'space-between' }}>
                   <div><b>{request.productName}</b><br /><span className="tiny muted">{request.facilityName} · {request.requestedQuantity} unité{request.requestedQuantity === 1 ? '' : 's'}</span></div>
                   <span className="status gray">{statusLabel(request.requestStatus)}</span>
@@ -3030,10 +3058,14 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 </div>
                 {request.note && <p className="tiny muted" style={{ marginTop: 4 }}>{request.note}</p>}
                 <span className="tiny muted">{request.responseCount} réponse{request.responseCount === 1 ? '' : 's'} · {new Date(request.createdAt).toLocaleDateString('fr-FR')}</span>
+                <span className="tiny muted" style={{ display: 'block', marginTop: 4, fontWeight: 800 }}>Revoir le suivi ›</span>
               </button>
-              {cancellable && (
-                <button className="btn ghost sm" type="button" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} onClick={() => void cancelBuyerRequest(request.id)}>Annuler la demande</button>
-              )}
+              <div className="btnrow" style={{ marginTop: 6 }}>
+                <button className="btn ghost sm" type="button" style={{ width: 'auto', minHeight: 28 }} onClick={() => { setSelectedId(request.facilityId); setSheet('facility'); void handlePinSelect({ id: request.facilityId, name: request.facilityName, category: request.facilityCategory, address: null, latitude: request.latitude, longitude: request.longitude, trust: 'unclaimed', plan: 'free', productCount: 0 } as PublicFacility); }}>Voir le vendeur</button>
+                {cancellable && (
+                  <button className="btn ghost sm" type="button" style={{ width: 'auto', minHeight: 28 }} onClick={() => void cancelBuyerRequest(request.id)}>Annuler la demande</button>
+                )}
+              </div>
             </div>
             );
           })}
@@ -3057,7 +3089,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               <button className="btn ghost sm" type="button" style={{ marginTop: 4 }} onClick={() => void openRoom(transaction)}>Ouvrir la Room · chat</button>
             </div>
           ))}
-          <div className="eyebrow" style={{ marginTop: 14 }}>Terminées</div>
+          <div className="eyebrow" style={{ marginTop: 14 }} ref={homeHistoriqueRef}>Terminées</div>
           {closedTxnState === 'loading' && <Skeleton variant="kv" count={3} />}
           {closedTxnState === 'error' && (
             <div role="alert"><p className="tiny muted" style={{ marginTop: 6 }}>Votre historique ne peut pas être chargé pour le moment.</p></div>

@@ -7820,7 +7820,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         ),
         credit_ledger_insert as (
           insert into v2_availability_credit_ledger (buyer_account_id, kind, amount, reason, request_id)
-          select a.id, 'bulk_debit', - ${creditCost}, 'bulk need over ' || (select cardinality(facility_scope) from request_insert) || ' facilities (1 credit per need)', r.id
+          select a.id, 'bulk_debit', - (${creditCost}::int), 'bulk need over ' || (select cardinality(facility_scope) from request_insert) || ' facilities (1 credit per need)', r.id
           from request_insert r
           cross join account a
           returning id

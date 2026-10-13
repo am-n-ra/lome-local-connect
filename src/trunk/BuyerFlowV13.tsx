@@ -23,6 +23,9 @@ type BuyerFlowV13Props = {
   walletBalanceMinor?: number | null;
   /** FF-2 — si fourni, on saute directement au suivi de la transaction (reprise). */
   resumeTxnId?: string | null;
+  /** BRANCHES — si fourni, on rouvre le suivi d'une demande de disponibilité
+   *  (étape « en attente de réponse » ou résultat) au lieu de repartir du formulaire. */
+  resumeRequestId?: string | null;
 };
 
 const STEPS: Array<{ id: Stage; label: string }> = [
@@ -43,7 +46,7 @@ const TXN_STAGES = [
 
 // Payload scannable par le vendeur: transactionId + jeton brut.
 
-export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, walletBalanceMinor, resumeTxnId }: BuyerFlowV13Props) {
+export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, walletBalanceMinor, resumeTxnId, resumeRequestId }: BuyerFlowV13Props) {
   const [stage, setStage] = useState<Stage>('avail');
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -116,6 +119,32 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
     if (resumeTxnId) void loadTxn(resumeTxnId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resumeTxnId]);
+
+  // BRANCHES — reprise d'une demande de disponibilité : on rouvre directement le suivi
+  // (« en attente de réponse », ou le résultat si le vendeur a déjà répondu) au lieu de
+  // repartir du formulaire. Aucune persistance neuve : même lecture que le poll.
+  useEffect(() => {
+    if (!resumeRequestId) return;
+    setRequestId(resumeRequestId);
+    setStage('pending');
+    let cancelled = false;
+    const poll = async (): Promise<void> => {
+      const token = await getAuthToken();
+      if (!token || cancelled) return;
+      const responses = await getAvailabilityResponses({ requestId: resumeRequestId, token });
+      const list = responses.ok ? (responses.data?.responses ?? []) : [];
+      if (list.length > 0) {
+        const r = list[0];
+        setLiveResponse({ priceMinor: r.priceMinor ?? 0, quantityAvailable: r.quantityAvailable ?? 0, status: r.status, observedAt: r.observedAt ?? null });
+        setStage('result');
+      } else {
+        pollRef.current = window.setTimeout(poll, 4000);
+      }
+    };
+    void poll();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeRequestId]);
 
   const sendChat = useCallback(async () => {
     const body = chatDraft.trim();
