@@ -3554,12 +3554,22 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               <PlansCompareV13 role="seller" currency={userCurrency} />
             </>
           ) : (
-            <div className="cardbox">
+            <>
+              <div className="cardbox">
+                <div className="row" style={{ justifyContent: 'space-between' }}>
+                  <div><b>Équipe · acheteur</b><br /><span className="tiny muted">Le comparatif acheteur, tel que le voit un acheteur. Accès revue complet.</span></div>
+                  <span className="status gray">Interne</span>
+                </div>
+              </div>
+              <PlansCompareV13 role="buyer" currency={userCurrency} />
+            <div className="cardbox" style={{ marginTop: 10 }}>
               <div className="row" style={{ justifyContent: 'space-between' }}>
-                <div><b>Équipe</b><br /><span className="tiny muted">Accès revue complet</span></div>
+                <div><b>Équipe · vendeur</b><br /><span className="tiny muted">Le comparatif vendeur, tel que le voit un vendeur.</span></div>
                 <span className="status gray">Interne</span>
               </div>
             </div>
+            <PlansCompareV13 role="seller" currency={userCurrency} />
+            </>
           )}
         </section>
       )}

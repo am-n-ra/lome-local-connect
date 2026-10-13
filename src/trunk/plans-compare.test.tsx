@@ -2,6 +2,8 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { PlansCompareV13 } from './PlansCompareV13';
 
 let container: HTMLDivElement;
@@ -51,5 +53,19 @@ describe('PlansCompareV13 — comparatif Free vs Pro adossé au réel', () => {
     act(() => { root.render(<PlansCompareV13 role="buyer" currency={currency} />); });
     const labels = [...container.querySelectorAll('button')].map((b) => b.textContent || '');
     expect(labels.length).toBe(0);
+  });
+
+  it('chaque rôle voit SON comparatif, et l’équipe voit les deux (fondateur 2026-10-07)', () => {
+    const app = readFileSync(resolve(__dirname, 'TrunkAppV13.tsx'), 'utf8');
+    // Branche acheteur + branche équipe : 2 montages buyer ; branche vendeur +
+    // branche équipe : 2 montages seller. Un seul ne suffit pas.
+    expect(app.match(/<PlansCompareV13 role="buyer"/g)?.length ?? 0).toBe(2);
+    expect(app.match(/<PlansCompareV13 role="seller"/g)?.length ?? 0).toBe(2);
+    // La branche équipe monte les deux tableaux (acheteur + vendeur), pas un stub.
+    const teamStart = app.indexOf('>Équipe · acheteur<');
+    expect(teamStart, 'branche équipe acheteur introuvable').toBeGreaterThan(-1);
+    const teamSlice = app.slice(teamStart, teamStart + 1200);
+    expect(teamSlice).toContain('<PlansCompareV13 role="buyer"');
+    expect(teamSlice).toContain('<PlansCompareV13 role="seller"');
   });
 });

@@ -64,8 +64,11 @@ async function signIn(page, creds) {
       if ((await authEntry.count()) > 0) {
         await authEntry.click({ timeout: 15000, force: true });
         await page.waitForTimeout(800);
-        await page.locator('#v13-email').fill(creds.email, { timeout: 15000 });
-        await page.locator('#v13-password').fill(creds.password, { timeout: 15000 });
+        // La fiche auth s'ouvre en création : basculer en connexion.
+        await page.getByRole('button', { name: /Déjà un compte/i }).first().click({ timeout: 15000, force: true }).catch(() => {});
+        await page.waitForTimeout(800);
+        await page.locator('#v13-auth-email').fill(creds.email, { timeout: 15000 });
+        await page.locator('#v13-auth-password').fill(creds.password, { timeout: 15000 });
         await page.getByRole('button', { name: 'Se connecter', exact: true }).click({ timeout: 15000, force: true });
         try {
           await page.getByRole('button', { name: /Se déconnecter/i }).first().waitFor({ timeout: 12000 });
