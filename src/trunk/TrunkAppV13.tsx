@@ -22,7 +22,7 @@ import {
 import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, trapDrawerFocus, walletBucketTotals, sheetDismissTarget, type PendingAction } from './ui-helpers';
 import { useSheetDrag } from './use-sheet-drag';
 import { NAV_STATE_STORAGE_KEY, parseNavState, serializeNavState, type NavSurfaceState } from './nav-state';
-import { backDestination, shouldInterceptBack } from './back-guard';
+import { backDestination, shouldInterceptBack, shouldSkipExternalRedirect } from './back-guard';
 import { Skeleton, SkeletonDetail } from './Skeleton';
 import { TransactionRoom } from './TransactionRoom';
 import { cartProductsFor, cartProductCount, clearFacilityCart, parseCarts, pruneCart, serializeCarts, toggleCartProduct, FACILITY_CARTS_STORAGE_KEY, type FacilityCarts } from './facility-cart';
@@ -160,6 +160,12 @@ function bulkBoundsCenter(bounds: [number, number, number, number] | null): { la
   return { latitude: (bounds[1] + bounds[3]) / 2, longitude: (bounds[0] + bounds[2]) / 2 };
 }
 
+// BRANCH-4 — clé de session (survit au départ vers le paiement externe et au retour) mémorisant
+// la longueur d'historique d'Omni au moment du départ. Au retour, `history.length - cette valeur`
+// donne exactement le nombre d'entrées externes à sauter (`history.go(-n)`) pour que le prochain
+// geste retour de l'utilisateur ne le ramène pas sur FedaPay.
+const EXT_REDIRECT_KEY = 'omni-ext-redirect-len';
+
 export function TrunkAppV13() {
   const stageRef = useRef<HTMLDivElement | null>(null);
   useViewportInsets(stageRef);
@@ -225,6 +231,18 @@ export function TrunkAppV13() {
   // S1b: which public QR the 'qr' sheet targets — the historic facility one, or the in-store entity one.
   const [qrTarget, setQrTarget] = useState<'facility' | 'entity'>('facility');
   const [sheet, setSheet] = useState<Sheet>('none');
+  // BRANCH-3 — garde retour (swipe gauche / bouton Android) : tant qu'une surface est
+  // ouverte, une entrée sentinelle est empilée et un retour la consomme. Déclarés ici (et
+  // non plus bas) car l'effet de retour d'un paiement EXTERNE (BRANCH-4) doit pouvoir
+  // neutraliser la garde le temps du saut d'historique.
+  const backGuardPushed = useRef(false);
+  const ignoreNextPop = useRef(false);
+  // BRANCH-4 — vrai pendant le saut d'historique qui ignore la page FedaPay au retour.
+  // `skipPopsRef` compte les popstate à avaler ; `skipFinalizedRef` évite de finaliser deux
+  // fois (une fois par compteur, une fois par le délai de repli).
+  const skipActiveRef = useRef(false);
+  const skipPopsRef = useRef(0);
+  const skipFinalizedRef = useRef(false);
   // Couche « ajouter à l'écran d'accueil » : l'état est dit honnêtement (bouton Android
   // quand le prompt est capturé, guide sinon, rien si déjà installé).
   const deferredInstallRef = useRef<{ prompt: () => Promise<void> } | null>(null);
@@ -664,6 +682,25 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       if (summary.ok && summary.data) setBulkCreditSummary(summary.data);
     })();
     window.history.replaceState(null, '', window.location.pathname);
+    // BRANCH-4 — au retour du paiement externe, la page du fournisseur occupe une entrée
+    // d'historique. On saute en arrière exactement les entrées ajoutées depuis le départ,
+    // sinon le prochain geste retour (swipe gauche / bouton Android) ramènerait l'utilisateur
+    // sur FedaPay — une boucle dont il ne sort qu'en annulant à nouveau.
+    let skip = 0;
+    try {
+      const before = Number(window.sessionStorage.getItem(EXT_REDIRECT_KEY) ?? '0');
+      skip = before > 0 ? window.history.length - before : 0;
+      window.sessionStorage.removeItem(EXT_REDIRECT_KEY);
+    } catch { skip = 0; }
+    if (shouldSkipExternalRedirect(skip)) {
+      skipActiveRef.current = true;
+      skipPopsRef.current = skip;
+      skipFinalizedRef.current = false;
+      ignoreNextPop.current = false;
+      window.history.go(-skip);
+      // Repli si le navigateur ne livre pas autant de popstate que d'entrées sautées.
+      window.setTimeout(() => finalizeSkipRef.current(), 600);
+    }
   }, []);
 
   const runSearch = useCallback(async (raw: string, opts?: SearchOptions) => {
@@ -753,14 +790,14 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // BRANCH-3 — le geste « retour » (swipe gauche / bouton Android) ne ferme pas Omni :
   // tant qu'une surface est ouverte, une entrée sentinelle est empilée ; un retour la
   // consomme et ferme la surface du dessus (même table de vérité que le bouton fermer).
-  const backGuardPushed = useRef(false);
-  const ignoreNextPop = useRef(false);
   const surfaceOpen = shouldInterceptBack(sheet, role, selectedId !== null);
 
   // Empile la sentinelle dès qu'une surface s'ouvre ; la retire si la surface est fermée
   // par un MOYEN NON-NAVIGATEUR (bouton, X, sélection) — `ignoreNextPop` évite que ce
-  // `back()` de nettoyage soit relu comme une intention de l'utilisateur.
+  // `back()` de nettoyage soit relu comme une intention de l'utilisateur. Pendant un saut
+  // d'historique BRANCH-4, on ne touche pas à la pile (sinon on perturberait le `go(-n)`).
   useEffect(() => {
+    if (skipActiveRef.current) return;
     if (surfaceOpen && !backGuardPushed.current) {
       window.history.pushState({ omniBackGuard: true }, '', window.location.pathname);
       backGuardPushed.current = true;
@@ -770,8 +807,38 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     }
   }, [surfaceOpen]);
 
+  // BRANCH-4 — départ vers le paiement externe (FedaPay) : on note la longueur d'historique
+  // d'Omni AVANT de quitter. Au retour, `history.length - cette valeur` donne le nombre exact
+  // d'entrées externes à sauter pour que le prochain geste retour ne rameène pas sur FedaPay.
+  const goToCheckout = useCallback((url: string) => {
+    try { window.sessionStorage.setItem(EXT_REDIRECT_KEY, String(window.history.length)); } catch { /* stockage indisponible */ }
+    window.location.assign(url);
+  }, []);
+
+  // BRANCH-4 — fin du saut d'historique : on rétablit la garde retour et on ré-empile une
+  // sentinelle pour que le prochain geste ferme la feuille ouverte (jamais ne quitte Omni).
+  const finalizeSkipRef = useRef(() => {});
+  finalizeSkipRef.current = () => {
+    if (skipFinalizedRef.current) return;
+    skipFinalizedRef.current = true;
+    skipActiveRef.current = false;
+    skipPopsRef.current = 0;
+    if (surfaceOpen && !backGuardPushed.current) {
+      window.history.pushState({ omniBackGuard: true }, '', window.location.pathname);
+      backGuardPushed.current = true;
+    }
+  };
+
   useEffect(() => {
     const onPop = () => {
+      // BRANCH-4 — pendant le saut qui ignore la page FedaPay, on avale exactement les
+      // popstate intermédiaires ; ils ne sont pas des intentions de l'utilisateur.
+      if (skipActiveRef.current) {
+        ignoreNextPop.current = false;
+        skipPopsRef.current -= 1;
+        if (skipPopsRef.current <= 0) finalizeSkipRef.current();
+        return;
+      }
       if (ignoreNextPop.current) { ignoreNextPop.current = false; return; }
       const outcome = backDestination(sheet, role, selectedId !== null);
       if (outcome.exit) { backGuardPushed.current = false; return; }
@@ -1313,7 +1380,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       });
       if (result.ok && result.data) {
         // Direction continuée vers FedaPay (paiement Mobile Money au checkout).
-        window.location.assign(result.data.checkoutUrl);
+        goToCheckout(result.data.checkoutUrl);
       } else {
         setBulkPacksState('error');
         setBulkPacksError(result.error?.message ?? 'L’achat du pack n’a pas pu être préparé.');
@@ -3336,7 +3403,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 {rechargeState === 'success' && rechargeResult ? (
                   <div className="cardbox" style={{ marginTop: 8 }}>
                     <p className="sub" role="status">Recharge créée · {formatMoney(rechargeResult.amountMinor, rechargeResult.currency)} en attente de confirmation.</p>
-                    <button className="btn" type="button" style={{ marginTop: 8 }} onClick={() => { window.location.assign(rechargeResult.checkoutUrl); }}>Continuer le paiement <ArrowRight size={15} /></button>
+                    <button className="btn" type="button" style={{ marginTop: 8 }} onClick={() => { goToCheckout(rechargeResult.checkoutUrl); }}>Continuer le paiement <ArrowRight size={15} /></button>
                     <button className="btn ghost sm" type="button" style={{ marginTop: 8 }} onClick={() => { setRechargeState('idle'); setRechargeResult(null); setRechargeAmount('100'); }}>Nouvelle recharge</button>
                   </div>
                 ) : (

@@ -86,3 +86,18 @@ describe('BRANCHES-NAV-MEMORY (founder report #3) — la mémoire survit à la f
     expect(APP).not.toMatch(/window\.sessionStorage\.(get|set)Item\(NAV_STATE_STORAGE_KEY/);
   });
 });
+
+describe('BRANCHES-FEDAPAY (founder report #4) — pas de boucle retour vers le paiement', () => {
+  it('records the history length before leaving Omni, and skips back on return', () => {
+    // Le départ vers le paiement note la longueur d'historique (clé de session, survit au retour).
+    expect(APP).toContain("const EXT_REDIRECT_KEY = 'omni-ext-redirect-len'");
+    expect(APP).toMatch(/window\.sessionStorage\.setItem\(EXT_REDIRECT_KEY, String\(window\.history\.length\)\)/);
+    // Au retour (callback `?wallet=recharge`), on saute les entrées externes.
+    expect(APP).toMatch(/window\.history\.go\(-skip\)/);
+    expect(APP).toMatch(/shouldSkipExternalRedirect\(skip\)/);
+    // Le départ passe par `goToCheckout` (plus de `location.assign` direct qui perdrait la mesure).
+    expect(APP).toMatch(/const goToCheckout = useCallback/);
+    expect(APP).not.toMatch(/window\.location\.assign\(result\.data\.checkoutUrl\)/);
+    expect(APP).not.toMatch(/window\.location\.assign\(rechargeResult\.checkoutUrl\)/);
+  });
+});

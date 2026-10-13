@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { backDestination, shouldInterceptBack } from './back-guard';
+import { backDestination, shouldInterceptBack, shouldSkipExternalRedirect } from './back-guard';
 
 describe('BRANCH-3 — le retour navigateur ne ferme pas Omni', () => {
   it('intercepte dès qu’une surface est ouverte', () => {
@@ -38,6 +38,22 @@ describe('BRANCH-3 — le retour navigateur ne ferme pas Omni', () => {
     expect(first).toMatchObject({ exit: false, role: 'buyer', sheet: 'none', stillOpen: false });
     const second = backDestination(first.sheet, first.role, false);
     expect(second.exit).toBe(true);
+  });
+});
+
+describe('BRANCH-4 — au retour d’un paiement externe, on saute la page du fournisseur', () => {
+  it('ne saute rien s’il n’y a pas eu de redirection externe', () => {
+    expect(shouldSkipExternalRedirect(0)).toBe(false);
+  });
+
+  it('saute dès qu’une redirection a eu lieu (sinon le retour ramène sur FedaPay)', () => {
+    expect(shouldSkipExternalRedirect(1)).toBe(true);
+    expect(shouldSkipExternalRedirect(2)).toBe(true);
+  });
+
+  it('ignore une valeur non finie (stockage corrompu) au lieu de sauter à l’aveugle', () => {
+    expect(shouldSkipExternalRedirect(Number.NaN)).toBe(false);
+    expect(shouldSkipExternalRedirect(Number.POSITIVE_INFINITY)).toBe(false);
   });
 });
 

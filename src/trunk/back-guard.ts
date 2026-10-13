@@ -67,3 +67,13 @@ export function backDestination(sheet: string, role: string, hasSelection: boole
 export function shouldInterceptBack(sheet: string, role: string, hasSelection: boolean): boolean {
   return sheet !== 'none' || role !== 'buyer' || hasSelection;
 }
+
+/**
+ * BRANCH-4 — au retour d'une redirection vers un paiement EXTERNE (FedaPay), faut-il sauter
+ * en arrière `depth` entrées pour ignorer la page du fournisseur ? Oui dès qu'une redirection
+ * a eu lieu (`depth > 0`) : sinon le prochain geste retour ramènerait l'utilisateur sur la
+ * page de paiement (boucle). Un `depth` de 0 = aucune redirection → ne rien faire.
+ */
+export function shouldSkipExternalRedirect(depth: number): boolean {
+  return Number.isFinite(depth) && depth > 0;
+}
