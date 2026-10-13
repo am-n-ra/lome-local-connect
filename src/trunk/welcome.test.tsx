@@ -28,6 +28,8 @@ const base = {
   firstName: 'Ama',
   onChooseRole: () => {},
   onTrySearch: () => {},
+  onOpenPlans: () => {},
+  onShare: async () => null,
   onExplore: () => {},
   onPublish: () => {},
   onClose: () => {},
@@ -49,11 +51,11 @@ describe('WelcomeV13 — parcours immersif après création (3 moments réels)',
     expect(container.textContent).not.toContain('undefined');
   });
 
-  it('affiche la progression honnête (étape 1 sur 3, dots reflétant l’état réel)', () => {
+  it('affiche la progression honnête (étape 1 sur 4, dots reflétant l’état réel)', () => {
     render(base);
-    expect(container.textContent).toContain('étape 1 sur 3');
+    expect(container.textContent).toContain('étape 1 sur 4');
     const dots = container.querySelectorAll('.onboard-dot');
-    expect(dots.length).toBe(3);
+    expect(dots.length).toBe(4);
     expect(dots[0].className).toContain('active');
     expect(dots[1].className).not.toContain('active');
   });
@@ -63,9 +65,9 @@ describe('WelcomeV13 — parcours immersif après création (3 moments réels)',
     render({ ...base, onChooseRole });
     act(() => {
       container.querySelectorAll('button');
-      [...container.querySelectorAll('button')].find((b) => /Découvrir en 3 gestes/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      [...container.querySelectorAll('button')].find((b) => /Continuer/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
-    expect(container.textContent).toContain('étape 2 sur 3');
+    expect(container.textContent).toContain('étape 2 sur 4');
     const labels = buttons();
     expect(labels.some((t) => /Je cherche autour de moi/.test(t))).toBe(true);
     expect(labels.some((t) => /Je propose quelque chose/.test(t))).toBe(true);
@@ -73,7 +75,7 @@ describe('WelcomeV13 — parcours immersif après création (3 moments réels)',
       [...container.querySelectorAll('button')].find((b) => /Je propose quelque chose/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
     expect(onChooseRole).toHaveBeenCalledWith('seller');
-    expect(container.textContent).toContain('étape 3 sur 3');
+    expect(container.textContent).toContain('étape 3 sur 4');
   });
 
   it('le moment 3 acheteur propose des exemples qui lancent une VRAIE recherche', () => {
@@ -82,7 +84,7 @@ describe('WelcomeV13 — parcours immersif après création (3 moments réels)',
     render({ ...base, onTrySearch, onChooseRole });
     expect(WELCOME_SEARCH_EXAMPLES.length).toBeGreaterThan(0);
     act(() => {
-      [...container.querySelectorAll('button')].find((b) => /Découvrir en 3 gestes/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      [...container.querySelectorAll('button')].find((b) => /Continuer/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
     act(() => {
       [...container.querySelectorAll('button')].find((b) => /Je cherche autour de moi/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -100,7 +102,7 @@ describe('WelcomeV13 — parcours immersif après création (3 moments réels)',
   it('le moment 3 vendeur garde les deux gestes réels : explorer et publier', () => {
     render(base);
     act(() => {
-      [...container.querySelectorAll('button')].find((b) => /Découvrir en 3 gestes/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      [...container.querySelectorAll('button')].find((b) => /Continuer/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
     act(() => {
       [...container.querySelectorAll('button')].find((b) => /Je propose quelque chose/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -114,7 +116,7 @@ describe('WelcomeV13 — parcours immersif après création (3 moments réels)',
     let published = false;
     render({ ...base, onPublish: () => { published = true; } });
     act(() => {
-      [...container.querySelectorAll('button')].find((b) => /Découvrir en 3 gestes/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      [...container.querySelectorAll('button')].find((b) => /Continuer/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
     act(() => {
       [...container.querySelectorAll('button')].find((b) => /Je propose quelque chose/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -125,9 +127,45 @@ describe('WelcomeV13 — parcours immersif après création (3 moments réels)',
     expect(published).toBe(true);
   });
 
-  it('ne propose AUCUN choix de plan (S-31 : on publie tôt, le Pro se paie quand on en a besoin)', () => {
-    render(base);
-    expect(container.textContent).not.toMatch(/Pro\b|plan|abonnement/i);
+  it('présente les plans en info + lien, jamais en mur (décision fondateur 2026-10-07)', () => {
+    let plansOpened = false;
+    render({ ...base, onOpenPlans: () => { plansOpened = true; } });
+    act(() => {
+      [...container.querySelectorAll('button')].find((b) => /Continuer/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    act(() => {
+      [...container.querySelectorAll('button')].find((b) => /Je cherche autour de moi/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    act(() => {
+      [...container.querySelectorAll('button')].find((b) => /Voir les plans/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(container.textContent).toContain('étape 4 sur 4');
+    expect(container.textContent).toMatch(/Gratuit|Pro/);
+    expect(plansOpened).toBe(false);
+    act(() => {
+      [...container.querySelectorAll('button')].find((b) => /Comparer les plans/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(plansOpened).toBe(true);
+  });
+
+  it('partage sans PII et affiche le retour réel', async () => {
+    render({ ...base, onShare: async () => 'Lien copié ! Partagez-le autour de vous.' });
+    act(() => {
+      [...container.querySelectorAll('button')].find((b) => /Continuer/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    act(() => {
+      [...container.querySelectorAll('button')].find((b) => /Je cherche autour de moi/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    act(() => {
+      [...container.querySelectorAll('button')].find((b) => /Voir les plans/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await act(async () => {
+      const btn = [...container.querySelectorAll('button')].find((b) => /Partager Omni/.test(b.textContent || ''));
+      expect(btn).toBeTruthy();
+      btn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(container.textContent).toContain('Lien copié');
   });
 
   it('fermer ne choisit rien (aucun rôle adopté, aucune recherche lancée)', () => {

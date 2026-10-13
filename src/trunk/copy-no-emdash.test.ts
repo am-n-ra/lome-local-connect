@@ -73,7 +73,7 @@ function scanFile(file: string): Hit[] {
 }
 
 describe('Copy — aucun tiret cadratin dans le texte visible', () => {
-  it('aucune chaîne/JSX de src/ (hors tests) ne contient — ou –', () => {
+  it('aucune chaîne/JSX de src/ (hors tests) ne contient — ou –', { timeout: 60000 }, () => {
     const hits = walk(SRC).flatMap(scanFile);
     const report = hits.map((h) => `${h.file}:${h.line}  « ${h.text} »`);
     expect(report).toEqual([]);

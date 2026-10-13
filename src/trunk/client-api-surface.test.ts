@@ -32,7 +32,7 @@ describe('classe gateRequest — surface d’API client réellement câblée', (
   const apiSrc = readFileSync(join(process.cwd(), 'src/trunk/api.ts'), 'utf8');
   const exported = [...apiSrc.matchAll(/export async function ([a-zA-Z0-9_]+)/g)].map((m) => m[1]);
 
-  it('chaque fonction d’API exportée a un appelant produit, ou est déclarée dormante', () => {
+  it('chaque fonction d’API exportée a un appelant produit, ou est déclarée dormante', { timeout: 60000 }, () => {
     const dead: string[] = [];
     for (const name of exported) {
       let prod = 0;

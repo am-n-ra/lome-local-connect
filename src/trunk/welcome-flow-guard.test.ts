@@ -42,4 +42,15 @@ describe('WELCOME-FLOW — reprise prioritaire, bienvenue seulement à la créat
     expect(APP).toContain("setRole('seller')");
     expect(APP).toContain('void runSearch(query)');
   });
+
+  it('« Partager Omni » existe au menu et ne partage que URL + nom (zéro PII)', () => {
+    expect(APP).toContain('Partager Omni');
+    const start = APP.indexOf('const shareOmni = useCallback');
+    expect(start, 'shareOmni introuvable').toBeGreaterThan(-1);
+    const body = APP.slice(start, start + 4000);
+    expect(body).toContain('window.location.origin');
+    expect(body).toMatch(/\.share\(/);
+    expect(body).toContain('clipboard');
+    expect(body, 'le partage ne doit embarquer ni email ni téléphone ni nom').not.toMatch(/sessionUser\??\.(email|phone|name)|user\.email/);
+  });
 });

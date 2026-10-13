@@ -58,6 +58,7 @@ import { CompanyV13 } from './CompanyV13';
 import { LegalSheetV13, type LegalSectionId } from './LegalSheetV13';
 import { AuthSheetV13 } from './AuthSheetV13';
 import { WelcomeV13 } from './WelcomeV13';
+import { PlansCompareV13 } from './PlansCompareV13';
 import { chipHintFor, chipStatusFor, chipsToSearchOptions, CONSTRAINT_GROUPS, emptyConstraints, activeConstraintCount, QUANTITY_DEFAULT, BUDGET_DEFAULT_LOCAL_MINOR, budgetFieldToMinor, RAYON_SCOPE_LABELS, summarizeActiveChips, type SearchConstraints } from './search-constraints';
 import { MAP_FILTERS, filterFacilities, type MapFilter } from './map-filters';
 import { parseEntityIdFromQr } from './entity-qr';
@@ -1118,6 +1119,30 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       setNotifsError(caught instanceof Error ? caught.message : 'Vos notifications ne peuvent pas être chargées pour le moment.');
     }
   }, [requireAuth]);
+
+  // Partager Omni (menu + welcome) : URL + nom, zéro PII. `navigator.share`
+  // quand dispo (mobile), sinon presse-papiers, sinon le lien affiché à copier.
+  // Renvoie le message à afficher, ou null quand le partage système prend le relais.
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
+  const shareOmni = useCallback(async (): Promise<string | null> => {
+    const url = window.location.origin;
+    const text = 'Omni, voir avant de bouger : trouvez où quelque chose existe près de vous.';
+    try {
+      const nav = window.navigator as Navigator & { share?: (data: { title: string; text: string; url: string }) => Promise<void> };
+      if (typeof nav.share === 'function') {
+        await nav.share({ title: 'Omni', text, url });
+        return null;
+      }
+    } catch {
+      /* refus/annulation : on bascule presse-papiers ci-dessous */
+    }
+    try {
+      await window.navigator.clipboard.writeText(url);
+      return 'Lien copié ! Partagez-le autour de vous.';
+    } catch {
+      return `Copiez ce lien : ${url}`;
+    }
+  }, []);
 
   // Tap d’une notification Web Push (?notifs=1) : ouvrir le centre de notifications,
   // jamais recharger l’app sur la carte. La lecture de la query est sans état.
@@ -3020,6 +3045,8 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 {role !== 'buyer' && (
                   <button className="menuitem" type="button" onClick={() => setSheet('account')}><span className="mi"><User size={15} /></span><span><b>{role === 'seller' ? 'Compte vendeur' : 'Mon compte'}</b><small>{role === 'seller' ? 'entités & équipe' : 'identité & réglages'}</small></span></button>
                 )}
+                <button className="menuitem" type="button" onClick={async () => { const message = await shareOmni(); setShareNotice(message); }}><span className="mi"><Share size={15} /></span><span><b>Partager Omni</b><small>inviter par lien</small></span></button>
+                {shareNotice && <p className="tiny muted" role="status" style={{ marginTop: 4 }}>{shareNotice}</p>}
                 <button className="menuitem" type="button" onClick={async () => { await authClient?.signOut?.().catch(() => undefined); setSessionUser(null); setAdminTools(false); setSellerAvailable(false); setAccountRoles([]); setRole('buyer'); setSheet('none'); }}><span className="mi"><LogOut size={15} /></span><span><b>Se déconnecter</b></span></button>
               </>
             )}
@@ -3440,6 +3467,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 )}
                 {buyerProError && <p className="sub" role="alert" style={{ marginTop: 6 }}>{buyerProError}</p>}
               </div>
+              <PlansCompareV13 role="buyer" currency={userCurrency} />
             </>
           ) : role === 'seller' ? (
             <>
@@ -3456,6 +3484,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 </div>
                 <button className="btn" type="button" style={{ marginTop: 8 }} onClick={() => void openWallet()}>Passer au niveau supérieur</button>
               </div>
+              <PlansCompareV13 role="seller" currency={userCurrency} />
             </>
           ) : (
             <div className="cardbox">
@@ -3809,6 +3838,8 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             }
           }}
           onTrySearch={(query) => { void runSearch(query); }}
+          onOpenPlans={() => setSheet('plans')}
+          onShare={() => shareOmni()}
           onExplore={() => setSheet('none')}
           onPublish={() => { setRole('seller'); setSheet('seller'); if (sessionUser) void loadSellerWorkspace(); }}
           onClose={() => setSheet('menu')}

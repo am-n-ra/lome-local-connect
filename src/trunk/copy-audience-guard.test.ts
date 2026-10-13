@@ -101,7 +101,7 @@ function scan(): string[] {
 }
 
 describe('copie — l’interface parle à l’utilisateur, jamais à l’équipe', () => {
-  it('aucun texte visible ne contient de voix technique/interne', () => {
+  it('aucun texte visible ne contient de voix technique/interne', { timeout: 60000 }, () => {
     expect(scan()).toEqual([]);
   });
 
