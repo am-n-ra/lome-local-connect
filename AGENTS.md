@@ -1415,3 +1415,47 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 - **Leçon (classe)** : *avant de refuser sur un nom, mesurer le **taux de faux positifs** de ce nom dans la donnée réelle — un signal textuel seul refuse l'innocent ; c'est le **nom + la géographie** qui identifient l'usurpation.*
 
 
+
+
+## BRANCHES-DESYNC + BRANCHES-OPSTATE + BRANCHES-MOBILE-POSITION (2026-10-13, commit `b15d37d`, prod `index-DmxtK5vG.js` === local, T-07d ✅)
+
+- **Deux bugs live durcis, une tranche.**
+- **BUG 1 — création d'offre silencieusement refusée (`FORBIDDEN_OR_SLOT_REQUIRED`).** Compte
+  **désynchronisé** : facilité + emplacement attribués mais `onboarding_state` resté `buyer_ready`.
+  La promotion (`35d9604`, 12:07) est arrivée **APRÈS** la création de la facilité du fondateur
+  (10:44) → **cache périmé**. `onboarding_state` n'est pas une vérité, c'est un **cache** : le
+  chemin serveur était sain (GET catalogue 200, POST offre 201), seul l'**état** mentait.
+  Correctif : auto-guérison dans `getAccountContext` (promotion quand un emplacement est attribué
+  ou `has_seller_slot`) + dérivation de capacité cohérente (`sellerWorkspace` depuis l'état **OU**
+  l'emplacement ; le cas `'complete'` spécial retiré). Un compte **supprimé** (facilités détachées)
+  n'est **jamais** re-promu. Preuve : `prove-branches-offer-create` **6/6** ; falsifié →
+  T1/T3 échouent avec **exactement** `FORBIDDEN_OR_SLOT_REQUIRED`.
+- **BUG 2 — bascule Ouvert/Fermé vendeur MORTE en prod.** `setSellerFacilityOperationalState`
+  portait une **virgule doublée** (`updated.seller_id,,` / `updated.id,,`) → Postgres
+  « syntax error at or near "," » → **toute** l'instruction échoue. Reproduit contre Postgres
+  réel (`OPSTATE THREW … syntax error at or near ","`) **avant** correctif. Même classe que
+  `cf1d07d`. **Garde statique** `src/server/sql-separator-safety.test.ts` : une virgule doublée
+  (`,\s*,`) n'est **jamais** du SQL valide → **faux positif impossible**. Falsifié : réintroduire
+  `,,` → FAIL exit 1. Preuve : `prove-branches-operational-state` OK.
+  **Leçon** : une corruption de séparateur dans un long `sql\`…\`` est invisible aux tests stubbés
+  (ils ne compilent pas le SQL) — seul le Postgres réel, ou un garde statique, la voit. **Deuxième
+  fois** que cette classe atteint la prod.
+- **TRANCHE — BRANCHES-MOBILE-POSITION « Je suis ici » (S-02/S-06/S-31).** La forme `mobile`
+  existait (facility_type + rayon_km) mais sa position restait le **point fixe déclaré à la
+  création**. Geste **manuel** (pas de `watchPosition` = V1+) : le point bouge, horodaté
+  `position_declared_at`, **jamais** `position_verified_at` (**déclaré ≠ vérifié**, S-31). **Un
+  seul geste** : `fixe` **corrige**, `mobile` **déplace**, `digital` **refusé** (origine
+  immatérielle). Hors zone refusé (même périmètre que routage/import via `isInsidePilotZone`).
+  Migration **`071`** (additive, idempotente) : `position_declared_at` + `position_verified_at`,
+  **appliquée à la canonique AVANT le code** (leçon R-4b). Preuve : `prove-branches-mobile-position`
+  **9/9** ; falsifié : point non déplacé → T1/T2/T5 échouent.
+- **Méthode de preuve respectée** : toutes les preuves sur **branche jetable** `br-lingering-term-amby7sq2`
+  (identifiée **par son compute host** `ep-super-truth-amilsq5t`, pas par son nom), **supprimée**
+  après. La canonique est `br-dawn-hill-am5amy22` (compute `ep-plain-butterfly-amn21o8h`).
+- **Vérifié en prod** : déploiement `b15d37d` Production ; prod `index-DmxtK5vG.js` **byte-identique**
+  local (sha `8a37b7e0…`) ; « Je suis ici » dans le **bundle servi** ; `POST …/position` **401** et
+  `POST …/operational-state` **401** (routes déployées + gardées). 1168/1168 tests, tsc 0, 6 gardes verts.
+- **Résidu honnête** : preuve navigateur (session vendeur réelle, géoloc autorisée) au prochain
+  spot-check ; `position_verified_at` reste **nul** par conception (aucune preuve terrain ne l'écrit
+  encore — c'est le contrat, pas un oubli).
+
