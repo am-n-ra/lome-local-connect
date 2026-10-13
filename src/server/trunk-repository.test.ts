@@ -3114,6 +3114,40 @@ describe('seller facility creation Root seam (NW-13c)', () => {
     expect(call.queries[2]).toContain('source_name');
   });
 
+  // BRANCHES-NEW-ACCOUNT : un utilisateur tout neuf (aucune ligne v2_accounts — l'inscription
+  // ne crée la ligne que si un téléphone est déclaré) doit pouvoir créer sa PREMIÈRE facilité.
+  // Avant ce correctif, le provisionnement du slot joignait `v2_accounts` : sans ligne, 0 slot,
+  // et l'utilisateur recevait « achetez un emplacement » — un mensonge (il n'en a jamais eu).
+  it('BRANCHES-NEW-ACCOUNT — materialises the account and provisions a slot for a user with no row', async () => {
+    const call = stubSqlSequence([
+      [], // ensure account + free slot
+      [], // overlap candidates
+      [{ facility_id: 'facility-12', slot_id: 'slot-12', created: true }],
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    await repository.createSellerFacility({
+      authUserId: 'brand-new-user',
+      name: 'Première échoppe',
+      facilityType: 'fixe',
+      ownerKind: 'organisation',
+      category: null,
+      description: null,
+      address: null,
+      latitude: 6.17,
+      longitude: 1.24,
+      rayonKm: null,
+      contactPhone: null,
+      contactWhatsapp: null,
+      idempotencyKey: 'newacct-facility-key-0000001',
+    });
+    // The provisioning statement upserts the account (buyer_ready) and feeds the slot from the
+    // upsert RETURNING — a same-statement re-read of v2_accounts would not see the inserted row.
+    expect(call.queries[0]).toContain('insert into v2_accounts');
+    expect(call.queries[0]).toContain("'buyer_ready'");
+    expect(call.queries[0]).toContain('returning id, suspended_at');
+    expect(call.queries[0]).toContain('insert into v2_facility_slots');
+  });
+
   // R-D : la nature de l'offreur est DÉCLARÉE, et le Seed en dépend (D-C6 : un particulier
   // prouve sa confiance par 1 vente, un commerce par 3). Avant ce correctif, `createSellerFacility`
   // écrivait `'organisation'` en dur — aucune requête ne pouvait produire `kind = 'individu'`,

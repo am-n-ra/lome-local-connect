@@ -1613,15 +1613,25 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       }
       // The universal seller (D-A) can create a facility from an account that is not yet
       // `seller_ready`: creation is the P2→P3 hand-off. A free slot is provisioned if the
-      // account has none (D-J Free = 1 free slot per account).
+      // account has none (D-J Free = 1 free slot per account). A brand-new authenticated user
+      // may have NO row yet — signup creates one only when a phone is declared — so we
+      // materialise it here at `buyer_ready`, exactly as the claim path does. Without this the
+      // first facility a new user creates is refused with a misleading "buy a slot" error.
+      // The upsert RETURNING carries the id and suspension: a same-statement re-read of
+      // v2_accounts would not see the inserted row (Postgres snapshot).
       await retryDatabase(() => sql`
+        with ensured as (
+          insert into v2_accounts (auth_user_id, onboarding_state)
+          select ${input.authUserId}, 'buyer_ready'
+          on conflict (auth_user_id) do update set updated_at = now()
+          returning id, suspended_at
+        )
         insert into v2_facility_slots (account_id, source)
-        select a.id, 'free'
-        from v2_accounts a
-        where a.auth_user_id = ${input.authUserId}
-          and a.suspended_at is null
+        select e.id, 'free'
+        from ensured e
+        where e.suspended_at is null
           and not exists (
-            select 1 from v2_facility_slots fs where fs.account_id = a.id and fs.source = 'free'
+            select 1 from v2_facility_slots fs where fs.account_id = e.id and fs.source = 'free'
           )
         on conflict (account_id) where source = 'free' do nothing
       `);

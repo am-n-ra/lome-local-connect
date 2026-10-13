@@ -1870,13 +1870,18 @@ function createTrunkRepository(sql = database()) {
         throw new SellerCataloguePolicyError("INVALID_INPUT");
       }
       await retryDatabase(() => sql`
+        with ensured as (
+          insert into v2_accounts (auth_user_id, onboarding_state)
+          select ${input.authUserId}, 'buyer_ready'
+          on conflict (auth_user_id) do update set updated_at = now()
+          returning id, suspended_at
+        )
         insert into v2_facility_slots (account_id, source)
-        select a.id, 'free'
-        from v2_accounts a
-        where a.auth_user_id = ${input.authUserId}
-          and a.suspended_at is null
+        select e.id, 'free'
+        from ensured e
+        where e.suspended_at is null
           and not exists (
-            select 1 from v2_facility_slots fs where fs.account_id = a.id and fs.source = 'free'
+            select 1 from v2_facility_slots fs where fs.account_id = e.id and fs.source = 'free'
           )
         on conflict (account_id) where source = 'free' do nothing
       `);
