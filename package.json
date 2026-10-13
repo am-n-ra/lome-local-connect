@@ -40,6 +40,7 @@
     "proof:branches-auth-loop": "node scripts/prove-branches-auth-loop.mjs",
     "proof:branches-input-zoom": "node scripts/prove-branches-input-zoom.mjs",
     "proof:branches-desktop-onboarding": "node scripts/prove-branches-desktop-onboarding.mjs",
+    "proof:branches-identity-slot": "tsx scripts/prove-branches-identity-slot.mjs",
     "proof:search-scope-global": "node scripts/prove-search-scope-global.mjs",
     "proof:web-push": "node scripts/prove-web-push.mjs",
     "proof:map-transform-heal": "node scripts/prove-map-transform-heal.mjs",
