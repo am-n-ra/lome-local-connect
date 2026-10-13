@@ -21,6 +21,8 @@ import {
 } from './api';
 import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, trapDrawerFocus, walletBucketTotals, sheetDismissTarget, type PendingAction } from './ui-helpers';
 import { useSheetDrag } from './use-sheet-drag';
+import { NAV_STATE_STORAGE_KEY, parseNavState, serializeNavState, type NavSurfaceState } from './nav-state';
+import { backDestination, shouldInterceptBack } from './back-guard';
 import { Skeleton, SkeletonDetail } from './Skeleton';
 import { TransactionRoom } from './TransactionRoom';
 import { cartProductsFor, cartProductCount, clearFacilityCart, parseCarts, pruneCart, serializeCarts, toggleCartProduct, FACILITY_CARTS_STORAGE_KEY, type FacilityCarts } from './facility-cart';
@@ -703,17 +705,89 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // BRANCH-1 — retirer une feuille mobile d'un geste (tirer sa poignée vers le bas).
   // Le geste produit le MÊME effet que le bouton de fermeture de la feuille (une seule table
   // de vérité, `sheetDismissTarget`), sinon deux sorties mèneraient à deux endroits.
-  const handleSheetDismiss = useCallback(() => {
+  const handleSheetDismiss = useCallback((): boolean => {
     const target = sheetDismissTarget(sheet);
-    if (!target) return;
-    if (target === 'facility') { setSheet('facility'); return; }
-    if (target === 'seller') { setSheet('seller'); return; }
-    if (target === 'home') { setSheet('home'); return; }
-    if (target === 'menu') { setSheet('menu'); return; }
+    if (!target) return false;
+    if (target === 'facility') { setSheet('facility'); return true; }
+    if (target === 'seller') { setSheet('seller'); return true; }
+    if (target === 'home') { setSheet('home'); return true; }
+    if (target === 'menu') { setSheet('menu'); return true; }
     setSelectedId(null);
     setSheet('none');
+    return true;
   }, [sheet]);
-  const sheetDrag = useSheetDrag(handleSheetDismiss);
+  const sheetDrag = useSheetDrag(() => { handleSheetDismiss(); });
+
+  // BRANCH-2 — mémoire de surface : à la réouverture d'Omni, revenir au MÊME endroit.
+  // On persiste une surface (rôle + feuille + lieu + visite), jamais une donnée volatile.
+  // `restoringRef` empêche l'effet de persistance d'écraser la sauvegarde pendant la
+  // restauration initiale (sinon on écrirait `none` avant d'avoir relu).
+  const restoringRef = useRef(true);
+  useEffect(() => {
+    if (restoringRef.current) return;
+    try {
+      const surface: NavSurfaceState = { role, sheet, selectedId, selVisitId };
+      window.sessionStorage.setItem(NAV_STATE_STORAGE_KEY, serializeNavState(surface));
+    } catch { /* stockage indisponible */ }
+  }, [role, sheet, selectedId, selVisitId]);
+
+  // BRANCH-2 — restaurer la surface au premier montage (avant que la persistance n'écrive).
+  useEffect(() => {
+    let restored: NavSurfaceState | null = null;
+    try { restored = parseNavState(window.sessionStorage.getItem(NAV_STATE_STORAGE_KEY)); } catch { restored = null; }
+    if (restored) {
+      const validRoles = ['buyer', 'seller', 'admin', 'operator'];
+      setRole(validRoles.includes(restored.role) ? (restored.role as Role) : 'buyer');
+      if (restored.selVisitId) setSelVisitId(restored.selVisitId);
+      if (restored.selectedId) {
+        void handlePinSelect({ id: restored.selectedId });
+      } else if (restored.sheet !== 'none') {
+        setSheet(restored.sheet as Sheet);
+      }
+    }
+    restoringRef.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // BRANCH-3 — le geste « retour » (swipe gauche / bouton Android) ne ferme pas Omni :
+  // tant qu'une surface est ouverte, une entrée sentinelle est empilée ; un retour la
+  // consomme et ferme la surface du dessus (même table de vérité que le bouton fermer).
+  const backGuardPushed = useRef(false);
+  const ignoreNextPop = useRef(false);
+  const surfaceOpen = shouldInterceptBack(sheet, role, selectedId !== null);
+
+  // Empile la sentinelle dès qu'une surface s'ouvre ; la retire si la surface est fermée
+  // par un MOYEN NON-NAVIGATEUR (bouton, X, sélection) — `ignoreNextPop` évite que ce
+  // `back()` de nettoyage soit relu comme une intention de l'utilisateur.
+  useEffect(() => {
+    if (surfaceOpen && !backGuardPushed.current) {
+      window.history.pushState({ omniBackGuard: true }, '', window.location.pathname);
+      backGuardPushed.current = true;
+    } else if (!surfaceOpen && backGuardPushed.current) {
+      backGuardPushed.current = false;
+      if (window.history.state?.omniBackGuard) { ignoreNextPop.current = true; window.history.back(); }
+    }
+  }, [surfaceOpen]);
+
+  useEffect(() => {
+    const onPop = () => {
+      if (ignoreNextPop.current) { ignoreNextPop.current = false; return; }
+      const outcome = backDestination(sheet, role, selectedId !== null);
+      if (outcome.exit) { backGuardPushed.current = false; return; }
+      if (outcome.clearSelection) setSelectedId(null);
+      setRole(outcome.role as Role);
+      setSheet(outcome.sheet as Sheet);
+      if (outcome.stillOpen) {
+        window.history.pushState({ omniBackGuard: true }, '', window.location.pathname);
+        backGuardPushed.current = true;
+      } else {
+        backGuardPushed.current = false;
+      }
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheet, role, selectedId]);
 
   const handleResultsScroll = useCallback(() => {
     if (resultsScrollFrame.current !== null) return;
@@ -1845,6 +1919,12 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     if (showOperator) base.push('operator');
     return base;
   }, [sessionUser, adminTools, showOperator]);
+
+  // BRANCH-2 — une surface restaurée ne doit jamais montrer un rôle que le compte n'a pas.
+  // Si l'état restauré portait un rôle devenu indisponible, on retombe sur Acheteur.
+  useEffect(() => {
+    if (sessionUser && !eligibleRoles.includes(role)) { setRole('buyer'); setSheet('none'); }
+  }, [sessionUser, eligibleRoles, role]);
 
   // Espace de rôle — la maquette garde un tableau par rôle pour le rolepill
   // glissant (.roleswitch avec .ind indicateur inset), pas la liste « on/off » seule.

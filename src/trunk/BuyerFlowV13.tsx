@@ -51,11 +51,14 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
   const [busy, setBusy] = useState(false);
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState('1');
   const [budgetMode, setBudgetMode] = useState<'unlimited' | 'maximum'>('unlimited');
   const [budget, setBudget] = useState('');
   const [proposedPrice, setProposedPrice] = useState('');
   const negotiable = isNegotiable(product.priceKind);
+  // Quantité — champ libre : l'utilisateur doit POUVOIR effacer (`''`) pour retaper.
+  // On clampe au moment de l'usage (1 si vide/0/NaN), jamais à la frappe.
+  const quantityValue = Math.max(1, Math.floor(Number(quantity) || 1));
   const [deliveryMode, setDeliveryMode] = useState<'retrait' | 'livraison'>('retrait');
   const [availNote, setAvailNote] = useState('');
   const [requestId, setRequestId] = useState<string | null>(null);
@@ -166,7 +169,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
   const request = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (busy) return;
-    if (onGate && !onGate({ kind: 'intent', returnTo: 'flow', facilityId: facility.id, facilityName: facility.name, productId: product.id, productName: product.name, quantity })) return;
+    if (onGate && !onGate({ kind: 'intent', returnTo: 'flow', facilityId: facility.id, facilityName: facility.name, productId: product.id, productName: product.name, quantity: quantityValue })) return;
     const token = await needAuth();
     if (!token) return;
     setBusy(true); setToast('');
@@ -174,7 +177,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
       const result = await requestAvailability({
         productId: product.id,
         facilityId: facility.id,
-        quantity,
+        quantity: quantityValue,
         budgetMode,
         budgetMinor: budgetMode === 'maximum' ? Math.round(Number(budget) * 100) : null,
         proposedPriceMinor: negotiable && proposedPrice.trim() !== '' ? Math.round(Number(proposedPrice) * 100) : null,
@@ -210,7 +213,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
         setToast('');
       }
     } finally { setBusy(false); }
-    }, [busy, needAuth, product.id, facility.id, quantity, budgetMode, budget, negotiable, proposedPrice]);
+    }, [busy, needAuth, product.id, facility.id, quantityValue, budgetMode, budget, negotiable, proposedPrice]);
 
   useEffect(() => () => { if (pollRef.current !== null) window.clearTimeout(pollRef.current); }, []);
 
@@ -351,7 +354,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
       {stage === 'avail' && (
         <form className="cardbox" onSubmit={request}>
           <label className="label" htmlFor="flow-qty">Quantité</label>
-          <input id="flow-qty" className="field" type="number" min="1" value={quantity} onChange={(event) => setQuantity(Math.max(1, Number(event.target.value || 1)))} />
+          <input id="flow-qty" className="field" type="number" min="1" value={quantity} inputMode="numeric" onChange={(event) => setQuantity(event.target.value.replace(/[^0-9]/g, ""))} />
           <div className="row" style={{ flexWrap: 'wrap', gap: 8, marginTop: 8, marginBottom: 8 }}>
             <button type="button" className={budgetMode === 'unlimited' ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', minHeight: 30 }} onClick={() => setBudgetMode('unlimited')}>Sans limite</button>
             <button type="button" className={budgetMode === 'maximum' ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', minHeight: 30 }} onClick={() => setBudgetMode('maximum')}>Budget max</button>
@@ -389,7 +392,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
         <div className="cardbox">
           <p className="sub">Demande envoyée. Le commerce confirme la disponibilité.</p>
           <div className="cardbox" style={{ marginTop: 8 }}>
-            <div className="kv"><span>{product.name} ×{quantity}</span><b className="status gray">En attente</b></div>
+            <div className="kv"><span>{product.name} ×{quantityValue}</span><b className="status gray">En attente</b></div>
           </div>
           <p className="tiny muted" style={{ marginTop: 7 }}>Sans réponse, Omni ne transforme jamais le silence en « disponible ». Cette page se met à jour dès que le vendeur répond.</p>
         </div>
@@ -397,7 +400,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
       {stage === 'result' && liveResponse && (
         <div>
           <div className="cardbox">
-            <div className="kv"><span>{product.name} ×{quantity} (source : auto)</span><b className="status ok">{liveResponse.quantityAvailable} dispo</b></div>
+            <div className="kv"><span>{product.name} ×{quantityValue} (source : auto)</span><b className="status ok">{liveResponse.quantityAvailable} dispo</b></div>
           </div>
           <div className={`freshbar${freshness.level === 'stale' ? ' stale' : freshness.level === 'expired' ? ' expired' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, padding: '6px 10px', borderRadius: 999, background: 'var(--accent-soft)', fontSize: 9 }}>
             <span className="fdot" />
@@ -413,9 +416,9 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
             {stage === 'intent' && liveResponse && (
         <div>
           <div className="cardbox">
-            <div className="kv"><span>{product.name} ×{quantity} (source : auto)</span><b className="status ok">{liveResponse.quantityAvailable} dispo</b></div>
+            <div className="kv"><span>{product.name} ×{quantityValue} (source : auto)</span><b className="status ok">{liveResponse.quantityAvailable} dispo</b></div>
             <div className="kv"><span>Prix unitaire</span><b>{formatMoney(liveResponse.priceMinor, 'XOF')}</b></div>
-            <div className="kv"><span>Total</span><b>{formatMoney(liveResponse.priceMinor * quantity, 'XOF')}</b></div>
+            <div className="kv"><span>Total</span><b>{formatMoney(liveResponse.priceMinor * quantityValue, 'XOF')}</b></div>
           </div>
           <div className={`freshbar${freshness.level === 'stale' ? ' stale' : freshness.level === 'expired' ? ' expired' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, padding: '6px 10px', borderRadius: 999, background: 'var(--accent-soft)', fontSize: 9 }}>
             <span className="fdot" />

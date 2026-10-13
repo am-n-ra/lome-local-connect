@@ -66,3 +66,14 @@ describe('BRANCHES behaviour contract', () => {
     expect(FLOW).toMatch(/if \(!resumeRequestId\) return;/);
   });
 });
+
+describe('BRANCHES-QUANTITY (founder report #3) — le champ quantité est effaçable', () => {
+  it('keeps the quantity field a free string, clamped only at use', () => {
+    // Le state est une chaîne : l'utilisateur peut vider le champ pour retaper.
+    expect(FLOW).toContain("const [quantity, setQuantity] = useState('1')");
+    // La valeur utilisée est clampée (jamais 0/NaN qui partirait au serveur).
+    expect(FLOW).toMatch(/const quantityValue = Math\.max\(1, Math\.floor\(Number\(quantity\) \|\| 1\)\)/);
+    // Le champ n'impose plus `Math.max(1, …)` à la frappe (bug : champ non effaçable).
+    expect(FLOW).not.toMatch(/onChange=\{\(event\) => setQuantity\(Math\.max\(1, Number\(event\.target\.value \|\| 1\)\)\)\}/);
+  });
+});
