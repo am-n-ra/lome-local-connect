@@ -281,7 +281,7 @@ export function TrunkAppV13() {
     setInstallState(installStateFor(installPlatform, false, false));
   }, [installPlatform]);
 
-  const [accountRoles, setAccountRoles] = useState<string[]>([]);const [ownedFacilityIds, setOwnedFacilityIds] = useState<string[]>([]);const [phoneDeclared, setPhoneDeclared] = useState<string | null>(null);const [phoneDraft, setPhoneDraft] = useState('');const [phoneBusy, setPhoneBusy] = useState(false);const [phoneMsg, setPhoneMsg] = useState<string | null>(null);const [sellerCatalogue, setSellerCatalogue] = useState<SellerCatalogueResult | null>(null);const [sellerQueue, setSellerQueue] = useState<SellerAvailabilityRequest[]>([]);const [sellerWorkspaceState, setSellerWorkspaceState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');const [sellerAvailable, setSellerAvailable] = useState(false);const [adminTools, setAdminTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);
+  const [accountRoles, setAccountRoles] = useState<string[]>([]);const [ownedFacilityIds, setOwnedFacilityIds] = useState<string[]>([]);const [phoneDeclared, setPhoneDeclared] = useState<string | null>(null);const [phoneDraft, setPhoneDraft] = useState('');const [phoneBusy, setPhoneBusy] = useState(false);const [phoneMsg, setPhoneMsg] = useState<string | null>(null);const [sellerCatalogue, setSellerCatalogue] = useState<SellerCatalogueResult | null>(null);const [sellerQueue, setSellerQueue] = useState<SellerAvailabilityRequest[]>([]);const [sellerWorkspaceState, setSellerWorkspaceState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');const [sellerAvailable, setSellerAvailable] = useState(false);const [adminTools, setAdminTools] = useState(false);const [operatorTools, setOperatorTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);
   // Entrée vendeur directe dans le formulaire de création (depuis la fiche d'une
   // facilité « pas sur la carte »). Consommée une fois, pour ne pas rouvrir le
   // formulaire à chaque retour sur l'espace vendeur.
@@ -623,6 +623,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             setAccountRoles(caps.data.roles ?? []);
             setOwnedFacilityIds(caps.data.ownedFacilityIds ?? []);
             setAdminTools(Boolean(caps.data.capabilities?.adminTools));
+            setOperatorTools(Boolean(caps.data.capabilities?.operatorTools));
             setSellerAvailable(Boolean(caps.data.capabilities?.sellerWorkspace));
             setPhoneDeclared(caps.data.phoneDeclared ?? null);
             if (caps.data.capabilities?.sellerWorkspace) void loadSellerWorkspace();
@@ -1357,6 +1358,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         setAccountRoles(caps.data.roles ?? []);
         setOwnedFacilityIds(caps.data.ownedFacilityIds ?? []);
         setAdminTools(Boolean(caps.data.capabilities?.adminTools));
+        setOperatorTools(Boolean(caps.data.capabilities?.operatorTools));
         setSellerAvailable(Boolean(caps.data.capabilities?.sellerWorkspace));
         setPhoneDeclared(caps.data.phoneDeclared ?? null);
         if (caps.data.capabilities?.sellerWorkspace) void loadSellerWorkspace();
@@ -1825,10 +1827,13 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const eligibleRoles = useMemo<Role[]>(() => {
     const base: Role[] = ['buyer'];
     if (sessionUser) base.push('seller');
+    // admin et opérateur sont deux capacités DISTINCTES (serveur : `adminTools` vs
+    // `operatorTools`). Les dériver toutes deux de `adminTools` privait un opérateur
+    // PUR (sans rôle admin) de son propre espace, et donnait « Console » à l'opérateur.
     if (adminTools) base.push('admin');
-    if (adminTools) base.push('operator');
+    if (operatorTools) base.push('operator');
     return base;
-  }, [sessionUser, adminTools]);
+  }, [sessionUser, adminTools, operatorTools]);
 
   // Espace de rôle — la maquette garde un tableau par rôle pour le rolepill
   // glissant (.roleswitch avec .ind indicateur inset), pas la liste « on/off » seule.
@@ -2682,10 +2687,16 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                   <button className="btn" type="button" style={{ marginTop: 8, width: '100%' }} onClick={() => { setRole('seller'); setSheet('seller'); if (sessionUser) void loadSellerWorkspace(); }}>Gérer ce lieu dans mon espace</button>
                 </div>
               )}
-              {(role === 'admin' || role === 'operator') && adminTools && (
+              {role === 'admin' && adminTools && (
                 <div className="cardbox" style={{ marginTop: 8 }}>
                   <p className="sub">Un pin d'équipe ouvre un objet de revue, jamais une fiche d'achat.</p>
                   <button className="btn" type="button" style={{ marginTop: 8, width: '100%' }} onClick={() => setSheet('admin')}>Ouvrir la console de revue</button>
+                </div>
+              )}
+              {role === 'operator' && (
+                <div className="cardbox" style={{ marginTop: 8 }}>
+                  <p className="sub">Vous êtes en tournée : le constat et l'aperçu côté entité vivent dans votre tournée du jour, pas dans la console de gouvernance.</p>
+                  <button className="btn" type="button" style={{ marginTop: 8, width: '100%' }} onClick={() => void openTour()}>Ouvrir ma tournée</button>
                 </div>
               )}
               {claimState === 'error' && <p className="sub" role="alert">{claimError}</p>}
@@ -2835,8 +2846,8 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         <section className="sheet h-mid" data-sheet="menu" key={role} role="dialog" aria-modal="false" aria-label="Espace" onKeyDown={trapDrawerFocus}>
           <div className="handle" />
           <div className="sheet-head">
-            <div><div className="eyebrow">Menu · {role === 'admin' || role === 'operator' ? 'Équipe' : role === 'seller' ? 'Vendeur' : 'Acheteur'}</div><h1>Tout Omni, depuis ici</h1></div>
-            <span className="status ink">{role === 'buyer' ? 'Acheteur' : role === 'seller' ? 'Vendeur' : role === 'admin' ? 'Admin' : 'Opérateur'}{role === 'admin' || role === 'operator' ? ' · équipe' : ''}</span>
+            <div><div className="eyebrow">Menu · {role === 'admin' ? 'Admin' : role === 'operator' ? 'Opérateur' : role === 'seller' ? 'Vendeur' : 'Acheteur'}</div><h1>Tout Omni, depuis ici</h1></div>
+            <span className="status ink">{role === 'buyer' ? 'Acheteur' : role === 'seller' ? 'Vendeur' : role === 'admin' ? 'Admin' : 'Opérateur'}</span>
           </div>
           <div className="menugrid" style={{ display: 'grid', gap: 8, marginTop: 10 }}>
             {!sessionUser && (
@@ -2883,14 +2894,28 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     <button className="menuitem" type="button" onClick={() => setSheet('plans')}><span className="mi"><Building2 size={15} /></span><span><b>Plans</b><small>Gratuit vs Pro</small></span></button>
                   </>
                 )}
-                {(role === 'admin' || role === 'operator') && (
+                {role === 'admin' && (
                   <>
-                    <button className="menuitem" type="button" onClick={() => setSheet('admin')}><span className="mi"><ShieldCheck size={15} /></span><span><b>Console</b><small>revue & audit</small></span></button>
-                    {role === 'operator' && (
-                      <button className="menuitem" type="button" onClick={() => void openTour()}><span className="mi"><MapPin size={15} /></span><span><b>Tournée du jour</b><small>dossiers à constater</small></span></button>
-                    )}
-                    <button className="menuitem" type="button" onClick={() => void openNotifs()}><span className="mi"><Bell size={15} /></span><span><b>Notifications</b><small>demandes à examiner, tours</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Portefeuille</b><small>solde & recharges</small></span></button>
+                    {/* Maquette `menu` — Admin : Console · File de revue · Signal de demande ·
+                        Rôles & équipe · Journal d'audit · Portefeuille & Plans · Mon compte.
+                        L'app porte TOUT cela dans une seule surface de gouvernance
+                        (`AdminV13`) ; on n'invente pas d'entrées qui ne routent nulle part. */}
+                    <button className="menuitem" type="button" onClick={() => setSheet('admin')}><span className="mi"><ShieldCheck size={15} /></span><span><b>Console</b><small>revue, rôles & audit</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openNotifs()}><span className="mi"><Bell size={15} /></span><span><b>Notifications</b><small>demandes à examiner</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Portefeuille & Plans</b><small>solde & recharges</small></span></button>
+                  </>
+                )}
+                {role === 'operator' && (
+                  <>
+                    {/* Maquette `menu` — Opérateur (terrain) : Ma tournée · Aperçu côté entité ·
+                        Portefeuille & Plans · Mon compte. L'opérateur ne voit PAS la console
+                        de gouvernance : sa surface est la tournée de constat, et l'« aperçu
+                        côté entité » s'ouvre DEPUIS un dossier de la tournée (il faut un
+                        dossier pour l'afficher) — pas une seconde entrée qui rouvrirait la
+                        même feuille. */}
+                    <button className="menuitem" type="button" onClick={() => void openTour()}><span className="mi"><MapPin size={15} /></span><span><b>Ma tournée</b><small>dossiers du jour & aperçu entité</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openNotifs()}><span className="mi"><Bell size={15} /></span><span><b>Notifications</b><small>tours à mener</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Portefeuille & Plans</b><small>solde & recharges</small></span></button>
                   </>
                 )}
                 {/* MENU-02 — le maquette ne nomme l'entrée de compte qu'UNE fois par rôle ;

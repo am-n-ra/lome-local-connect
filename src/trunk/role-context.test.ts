@@ -55,4 +55,26 @@ describe('surfaces contextuelles au rôle', () => {
     expect(line).toBeTruthy();
     expect(line).toContain("setSheet('products')");
   });
+
+  it('admin et opérateur sont deux capacités DISTINCTES (pas adminTools pour les deux)', () => {
+    const start = APP.indexOf('const eligibleRoles');
+    const block = APP.slice(start, APP.indexOf('], [sessionUser', start));
+    expect(block).toMatch(/if \(adminTools\) base\.push\('admin'\)/);
+    expect(block).toMatch(/if \(operatorTools\) base\.push\('operator'\)/);
+    // l'ancien bug : operator dérivé de adminTools
+    expect(block).not.toMatch(/if \(adminTools\) base\.push\('operator'\)/);
+  });
+
+  it('le menu ADMIN contient « Console », le menu OPÉRATEUR ne l’a pas', () => {
+    const adminBlockStart = APP.indexOf("role === 'admin' && (", APP.indexOf('data-sheet="menu"'));
+    const operatorBlockStart = APP.indexOf("role === 'operator' && (", APP.indexOf('data-sheet="menu"'));
+    expect(adminBlockStart).toBeGreaterThan(0);
+    expect(operatorBlockStart).toBeGreaterThan(adminBlockStart);
+    const adminBlock = APP.slice(adminBlockStart, operatorBlockStart);
+    const operatorBlock = APP.slice(operatorBlockStart, APP.indexOf('MENU-02', operatorBlockStart));
+    expect(adminBlock).toContain('>Console</b>');
+    expect(operatorBlock).not.toContain("setSheet('admin')");
+    expect(operatorBlock).not.toContain('>Console</b>');
+    expect(operatorBlock).toContain('>Ma tournée</b>');
+  });
 });
