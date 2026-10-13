@@ -1886,6 +1886,18 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     }
   }, [requireAuth]);
 
+  // BRANCHES-IDENTITY — la création a été refusée parce qu'elle recouvrait un lieu existant :
+  // on ouvre la fiche de ce lieu pour engager la REVENDICATION (voie légitime), sans repasser
+  // par la carte ni demander à l'utilisateur de le retrouver lui-même.
+  const openExistingForClaim = useCallback(async (facilityId: string) => {
+    const detail = await getFacilityDetail(facilityId).catch(() => null);
+    if (detail?.ok && detail.data) {
+      setSelectedFacility(detail.data);
+      setSelectedId(detail.data.id);
+      void startClaim(detail.data);
+    }
+  }, [startClaim]);
+
   const handleTileTap = useCallback(async (tap: TileTapPoint) => {
     setTileTap(tap); setTileResolved(null); setTileName('');
     setTileClaimState('idle'); setTileClaimError('');
@@ -2993,7 +3005,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         </section>
       )}
       {sheet === 'seller' && (
-        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} onScan={() => setSheet('seller-qr')} onMap={() => { setSelectedId(null); setSheet('none'); }} onClaim={(facility) => { void startClaim(facility); }} onOpenTransaction={(transaction) => void openRoom(transaction)} startInCreate={sellerCreateIntent} onConsumeCreateIntent={() => setSellerCreateIntent(false)} catalogue={sellerCatalogue} queue={sellerQueue} publicFacilities={facilities} ownedIds={ownedFacilityIds} onRefresh={loadSellerWorkspace} />
+        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} onScan={() => setSheet('seller-qr')} onMap={() => { setSelectedId(null); setSheet('none'); }} onClaim={(facility) => { void startClaim(facility); }} onClaimExisting={(facilityId) => void openExistingForClaim(facilityId)} onOpenTransaction={(transaction) => void openRoom(transaction)} startInCreate={sellerCreateIntent} onConsumeCreateIntent={() => setSellerCreateIntent(false)} catalogue={sellerCatalogue} queue={sellerQueue} publicFacilities={facilities} ownedIds={ownedFacilityIds} onRefresh={loadSellerWorkspace} />
       )}
       {sheet === 'seller-reply' && (
         <SellerReplyV13 onClose={() => setSheet('seller')} />

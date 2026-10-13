@@ -425,6 +425,32 @@ export interface CreateSellerFacilityResult {
   created: boolean;
 }
 
+// BRANCHES-SLOT (D-J) — solde d'emplacements d'un compte vendeur + achat d'un emplacement payant.
+export interface SlotStanding {
+  freeTotal: number;
+  freeUsed: number;
+  freeAvailable: number;
+  paidTotal: number;
+  paidUsed: number;
+  paidAvailable: number;
+  canCreate: boolean;
+  needsPaidSlot: boolean;
+}
+
+export interface SellerSlotStandingResult {
+  standing: SlotStanding;
+  slotPriceMinor: number;
+  billingCurrency: string;
+}
+
+export interface FacilitySlotPurchaseResult {
+  slotId: string | null;
+  walletId: string;
+  amountMinor: number;
+  billingCurrency: string;
+  purchased: boolean;
+}
+
 export type ProductAvailabilityState = 'en_stock' | 'verifie' | 'a_valider' | 'bientot';
 
 // TRUNK-X2 : disponibilité automatique (Pro).
@@ -845,6 +871,9 @@ export interface ApiFailure {
   code: string;
   message: string;
   retryable: boolean;
+  /** BRANCHES-IDENTITY : la création recouvrirait un lieu existant → le client route vers la revendication. */
+  existingFacilityId?: string;
+  existingFacilityName?: string;
 }
 
 export interface ApiResult<T> {

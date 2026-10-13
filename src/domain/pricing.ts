@@ -22,6 +22,20 @@ export const OMNI_PLAN_PRICES_USD_MINOR = {
 } as const;
 
 /**
+ * D-J — prix d'un SLOT de facilité additionnel (au-delà du slot gratuit).
+ *
+ * Verrouillé fondateur 2026-10-07 : « on construit les slot payant en meme temps ».
+ * Le prix était une hypothèse (« 1 000 XOF à confirmer », D-J). Il est désormais
+ * EXPRIMÉ en USD, comme tout autre prix, et dérivé en devise locale à la charge —
+ * jamais un littéral dupliqué au site d'écriture (leçon devise : deux lectures
+ * d'une même promesse divergent).
+ *
+ * 2 USD ≈ 1 000 XOF au taux pilote (1 USD = 500 XOF). Un slot payé n'a pas de
+ * mensualité : c'est un achat unique (le slot reste assigné).
+ */
+export const OMNI_SLOT_PRICE_USD_MINOR = 200; // $2.00 ≈ 1 000 XOF
+
+/**
  * D-H — trust bonus granted to a seller after 3 Omni sales to distinct buyers.
  * Founder decision 2026-09-27: **$20**, one-time, not withdrawable.
  *

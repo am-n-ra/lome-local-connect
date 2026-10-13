@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { neon } from '@neondatabase/serverless';
-import { AvailabilityPolicyError, AvailabilityResponsePolicyError, FieldPilotPolicyError, InsufficientCreditsError, PurchaseIntentPolicyError, SellerCataloguePolicyError, TransactionPolicyError, WalletPolicyError, createTrunkRepository, toProduct } from './trunk-repository';
+import { AvailabilityPolicyError, AvailabilityResponsePolicyError, FacilityShadowError, FieldPilotPolicyError, InsufficientCreditsError, PurchaseIntentPolicyError, SellerCataloguePolicyError, SlotPolicyError, TransactionPolicyError, WalletPolicyError, createTrunkRepository, toProduct } from './trunk-repository';
 import { qrExpiryFrom, resolveQrTtlMinutes } from '../trunk/transaction-time';
 import { SELLER_BONUS_USD_MINOR, convertUsdMinorToLocal, OMNI_DEFAULT_LOCAL_CURRENCY } from '../domain/pricing';
 
@@ -2494,16 +2494,25 @@ describe('review and inbox Root seam', () => {
   });
 
   it('writes a review, queues an in-app delivery and maps certification to Free unconfirmed', async () => {
-    const call = stubSql([{ request_id: 'request-1', facility_id: 'facility-1', outcome: 'certified', facility_trust: 'unconfirmed', version: 2 }]);
+    // BRANCHES-SLOT : la revue provisionne d'abord un slot gratuit (instruction séparée — une CTE
+    // qui écrit n'est pas visible des CTE sœurs), puis exécute la revue + assignation.
+    const call = stubSqlSequence([
+      [], // slot provision: insert ... on conflict
+      [{ request_id: 'request-1', facility_id: 'facility-1', outcome: 'certified', facility_trust: 'unconfirmed', version: 2 }],
+      [], // assignation du slot à la facilité revendiquée
+    ]);
     const repository = createTrunkRepository(call.sql);
     await expect(repository.reviewFacilityClaim({ authUserId: 'auth-reviewer', requestId: 'request-1', outcome: 'certified', reason: 'Evidence matches the facility.', correlationId: 'corr-review-1' })).resolves.toEqual({ requestId: 'request-1', facilityId: 'facility-1', outcome: 'certified', state: 'certified', facilityTrust: 'unconfirmed', version: 2 });
-    expect(call.queries[0]).toContain("ar.role = 'reviewer'");
-    expect(call.queries[0]).toContain('v2_verification_reviews');
-    expect(call.queries[0]).toContain('v2_notification_events');
-    expect(call.queries[0]).toContain('v2_notification_deliveries');
-    expect(call.queries[0]).toContain('v2_facility_status_history');
-    expect(call.queries[0]).toContain('unconfirmed');
-    expect(call.queries[0]).toContain('claimant_account_id');
+    expect(call.queries[1]).toContain("ar.role = 'reviewer'");
+    expect(call.queries[1]).toContain('v2_verification_reviews');
+    expect(call.queries[1]).toContain('v2_notification_events');
+    expect(call.queries[1]).toContain('v2_notification_deliveries');
+    expect(call.queries[1]).toContain('v2_facility_status_history');
+    expect(call.queries[1]).toContain('unconfirmed');
+    expect(call.queries[1]).toContain('claimant_account_id');
+    // BRANCHES-SLOT : la revue certifiée assigne un slot, sinon la facilité revendiquée resterait
+    // invisible (le catalogue vendeur joint `status='assigned'`).
+    expect(call.queries[2]).toContain("set status = 'assigned', facility_id = f.id");
   });
 
   it('returns only the authenticated account inbox and marks its own event seen', async () => {
@@ -3062,6 +3071,7 @@ describe('seller facility creation Root seam (NW-13c)', () => {
   it('provisions a free slot and creates an unconfirmed typed facility', async () => {
     const call = stubSqlSequence([
       [], // slot provision: insert ... on conflict
+      [], // BRANCHES-IDENTITY : candidats de recouvrement (aucun homonyme proche ici)
       [{ facility_id: 'facility-9', slot_id: 'slot-9', created: true }],
     ]);
     const repository = createTrunkRepository(call.sql);
@@ -3083,10 +3093,10 @@ describe('seller facility creation Root seam (NW-13c)', () => {
     expect(result).toEqual({ facilityId: 'facility-9', slotId: 'slot-9', trustState: 'unconfirmed', facilityType: 'mobile', created: true });
     expect(call.queries[0]).toContain('insert into v2_facility_slots');
     expect(call.queries[0]).toContain("source = 'free'");
-    expect(call.queries[1]).toContain('facility_type');
-    expect(call.queries[1]).toContain('rayon_km');
-    expect(call.queries[1]).toContain("trust_state)");
-    expect(call.queries[1]).toContain('source_name');
+    expect(call.queries[2]).toContain('facility_type');
+    expect(call.queries[2]).toContain('rayon_km');
+    expect(call.queries[2]).toContain("trust_state)");
+    expect(call.queries[2]).toContain('source_name');
   });
 
   // R-D : la nature de l'offreur est DÉCLARÉE, et le Seed en dépend (D-C6 : un particulier
@@ -3123,6 +3133,7 @@ describe('seller facility creation Root seam (NW-13c)', () => {
   it('R-D — still persists organisation when the seller declares a business', async () => {
     const call = stubSqlSequence([
       [],
+      [],
       [{ facility_id: 'facility-12', slot_id: 'slot-12', created: true }],
     ]);
     const repository = createTrunkRepository(call.sql);
@@ -3141,8 +3152,8 @@ describe('seller facility creation Root seam (NW-13c)', () => {
       contactWhatsapp: null,
       idempotencyKey: 'nwrd-organisation-key-00001',
     });
-    expect(call.values[1]).toContain('organisation');
-    expect(call.values[1]).not.toContain('individu');
+    expect(call.values[2]).toContain('organisation');
+    expect(call.values[2]).not.toContain('individu');
   });
 
   it('allows a digital facility without coordinates and without a rayon', async () => {
@@ -3175,6 +3186,7 @@ describe('seller facility creation Root seam (NW-13c)', () => {
   it('creates the offering ENTITY with the facility (R-2/S-25) — sinon le vendeur ne peut jamais publier', async () => {
     const call = stubSqlSequence([
       [],
+      [],
       [{ facility_id: 'facility-11', slot_id: 'slot-11', created: true }],
     ]);
     const repository = createTrunkRepository(call.sql);
@@ -3193,17 +3205,111 @@ describe('seller facility creation Root seam (NW-13c)', () => {
       contactWhatsapp: null,
       idempotencyKey: 'r4-entity-key-0000001',
     });
-    const publishSql = call.queries[1];
+    const publishSql = call.queries[2];
     // Le lieu reçoit son entité dans la MEME instruction : la publication exige ce lien,
     // donc un vendeur sans entité serait définitivement bloqué.
     expect(publishSql).toContain('insert into v2_entities');
     // R-D : la nature n'est plus un littéral figé dans le SQL — elle est liée. L'assertion
     // porte donc sur la valeur transmise (avant ce correctif : `'organisation'` en dur).
-    expect(call.values[1]).toContain('organisation');
+    expect(call.values[2]).toContain('organisation');
     expect(publishSql).toContain('entity_id');
     // Une CTE qui écrit n'est pas visible par les autres CTE de la meme instruction :
     // l'entite doit venir d'un RETURNING, jamais d'une relecture de table.
     expect(publishSql).toContain('returning id, account_id');
+  });
+
+  // BRANCHES-IDENTITY — créer une facilité sous le nom d'un lieu EXISTANT au même endroit
+  // est une usurpation. La décision (nom normalisé + ≤ 250 m) est pure ; le SQL ne fournit
+  // que les candidats d'une boîte étroite.
+  it('BRANCHES-IDENTITY — refuse une création qui recouvre un lieu existant (usurpation)', async () => {
+    const call = stubSqlSequence([
+      [], // provision slot
+      [{ id: 'facility-existing', name: 'Boulangerie du Marché', latitude: 6.1301, longitude: 1.2201 }], // candidats proches
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    // L'erreur NOMME le lieu recouvré : le client peut router vers la revendication.
+    await expect(repository.createSellerFacility({
+      authUserId: 'auth-user-1',
+      name: 'Boulangerie du Marche', // même nom replié, accent en moins
+      facilityType: 'fixe',
+      ownerKind: 'organisation',
+      category: null,
+      description: null,
+      address: 'Lomé',
+      latitude: 6.13,
+      longitude: 1.22,
+      rayonKm: null,
+      contactPhone: null,
+      contactWhatsapp: null,
+      idempotencyKey: 'branches-shadow-key-00001',
+    })).rejects.toMatchObject({ existingFacilityId: 'facility-existing', existingFacilityName: 'Boulangerie du Marché' });
+    // Aucune écriture de facilité n'a été tentée (la 3ᵉ requête n'existe pas).
+    expect(call.queries).toHaveLength(2);
+  });
+
+  it('BRANCHES-IDENTITY — laisse passer un nom différent au même endroit', async () => {
+    const call = stubSqlSequence([
+      [],
+      [{ id: 'facility-existing', name: 'Boulangerie du Marché', latitude: 6.13, longitude: 1.22 }],
+      [{ facility_id: 'facility-new', slot_id: 'slot-new', created: true }],
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.createSellerFacility({
+      authUserId: 'auth-user-1',
+      name: 'Pharmacie du Port',
+      facilityType: 'fixe',
+      ownerKind: 'organisation',
+      category: null,
+      description: null,
+      address: 'Lomé',
+      latitude: 6.13,
+      longitude: 1.22,
+      rayonKm: null,
+      contactPhone: null,
+      contactWhatsapp: null,
+      idempotencyKey: 'branches-shadow-key-00003',
+    });
+    expect(result.created).toBe(true);
+  });
+
+  // BRANCHES-SLOT — « plus d'emplacement » n'est pas « non autorisé » : le client doit pouvoir
+  // acheter. Un refus générique laissait l'utilisateur sans action possible.
+  it('BRANCHES-SLOT — distingue « aucun emplacement » (acheter) de « non autorisé »', async () => {
+    const call = stubSqlSequence([
+      [], // provision slot
+      [], // candidats recouvrement
+      [], // insert facilité → aucune ligne (plus de slot libre)
+      [{ available: 0 }], // sonde : 0 slot disponible
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.createSellerFacility({
+      authUserId: 'auth-user-1',
+      name: 'Nouvelle échoppe',
+      facilityType: 'fixe',
+      ownerKind: 'organisation',
+      category: null,
+      description: null,
+      address: 'Lomé',
+      latitude: 6.13,
+      longitude: 1.22,
+      rayonKm: null,
+      contactPhone: null,
+      contactWhatsapp: null,
+      idempotencyKey: 'branches-slot-key-00001',
+    })).rejects.toBeInstanceOf(SlotPolicyError);
+  });
+
+  // BRANCHES-SLOT (D-J) — acheter un emplacement : le slot est créé au débit FRAIS uniquement.
+  it('BRANCHES-SLOT — achète un emplacement via le wallet et crée le slot', async () => {
+    const call = stubSqlSequence([
+      [{ slot_id: 'slot-paid', wallet_id: 'wallet-1', amount_minor: 500000, purchased: true }],
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.purchaseFacilitySlot({ authUserId: 'auth-user-1', idempotencyKey: 'branches-slot-buy-0001' });
+    expect(result.purchased).toBe(true);
+    expect(result.slotId).toBe('slot-paid');
+    expect(call.queries[0]).toContain("'slot_spend'");
+    expect(call.queries[0]).toContain('insert into v2_facility_slots');
   });
 });
 
@@ -3363,6 +3469,7 @@ describe('RAC-1 seller contact Root seam', () => {
   it('createSellerFacility accepts and persists optional contact fields', async () => {
     const call = stubSqlSequence([
       [],
+      [],
       [{ facility_id: 'facility-9', slot_id: 'slot-9', created: true }],
     ]);
     const repository = createTrunkRepository(call.sql);
@@ -3383,8 +3490,8 @@ describe('RAC-1 seller contact Root seam', () => {
     });
     expect(result.facilityId).toBe('facility-9');
     expect(result.created).toBe(true);
-    expect(call.queries[1]).toContain('contact_phone');
-    expect(call.queries[1]).toContain('contact_whatsapp');
+    expect(call.queries[2]).toContain('contact_phone');
+    expect(call.queries[2]).toContain('contact_whatsapp');
   });
 });
 describe('FF-2 open transactions Root seam', () => {

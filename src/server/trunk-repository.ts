@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { createHash, randomBytes } from 'node:crypto';
-import { BULK_PACKS, bulkPackById, convertUsdMinorToLocal, OMNI_BASE_CURRENCY, OMNI_DEFAULT_LOCAL_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, SELLER_BONUS_USD_MINOR } from '../domain/pricing';
+import { BULK_PACKS, bulkPackById, convertUsdMinorToLocal, OMNI_BASE_CURRENCY, OMNI_DEFAULT_LOCAL_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, OMNI_SLOT_PRICE_USD_MINOR, SELLER_BONUS_USD_MINOR } from '../domain/pricing';
+import { findShadowedPlace, shadowRefusalMessage, slotStanding } from '../trunk/facility-identity';
 import { CONFIRMED_SALES_THRESHOLD, FREE_OFFER_LIMIT, INDIVIDUAL_CONFIRMED_SALES_THRESHOLD } from '../domain/invariants';
 
 import type { OfferOwnerKind, QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
@@ -35,18 +36,9 @@ const PUBLIC_TRUST_STATES = new Set<PublicFacility['trust']>(['unclaimed', 'unco
 // s/x toléré. Les jetons proviennent d'un split sur `[^a-z0-9]+` : seuls `[a-z0-9]`
 // survivent, donc AUCUN métacaractère regex n'atteint le motif (pas d'injection).
 // Les accents d'ENTRÉE sont pliés côté SQL pour une seule source de vérité.
-const ACCENT_FOLD_FROM = 'àâäáãåçèéêëìíîïñòóôõöùúûüýÿÀÂÄÁÃÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ';
-const ACCENT_FOLD_TO = 'aaaaaaceeeeiiiinooooouuuuyyAAAAAACEEEEIIIINOOOOOUUUUY';
+import { ACCENT_FOLD_FROM, ACCENT_FOLD_TO, foldAccents } from '../domain/text-fold';
 
-/** Fold accents with the SAME map as the SQL `translate` side (one source of truth). */
-export function foldAccents(input: string): string {
-  let out = '';
-  for (const ch of input.toLowerCase()) {
-    const i = ACCENT_FOLD_FROM.indexOf(ch);
-    out += i >= 0 ? ACCENT_FOLD_TO[i] : ch;
-  }
-  return out;
-}
+export { foldAccents };
 
 /**
  * Turn a raw query into a word-boundary regex, or `null` when it has no searchable
@@ -186,6 +178,30 @@ export class SellerCataloguePolicyError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'SellerCataloguePolicyError';
+  }
+}
+
+/**
+ * BRANCHES-IDENTITY — la création recouvrirait un lieu déjà sur la carte. Distinct de
+ * `SellerCataloguePolicyError` parce que le client doit pouvoir router vers la
+ * REVENDICATION (il lui faut l'id du lieu existant), pas seulement afficher un refus.
+ */
+export class FacilityShadowError extends Error {
+  existingFacilityId: string;
+  existingFacilityName: string;
+  constructor(existingFacilityId: string, existingFacilityName: string) {
+    super(shadowRefusalMessage(existingFacilityName));
+    this.name = 'FacilityShadowError';
+    this.existingFacilityId = existingFacilityId;
+    this.existingFacilityName = existingFacilityName;
+  }
+}
+
+/** BRANCHES-SLOT — plus de slot libre : il faut en acheter un (D-J). */
+export class SlotPolicyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SlotPolicyError';
   }
 }
 
@@ -1414,6 +1430,30 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           )
         on conflict (account_id) where source = 'free' do nothing
       `);
+      // BRANCHES-IDENTITY — créer ne doit pas recouvrir un lieu DÉJÀ sur la carte. Le SQL fournit
+      // les candidats d'une boîte géographique étroite ; la décision (nom normalisé + rayon) est
+      // PURE (`findShadowedPlace`), donc prouvable sans base. Sans coordonnées (digital) il n'y a
+      // pas de recouvrement géographique à vérifier.
+      if (input.latitude !== null && input.longitude !== null) {
+        const box = 0.01; // ≈ 1,1 km : couvre largement le seuil de recouvrement (250 m)
+        const candidateRows = await retryDatabase(() => sql`
+          select f.id, f.name, f.latitude, f.longitude
+          from v2_facilities f
+          where f.latitude between ${input.latitude! - box} and ${input.latitude! + box}
+            and f.longitude between ${input.longitude! - box} and ${input.longitude! + box}
+            and f.trust_state <> 'rejected'
+            and not exists (
+              select 1 from v2_accounts a
+              where a.auth_user_id = ${input.authUserId} and a.id = f.account_id
+            )
+          limit 200
+        `);
+        const shadowed = findShadowedPlace(
+          (candidateRows as Record<string, unknown>[]).map((r) => ({ id: String(r.id), name: String(r.name), latitude: Number(r.latitude), longitude: Number(r.longitude) })),
+          { name: input.name, latitude: input.latitude, longitude: input.longitude },
+        );
+        if (shadowed) throw new FacilityShadowError(shadowed.id, shadowed.name);
+      }
       const rows = await retryDatabase(() => sql`
         with seller as (
           select a.id
@@ -1465,15 +1505,114 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           from inserted
           where fs.id = (select id from available_slot)
           returning fs.id as slot_id, fs.facility_id
+        ), account_promoted as (
+          -- S-31 : créer (ou revendiquer) une entité débloque la publication. Sans cette
+          -- promotion, l'offre exige seller_ready que SEULE l'activation admin accordait —
+          -- un créateur ne pouvait jamais vendre (le bug rapporté). Même geste que le claim.
+          update v2_accounts a
+          set onboarding_state = 'seller_ready', updated_at = now()
+          from inserted i
+          where a.id = i.account_id and a.onboarding_state <> 'seller_ready'
+          returning a.id
         )
-        select facility_id, slot_id, created from existing
+        select existing.facility_id, existing.slot_id, existing.created
+        from existing
         union all
-        select assigned.facility_id, assigned.slot_id, true from assigned
+        -- LEFT join : account_promoted est VIDE quand le vendeur est déjà seller_ready
+        -- (2ᵉ facilité, multi-emplacement). Un inner join supprimerait la ligne créée et la
+        -- fonction renverrait « aucun emplacement » alors que le lieu ET le slot existent.
+        select assigned.facility_id, assigned.slot_id, true
+        from assigned left join account_promoted on true
         limit 1
       `);
       const row = (rows as Record<string, unknown>[])[0];
-      if (!row) throw new SellerCataloguePolicyError('FORBIDDEN_OR_SLOT_REQUIRED');
+      if (!row) {
+        // Aucune ligne : soit le compte n'a plus de slot libre (D-J → acheter), soit il n'est
+        // pas autorisé. On sépare les deux pour que le client puisse agir (message honnête).
+        const slotRows = await retryDatabase(() => sql`
+          select count(*)::int as available
+          from v2_facility_slots fs
+          join v2_accounts a on a.id = fs.account_id
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null and fs.status = 'available'
+        `);
+        const available = Number((slotRows as Record<string, unknown>[])[0]?.available ?? 0);
+        if (available === 0) throw new SlotPolicyError('Aucun emplacement disponible : achetez un emplacement pour créer une autre facilité.');
+        throw new SellerCataloguePolicyError('FORBIDDEN_OR_SLOT_REQUIRED');
+      }
       return { facilityId: String(row.facility_id), slotId: String(row.slot_id), trustState: 'unconfirmed', facilityType: input.facilityType, created: row.created === true };
+    },
+    async getSellerSlotStanding(input: { authUserId: string }): Promise<{ standing: { freeTotal: number; freeUsed: number; freeAvailable: number; paidTotal: number; paidUsed: number; paidAvailable: number; canCreate: boolean; needsPaidSlot: boolean }; slotPriceMinor: number; billingCurrency: string }> {
+      const rows = await retryDatabase(() => sql`
+        select fs.source, fs.status
+        from v2_facility_slots fs
+        join v2_accounts a on a.id = fs.account_id
+        where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+      `);
+      const facts = (rows as Record<string, unknown>[]).map((r) => ({ source: String(r.source), status: String(r.status) }));
+      return {
+        standing: slotStanding(facts),
+        slotPriceMinor: convertUsdMinorToLocal(OMNI_SLOT_PRICE_USD_MINOR, OMNI_DEFAULT_LOCAL_CURRENCY),
+        billingCurrency: OMNI_DEFAULT_LOCAL_CURRENCY,
+      };
+    },
+    async purchaseFacilitySlot(input: { authUserId: string; idempotencyKey: string }): Promise<{ slotId: string | null; walletId: string; amountMinor: number; billingCurrency: string; purchased: boolean }> {
+      if (!input.idempotencyKey.trim() || input.idempotencyKey.length > 180) throw new SlotPolicyError('A bounded idempotency key is required to purchase a slot.');
+      const priceMinor = convertUsdMinorToLocal(OMNI_SLOT_PRICE_USD_MINOR, OMNI_DEFAULT_LOCAL_CURRENCY);
+      const reference = `facility-slot:${input.idempotencyKey.trim()}`;
+      const rows = await retryDatabase(() => sql`
+        with seller as (
+          select a.id as account_id, w.id as wallet_id
+          from v2_accounts a
+          join v2_wallets w on w.account_id = a.id
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+          limit 1
+        ), balance as (
+          select coalesce(sum(case when e.kind in ('recharge', 'bonus_grant', 'reversal', 'coupon_credit') then e.amount_minor else -e.amount_minor end), 0)::int as balance_minor
+          from v2_wallet_ledger_entries e
+          join seller s on s.wallet_id = e.wallet_id
+          where e.status = 'confirmed'
+        ), existing_spend as (
+          select e.wallet_id, e.amount_minor
+          from v2_wallet_ledger_entries e
+          join seller s on s.wallet_id = e.wallet_id
+          where e.kind = 'slot_spend' and e.reference = ${reference}
+          limit 1
+        ), spend as (
+          insert into v2_wallet_ledger_entries (wallet_id, kind, amount_minor, status, reference, created_at, confirmed_at)
+          select s.wallet_id, 'slot_spend', ${priceMinor}, 'confirmed', ${reference}, now(), now()
+          from seller s cross join balance b
+          where b.balance_minor >= ${priceMinor} and not exists (select 1 from existing_spend)
+          on conflict (wallet_id, kind, reference) do nothing
+          returning wallet_id, amount_minor
+        ), slot as (
+          -- Le slot est créé UNIQUEMENT par le débit FRAIS. Un rejeu (existing_spend) ne doit
+          -- jamais créer un second slot — sinon un retry réseau donnerait deux slots pour un paiement.
+          insert into v2_facility_slots (account_id, source, status)
+          select s.account_id, 'wallet', 'available'
+          from seller s join spend sp on sp.wallet_id = s.wallet_id
+          returning id, account_id
+        )
+        select slot.id as slot_id, s.wallet_id, sp.amount_minor, true as purchased
+        from slot cross join seller s cross join spend sp
+        union all
+        select null as slot_id, es.wallet_id, es.amount_minor, false as purchased
+        from existing_spend es
+        limit 1
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) {
+        const balanceRows = await retryDatabase(() => sql`
+          select coalesce(sum(case when e.kind in ('recharge', 'bonus_grant', 'reversal', 'coupon_credit') then e.amount_minor else -e.amount_minor end), 0)::int as balance_minor
+          from v2_wallet_ledger_entries e
+          join v2_wallets w on w.id = e.wallet_id
+          join v2_accounts a on a.id = w.account_id
+          where a.auth_user_id = ${input.authUserId} and e.status = 'confirmed'
+        `);
+        const balance = Number((balanceRows as Record<string, unknown>[])[0]?.balance_minor ?? 0);
+        throw new SlotPolicyError(`Solde insuffisant pour acheter un emplacement (${priceMinor} requis, ${Math.max(0, balance)} disponible).`);
+      }
+      return { slotId: row.slot_id === null || row.slot_id === undefined ? null : String(row.slot_id), walletId: String(row.wallet_id), amountMinor: Number(row.amount_minor), billingCurrency: OMNI_DEFAULT_LOCAL_CURRENCY, purchased: row.purchased === true };
     },
     async updateSellerFacilityContact(input: {
       authUserId: string;
@@ -2049,6 +2188,21 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       if (!['certified', 'rejected', 'needs_more_evidence'].includes(input.outcome) || input.reason.trim().length < 3 || input.reason.trim().length > 1000) {
         throw new FieldPilotPolicyError('A review outcome and a bounded reason are required.');
       }
+      // BRANCHES-SLOT (étape 1/2) : avant la revue, si le demandeur n'a AUCUN slot gratuit,
+      // on lui en provisionne un. Fait AVANT l'instruction de revue : une CTE qui écrit n'est
+      // pas visible des CTE sœurs de la même instruction (sémantique de snapshot Postgres), donc
+      // provisionner et assigner dans la même requête que la revue serait un no-op silencieux.
+      await retryDatabase(() => sql`
+        insert into v2_facility_slots (account_id, source)
+        select vr.claimant_account_id, 'free'
+        from v2_verification_requests vr
+        where vr.id = ${input.requestId}::uuid
+          and vr.state in ('submitted', 'admin_review')
+          and not exists (
+            select 1 from v2_facility_slots fs where fs.account_id = vr.claimant_account_id and fs.source = 'free'
+          )
+        on conflict (account_id) where source = 'free' do nothing
+      `);
       const rows = await retryDatabase(() => sql`
         with reviewer as (
           select a.id
@@ -2086,7 +2240,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
               updated_at = now()
           from candidate join request_update on request_update.facility_id = candidate.facility_id
           where f.id = candidate.facility_id
-          returning f.id, f.entity_id, f.trust_state
+          returning f.id, f.entity_id, f.trust_state, f.account_id
         ), entity_update as (
           -- R-3b : S-30 veut la confiance sur l'ENTITE. Sans ce miroir, la colonne d'entite
           -- reste celle du backfill et sert une confiance perimee des la premiere transition.
@@ -2103,7 +2257,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           returning id, facility_id
         ), notification_insert as (
           insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
-          select candidate.claimant_account_id, 'claim_reviewed', 'verification_request', request_update.id::text, request_update.id::text || ':' || request_update.version::text || ':' || ${input.outcome}, jsonb_build_object('outcome', ${input.outcome}), ${input.correlationId}
+          select candidate.claimant_account_id, 'claim_reviewed', 'verification_request', request_update.id::text, request_update.id::text || ':' || request_update.version::text || ':' || ${input.outcome}, jsonb_build_object('outcome', ${input.outcome}::text), ${input.correlationId}
           from candidate join request_update on request_update.id = candidate.id
           on conflict (recipient_account_id, dedupe_key) do nothing
           returning id
@@ -2119,6 +2273,21 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       `);
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) throw new FieldPilotPolicyError('The claim is not reviewable by this reviewer or is no longer pending.');
+      // BRANCHES-SLOT (étape 2/2) : une fois la revue validée, la facilité revendiquée doit tenir
+      // un slot ASSIGNÉ — sinon le catalogue vendeur et la création d'offre (qui joignent
+      // `status='assigned'`) ne la verraient pas : propriété sans visibilité. On assigne un slot
+      // libre (gratuit ou payé), une seule fois. Lecture APRÈS la revue ⇒ voit le slot provisionné.
+      if (input.outcome === 'certified') {
+        await retryDatabase(() => sql`
+          update v2_facility_slots fs
+          set status = 'assigned', facility_id = f.id, assigned_at = now()
+          from v2_facilities f
+          where f.id = ${String(row.facility_id)}::uuid
+            and fs.account_id = f.account_id
+            and fs.status = 'available'
+            and not exists (select 1 from v2_facility_slots x where x.facility_id = f.id)
+        `);
+      }
       const facilityTrust = row.facility_trust ? String(row.facility_trust) : input.outcome === 'certified' ? 'unconfirmed' : input.outcome === 'needs_more_evidence' ? 'verification_draft' : 'rejected';
       return { requestId: String(row.request_id), facilityId: String(row.facility_id), outcome: input.outcome, state: input.outcome, facilityTrust: facilityTrust as ReviewClaimResult['facilityTrust'], version: Number(row.version) };
     },

@@ -206,6 +206,7 @@ var OMNI_PLAN_PRICES_USD_MINOR = {
   buyerPro: 500
   // $5.00 /mois
 };
+var OMNI_SLOT_PRICE_USD_MINOR = 200;
 var SELLER_BONUS_USD_MINOR = 2e3;
 var LOCAL_RATE_PER_USD_MINOR = {
   XOF: 500
@@ -227,6 +228,72 @@ var BULK_PACKS = [
 ];
 function bulkPackById(id) {
   return BULK_PACKS.find((p) => p.id === id);
+}
+
+// src/domain/text-fold.ts
+var ACCENT_FOLD_FROM = "\xE0\xE2\xE4\xE1\xE3\xE5\xE7\xE8\xE9\xEA\xEB\xEC\xED\xEE\xEF\xF1\xF2\xF3\xF4\xF5\xF6\xF9\xFA\xFB\xFC\xFD\xFF\xC0\xC2\xC4\xC1\xC3\xC5\xC7\xC8\xC9\xCA\xCB\xCC\xCD\xCE\xCF\xD1\xD2\xD3\xD4\xD5\xD6\xD9\xDA\xDB\xDC\xDD";
+var ACCENT_FOLD_TO = "aaaaaaceeeeiiiinooooouuuuyyAAAAAACEEEEIIIINOOOOOUUUUY";
+function foldAccents(input) {
+  let out = "";
+  for (const ch of input.toLowerCase()) {
+    const i = ACCENT_FOLD_FROM.indexOf(ch);
+    out += i >= 0 ? ACCENT_FOLD_TO[i] : ch;
+  }
+  return out;
+}
+
+// src/trunk/facility-identity.ts
+var SHADOW_PROXIMITY_METERS = 250;
+function foldPlaceName(input) {
+  const folded = foldAccents(String(input ?? ""));
+  return folded.replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
+}
+function distanceMeters(a, b) {
+  const R = 6371e3;
+  const dLat = (b.latitude - a.latitude) * Math.PI / 180;
+  const dLon = (b.longitude - a.longitude) * Math.PI / 180;
+  const lat1 = a.latitude * Math.PI / 180;
+  const lat2 = b.latitude * Math.PI / 180;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+function findShadowedPlace(candidates, target) {
+  const wanted = foldPlaceName(target.name);
+  if (!wanted) return null;
+  let best = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (const candidate of candidates) {
+    if (foldPlaceName(candidate.name) !== wanted) continue;
+    const d = distanceMeters(target, candidate);
+    if (d <= SHADOW_PROXIMITY_METERS && d < bestDistance) {
+      best = candidate;
+      bestDistance = d;
+    }
+  }
+  return best;
+}
+function shadowRefusalMessage(placeName) {
+  return `\xAB ${placeName} \xBB existe d\xE9j\xE0 sur la carte \xE0 cet endroit. Ce n'est pas une cr\xE9ation : c'est une revendication. Ouvrez la fiche du lieu et revendiquez-le (preuve de contr\xF4le, arbitrage op\xE9rateur).`;
+}
+function slotStanding(slots) {
+  const live = slots.filter((s) => s.status !== "revoked");
+  const free = live.filter((s) => s.source === "free");
+  const paid = live.filter((s) => s.source === "wallet" || s.source === "workspace");
+  const freeUsed = free.filter((s) => s.status === "assigned").length;
+  const freeAvailable = free.filter((s) => s.status === "available").length;
+  const paidUsed = paid.filter((s) => s.status === "assigned").length;
+  const paidAvailable = paid.filter((s) => s.status === "available").length;
+  const canCreate = freeAvailable > 0 || paidAvailable > 0;
+  return {
+    freeTotal: free.length,
+    freeUsed,
+    freeAvailable,
+    paidTotal: paid.length,
+    paidUsed,
+    paidAvailable,
+    canCreate,
+    needsPaidSlot: !canCreate
+  };
 }
 
 // src/domain/invariants.ts
@@ -576,16 +643,6 @@ function database() {
   return neon2(url);
 }
 var PUBLIC_TRUST_STATES = /* @__PURE__ */ new Set(["unclaimed", "unconfirmed", "confirmed"]);
-var ACCENT_FOLD_FROM = "\xE0\xE2\xE4\xE1\xE3\xE5\xE7\xE8\xE9\xEA\xEB\xEC\xED\xEE\xEF\xF1\xF2\xF3\xF4\xF5\xF6\xF9\xFA\xFB\xFC\xFD\xFF\xC0\xC2\xC4\xC1\xC3\xC5\xC7\xC8\xC9\xCA\xCB\xCC\xCD\xCE\xCF\xD1\xD2\xD3\xD4\xD5\xD6\xD9\xDA\xDB\xDC\xDD";
-var ACCENT_FOLD_TO = "aaaaaaceeeeiiiinooooouuuuyyAAAAAACEEEEIIIINOOOOOUUUUY";
-function foldAccents(input) {
-  let out = "";
-  for (const ch of input.toLowerCase()) {
-    const i = ACCENT_FOLD_FROM.indexOf(ch);
-    out += i >= 0 ? ACCENT_FOLD_TO[i] : ch;
-  }
-  return out;
-}
 function buildWordBoundaryPattern(raw) {
   const tokens = foldAccents(raw).split(/[^a-z0-9]+/).filter((t) => t.length > 0);
   if (tokens.length === 0) return null;
@@ -670,6 +727,22 @@ var SellerCataloguePolicyError = class extends Error {
   constructor(message) {
     super(message);
     this.name = "SellerCataloguePolicyError";
+  }
+};
+var FacilityShadowError = class extends Error {
+  existingFacilityId;
+  existingFacilityName;
+  constructor(existingFacilityId, existingFacilityName) {
+    super(shadowRefusalMessage(existingFacilityName));
+    this.name = "FacilityShadowError";
+    this.existingFacilityId = existingFacilityId;
+    this.existingFacilityName = existingFacilityName;
+  }
+};
+var SlotPolicyError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "SlotPolicyError";
   }
 };
 var BuyerSearchPolicyError = class extends Error {
@@ -1444,6 +1517,26 @@ function createTrunkRepository(sql = database()) {
           )
         on conflict (account_id) where source = 'free' do nothing
       `);
+      if (input.latitude !== null && input.longitude !== null) {
+        const box = 0.01;
+        const candidateRows = await retryDatabase(() => sql`
+          select f.id, f.name, f.latitude, f.longitude
+          from v2_facilities f
+          where f.latitude between ${input.latitude - box} and ${input.latitude + box}
+            and f.longitude between ${input.longitude - box} and ${input.longitude + box}
+            and f.trust_state <> 'rejected'
+            and not exists (
+              select 1 from v2_accounts a
+              where a.auth_user_id = ${input.authUserId} and a.id = f.account_id
+            )
+          limit 200
+        `);
+        const shadowed = findShadowedPlace(
+          candidateRows.map((r) => ({ id: String(r.id), name: String(r.name), latitude: Number(r.latitude), longitude: Number(r.longitude) })),
+          { name: input.name, latitude: input.latitude, longitude: input.longitude }
+        );
+        if (shadowed) throw new FacilityShadowError(shadowed.id, shadowed.name);
+      }
       const rows = await retryDatabase(() => sql`
         with seller as (
           select a.id
@@ -1495,15 +1588,112 @@ function createTrunkRepository(sql = database()) {
           from inserted
           where fs.id = (select id from available_slot)
           returning fs.id as slot_id, fs.facility_id
+        ), account_promoted as (
+          -- S-31 : créer (ou revendiquer) une entité débloque la publication. Sans cette
+          -- promotion, l'offre exige seller_ready que SEULE l'activation admin accordait —
+          -- un créateur ne pouvait jamais vendre (le bug rapporté). Même geste que le claim.
+          update v2_accounts a
+          set onboarding_state = 'seller_ready', updated_at = now()
+          from inserted i
+          where a.id = i.account_id and a.onboarding_state <> 'seller_ready'
+          returning a.id
         )
-        select facility_id, slot_id, created from existing
+        select existing.facility_id, existing.slot_id, existing.created
+        from existing
         union all
-        select assigned.facility_id, assigned.slot_id, true from assigned
+        -- LEFT join : account_promoted est VIDE quand le vendeur est déjà seller_ready
+        -- (2ᵉ facilité, multi-emplacement). Un inner join supprimerait la ligne créée et la
+        -- fonction renverrait « aucun emplacement » alors que le lieu ET le slot existent.
+        select assigned.facility_id, assigned.slot_id, true
+        from assigned left join account_promoted on true
         limit 1
       `);
       const row = rows[0];
-      if (!row) throw new SellerCataloguePolicyError("FORBIDDEN_OR_SLOT_REQUIRED");
+      if (!row) {
+        const slotRows = await retryDatabase(() => sql`
+          select count(*)::int as available
+          from v2_facility_slots fs
+          join v2_accounts a on a.id = fs.account_id
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null and fs.status = 'available'
+        `);
+        const available = Number(slotRows[0]?.available ?? 0);
+        if (available === 0) throw new SlotPolicyError("Aucun emplacement disponible : achetez un emplacement pour cr\xE9er une autre facilit\xE9.");
+        throw new SellerCataloguePolicyError("FORBIDDEN_OR_SLOT_REQUIRED");
+      }
       return { facilityId: String(row.facility_id), slotId: String(row.slot_id), trustState: "unconfirmed", facilityType: input.facilityType, created: row.created === true };
+    },
+    async getSellerSlotStanding(input) {
+      const rows = await retryDatabase(() => sql`
+        select fs.source, fs.status
+        from v2_facility_slots fs
+        join v2_accounts a on a.id = fs.account_id
+        where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+      `);
+      const facts = rows.map((r) => ({ source: String(r.source), status: String(r.status) }));
+      return {
+        standing: slotStanding(facts),
+        slotPriceMinor: convertUsdMinorToLocal(OMNI_SLOT_PRICE_USD_MINOR, OMNI_DEFAULT_LOCAL_CURRENCY),
+        billingCurrency: OMNI_DEFAULT_LOCAL_CURRENCY
+      };
+    },
+    async purchaseFacilitySlot(input) {
+      if (!input.idempotencyKey.trim() || input.idempotencyKey.length > 180) throw new SlotPolicyError("A bounded idempotency key is required to purchase a slot.");
+      const priceMinor = convertUsdMinorToLocal(OMNI_SLOT_PRICE_USD_MINOR, OMNI_DEFAULT_LOCAL_CURRENCY);
+      const reference = `facility-slot:${input.idempotencyKey.trim()}`;
+      const rows = await retryDatabase(() => sql`
+        with seller as (
+          select a.id as account_id, w.id as wallet_id
+          from v2_accounts a
+          join v2_wallets w on w.account_id = a.id
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+          limit 1
+        ), balance as (
+          select coalesce(sum(case when e.kind in ('recharge', 'bonus_grant', 'reversal', 'coupon_credit') then e.amount_minor else -e.amount_minor end), 0)::int as balance_minor
+          from v2_wallet_ledger_entries e
+          join seller s on s.wallet_id = e.wallet_id
+          where e.status = 'confirmed'
+        ), existing_spend as (
+          select e.wallet_id, e.amount_minor
+          from v2_wallet_ledger_entries e
+          join seller s on s.wallet_id = e.wallet_id
+          where e.kind = 'slot_spend' and e.reference = ${reference}
+          limit 1
+        ), spend as (
+          insert into v2_wallet_ledger_entries (wallet_id, kind, amount_minor, status, reference, created_at, confirmed_at)
+          select s.wallet_id, 'slot_spend', ${priceMinor}, 'confirmed', ${reference}, now(), now()
+          from seller s cross join balance b
+          where b.balance_minor >= ${priceMinor} and not exists (select 1 from existing_spend)
+          on conflict (wallet_id, kind, reference) do nothing
+          returning wallet_id, amount_minor
+        ), slot as (
+          -- Le slot est créé UNIQUEMENT par le débit FRAIS. Un rejeu (existing_spend) ne doit
+          -- jamais créer un second slot — sinon un retry réseau donnerait deux slots pour un paiement.
+          insert into v2_facility_slots (account_id, source, status)
+          select s.account_id, 'wallet', 'available'
+          from seller s join spend sp on sp.wallet_id = s.wallet_id
+          returning id, account_id
+        )
+        select slot.id as slot_id, s.wallet_id, sp.amount_minor, true as purchased
+        from slot cross join seller s cross join spend sp
+        union all
+        select null as slot_id, es.wallet_id, es.amount_minor, false as purchased
+        from existing_spend es
+        limit 1
+      `);
+      const row = rows[0];
+      if (!row) {
+        const balanceRows = await retryDatabase(() => sql`
+          select coalesce(sum(case when e.kind in ('recharge', 'bonus_grant', 'reversal', 'coupon_credit') then e.amount_minor else -e.amount_minor end), 0)::int as balance_minor
+          from v2_wallet_ledger_entries e
+          join v2_wallets w on w.id = e.wallet_id
+          join v2_accounts a on a.id = w.account_id
+          where a.auth_user_id = ${input.authUserId} and e.status = 'confirmed'
+        `);
+        const balance = Number(balanceRows[0]?.balance_minor ?? 0);
+        throw new SlotPolicyError(`Solde insuffisant pour acheter un emplacement (${priceMinor} requis, ${Math.max(0, balance)} disponible).`);
+      }
+      return { slotId: row.slot_id === null || row.slot_id === void 0 ? null : String(row.slot_id), walletId: String(row.wallet_id), amountMinor: Number(row.amount_minor), billingCurrency: OMNI_DEFAULT_LOCAL_CURRENCY, purchased: row.purchased === true };
     },
     async updateSellerFacilityContact(input) {
       const contactValid = (v) => v === null || v.trim().length >= 5 && v.trim().length <= 40;
@@ -2058,6 +2248,17 @@ function createTrunkRepository(sql = database()) {
       if (!["certified", "rejected", "needs_more_evidence"].includes(input.outcome) || input.reason.trim().length < 3 || input.reason.trim().length > 1e3) {
         throw new FieldPilotPolicyError("A review outcome and a bounded reason are required.");
       }
+      await retryDatabase(() => sql`
+        insert into v2_facility_slots (account_id, source)
+        select vr.claimant_account_id, 'free'
+        from v2_verification_requests vr
+        where vr.id = ${input.requestId}::uuid
+          and vr.state in ('submitted', 'admin_review')
+          and not exists (
+            select 1 from v2_facility_slots fs where fs.account_id = vr.claimant_account_id and fs.source = 'free'
+          )
+        on conflict (account_id) where source = 'free' do nothing
+      `);
       const rows = await retryDatabase(() => sql`
         with reviewer as (
           select a.id
@@ -2095,7 +2296,7 @@ function createTrunkRepository(sql = database()) {
               updated_at = now()
           from candidate join request_update on request_update.facility_id = candidate.facility_id
           where f.id = candidate.facility_id
-          returning f.id, f.entity_id, f.trust_state
+          returning f.id, f.entity_id, f.trust_state, f.account_id
         ), entity_update as (
           -- R-3b : S-30 veut la confiance sur l'ENTITE. Sans ce miroir, la colonne d'entite
           -- reste celle du backfill et sert une confiance perimee des la premiere transition.
@@ -2112,7 +2313,7 @@ function createTrunkRepository(sql = database()) {
           returning id, facility_id
         ), notification_insert as (
           insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
-          select candidate.claimant_account_id, 'claim_reviewed', 'verification_request', request_update.id::text, request_update.id::text || ':' || request_update.version::text || ':' || ${input.outcome}, jsonb_build_object('outcome', ${input.outcome}), ${input.correlationId}
+          select candidate.claimant_account_id, 'claim_reviewed', 'verification_request', request_update.id::text, request_update.id::text || ':' || request_update.version::text || ':' || ${input.outcome}, jsonb_build_object('outcome', ${input.outcome}::text), ${input.correlationId}
           from candidate join request_update on request_update.id = candidate.id
           on conflict (recipient_account_id, dedupe_key) do nothing
           returning id
@@ -2128,6 +2329,17 @@ function createTrunkRepository(sql = database()) {
       `);
       const row = rows[0];
       if (!row) throw new FieldPilotPolicyError("The claim is not reviewable by this reviewer or is no longer pending.");
+      if (input.outcome === "certified") {
+        await retryDatabase(() => sql`
+          update v2_facility_slots fs
+          set status = 'assigned', facility_id = f.id, assigned_at = now()
+          from v2_facilities f
+          where f.id = ${String(row.facility_id)}::uuid
+            and fs.account_id = f.account_id
+            and fs.status = 'available'
+            and not exists (select 1 from v2_facility_slots x where x.facility_id = f.id)
+        `);
+      }
       const facilityTrust = row.facility_trust ? String(row.facility_trust) : input.outcome === "certified" ? "unconfirmed" : input.outcome === "needs_more_evidence" ? "verification_draft" : "rejected";
       return { requestId: String(row.request_id), facilityId: String(row.facility_id), outcome: input.outcome, state: input.outcome, facilityTrust, version: Number(row.version) };
     },
@@ -8118,6 +8330,12 @@ function toApiErrorResponse(correlationId, error) {
   if (error instanceof InsufficientCreditsError) {
     return { status: 403, body: errorBody(correlationId, "INSUFFICIENT_CREDITS", error.message) };
   }
+  if (error instanceof FacilityShadowError) {
+    return { status: 409, body: { ok: false, correlationId, error: { code: "FACILITY_SHADOWED", message: error.message, retryable: false, existingFacilityId: error.existingFacilityId, existingFacilityName: error.existingFacilityName } } };
+  }
+  if (error instanceof SlotPolicyError) {
+    return { status: 409, body: errorBody(correlationId, "SLOT_REQUIRED", error.message) };
+  }
   if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof SellerCataloguePolicyError || error instanceof TransactionPolicyError || error instanceof FieldPilotPolicyError || error instanceof WalletPolicyError || error instanceof BuyerSearchPolicyError) {
     return { status: 409, body: errorBody(correlationId, "POLICY_REJECTED", error.message) };
   }
@@ -9964,6 +10182,32 @@ async function handleApi(req, res, pathname, url) {
       const validated = validateSellerFacilityCreate(input, idempotencyKey, authUserId);
       const result = await repository.createSellerFacility(validated);
       json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "GET" && pathname === "/api/v2/seller/slots") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in to view your facility slots."));
+        return true;
+      }
+      const result = await repository.getSellerSlotStanding({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/seller/slots") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in to purchase a facility slot."));
+        return true;
+      }
+      const rawIdempotencyKey = req.headers["idempotency-key"];
+      const idempotencyKey = Array.isArray(rawIdempotencyKey) ? rawIdempotencyKey[0] : rawIdempotencyKey ?? "";
+      if (typeof idempotencyKey !== "string" || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "A valid idempotency key is required."));
+        return true;
+      }
+      const result = await repository.purchaseFacilitySlot({ authUserId, idempotencyKey });
+      json(res, result.purchased ? 201 : 200, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === "PATCH" && pathname.startsWith("/api/v2/seller/facilities/") && pathname.endsWith("/contact")) {

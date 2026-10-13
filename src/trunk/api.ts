@@ -1,6 +1,6 @@
 import { upload as uploadPrivateBlob } from '@vercel/blob/client';
 import { raceWithTimeout } from './request-timeout';
-import type { AccountCapabilitiesResult, AdCampaignCreateResult, AdCampaignListResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, ClaimByOsmRefInput, ClaimByOsmRefResult, CreateSellerFacilityResult, CreateTeamResult, FacilityOperationalState, FacilityType, MyTeamInvite, RoleManagementAccount, RoleManagementResult, TeamInviteResult, TeamListResult, TeamMemberResult, TeamInviteAcceptResult, FacilityZoneAssignment, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, CancelAvailabilityRequestResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, PublicEntity, PublicEntityDetail, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PublicStats, RoutingResult, PurchaseIntentResult, QrTokenIssueResult, QrRevocationResult, QrVerificationResult, DemandSignalsResult, OfferReportMotif, OfferReportCreateResult, OfferReportListResult, OfferReportOutcome, OfferReportDecisionResult, AcquisitionObjectiveListResult, AcquisitionObjectiveCreateResult, AcquisitionObjectiveState, FieldVisitSubjectType, FieldVisitCreateResult, FieldVisitListResult, FieldVisitClaimResult, FieldVisitState, VisitReportSubmitResult, OperatorEntitySideResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, SellerVerification, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind } from './types';
+import type { AccountCapabilitiesResult, AdCampaignCreateResult, AdCampaignListResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, ClaimByOsmRefInput, ClaimByOsmRefResult, CreateSellerFacilityResult, CreateTeamResult, FacilityOperationalState, FacilityType, MyTeamInvite, RoleManagementAccount, RoleManagementResult, TeamInviteResult, TeamListResult, TeamMemberResult, TeamInviteAcceptResult, FacilityZoneAssignment, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, CancelAvailabilityRequestResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, PublicEntity, PublicEntityDetail, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PublicStats, RoutingResult, PurchaseIntentResult, QrTokenIssueResult, QrRevocationResult, QrVerificationResult, DemandSignalsResult, OfferReportMotif, OfferReportCreateResult, OfferReportListResult, OfferReportOutcome, OfferReportDecisionResult, AcquisitionObjectiveListResult, AcquisitionObjectiveCreateResult, AcquisitionObjectiveState, FieldVisitSubjectType, FieldVisitCreateResult, FieldVisitListResult, FieldVisitClaimResult, FieldVisitState, VisitReportSubmitResult, OperatorEntitySideResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, SellerVerification, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind, SellerSlotStandingResult, FacilitySlotPurchaseResult } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -507,6 +507,20 @@ export async function updateSellerFacilityContact(input: { token: string; facili
     method: 'PATCH',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
     body: JSON.stringify({ contactPhone: input.contactPhone, contactWhatsapp: input.contactWhatsapp }),
+  });
+  return parse(response);
+}
+
+// BRANCHES-SLOT (D-J) — solde d'emplacements + achat d'un emplacement payant.
+export async function getSellerSlots(input: { token: string }): Promise<ApiResult<SellerSlotStandingResult>> {
+  const response = await fetchWithRecovery('/api/v2/seller/slots', { headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` } });
+  return parse(response);
+}
+
+export async function purchaseSellerSlot(input: { token: string; idempotencyKey: string }): Promise<ApiResult<FacilitySlotPurchaseResult>> {
+  const response = await fetchWithRecovery('/api/v2/seller/slots', {
+    method: 'POST',
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}`, 'Idempotency-Key': input.idempotencyKey },
   });
   return parse(response);
 }

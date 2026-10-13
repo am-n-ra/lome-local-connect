@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LocateFixed, RefreshCw, ScanLine } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { createSellerProductDraft, createSellerFacility, createFacilityAdCampaign, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, listClosedTransactions, listFacilityAdCampaigns, listTransactions, refreshProductAvailability, renewFacilityPro, setFacilityRenewalOptIn, setProductAutoAvailability, setSellerFacilityOperationalState, unlockFacilityBonus, updateSellerFacilityContact } from './api';
+import { createSellerProductDraft, createSellerFacility, createFacilityAdCampaign, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, getSellerSlots, listClosedTransactions, listFacilityAdCampaigns, listTransactions, purchaseSellerSlot, refreshProductAvailability, renewFacilityPro, setFacilityRenewalOptIn, setProductAutoAvailability, setSellerFacilityOperationalState, unlockFacilityBonus, updateSellerFacilityContact } from './api';
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
 import { isSinglePiece } from './offer-uniqueness';
 import { Skeleton, SkeletonDetail } from './Skeleton';
-import type { AdCampaignListResult, FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAdCampaign, SellerAvailabilityRequest, SellerCatalogueResult, SellerFacilityAnalytics, OpenTransactionSummary, ClosedTransactionSummary, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind } from './types';
+import type { AdCampaignListResult, FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAdCampaign, SellerAvailabilityRequest, SellerCatalogueResult, SellerFacilityAnalytics, SellerSlotStandingResult, OpenTransactionSummary, ClosedTransactionSummary, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind } from './types';
 import { relativeAge, transactionStateLabel } from './transaction-time';
-import { formatMoney, formatUsdSticker } from '../domain/currency';
+import { formatMoney, formatUsdSticker, resolveUserCurrency } from '../domain/currency';
 import { SELLER_BONUS_USD_MINOR } from '../domain/pricing';
 
 const SELLER_AVAILABILITY_LABELS: Record<string, string> = { en_stock: 'En stock', verifie: 'Vérifié', a_valider: 'À valider', bientot: 'Bientôt' };
@@ -24,6 +24,8 @@ type SellerV13Props = {
   onMap?: () => void;
   /** Entrée vendeur : ouvre le brouillon de revendication sur une facilité publique. */
   onClaim?: (facility: PublicFacility) => void;
+  /** BRANCHES-IDENTITY : la création recouvre un lieu existant → ouvrir sa fiche pour revendiquer. */
+  onClaimExisting?: (facilityId: string) => void;
   /** X3 (S-27) — ouvrir la Room d'une transaction vendeur (liste + chat + paiement + remise). */
   onOpenTransaction?: (transaction: { transactionId: string; counterparty: string | null; actorRole: 'buyer' | 'seller'; lastEventAt?: string | null }) => void;
   /** Entrée directe dans le formulaire de création (ex. depuis « la facilité n'est pas sur la carte »). */
@@ -40,7 +42,7 @@ type SellerV13Props = {
 // canonique. Une seule verite, du catalogue jusqu'au libelle.
 const BONUS_LABEL = formatUsdSticker(SELLER_BONUS_USD_MINOR);
 
-export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, onRefresh, onScan, onMap, onClaim, onOpenTransaction, startInCreate = false, onConsumeCreateIntent, catalogue: propsCatalogue, queue: propsQueue = [], publicFacilities = [], ownedIds = [] }: SellerV13Props) {
+export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, onRefresh, onScan, onMap, onClaim, onClaimExisting, onOpenTransaction, startInCreate = false, onConsumeCreateIntent, catalogue: propsCatalogue, queue: propsQueue = [], publicFacilities = [], ownedIds = [] }: SellerV13Props) {
   const [error, setError] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(startInCreate);
   const [busy, setBusy] = useState(false);
@@ -50,6 +52,13 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
   const [toogleBusy, setToogleBusy] = useState(false);
   const [createBusy, setCreateBusy] = useState(false);
   const [createError, setCreateError] = useState('');
+  // BRANCHES-SLOT (D-J) — solde d'emplacements du compte + achat d'un emplacement payant.
+  const [slots, setSlots] = useState<SellerSlotStandingResult | null>(null);
+  const [slotBusy, setSlotBusy] = useState(false);
+  const [slotError, setSlotError] = useState('');
+  // BRANCHES-IDENTITY — la création recouvrirait un lieu existant : on nomme le lieu et on
+  // propose la revendication au lieu d'un refus sec.
+  const [shadow, setShadow] = useState<{ id: string; name: string; message: string } | null>(null);
   const [facilityType, setFacilityType] = useState<FacilityType>('fixe');
   const [ownerKind, setOwnerKind] = useState<OfferOwnerKind>('organisation');
   const [facilityName, setFacilityName] = useState('');
@@ -99,6 +108,17 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
 
   useEffect(() => { if (!propsCatalogue && !catalogue) void load(); }, [load, propsCatalogue, catalogue]);
 
+  // BRANCHES-SLOT — le solde d'emplacements décide si créer est possible (D-J : 1 gratuit, puis payant).
+  const loadSlots = useCallback(async () => {
+    try {
+      const token = await getAuthToken();
+      if (!token) return;
+      const result = await getSellerSlots({ token });
+      if (result.ok && result.data) setSlots(result.data);
+    } catch { /* best-effort : l'absence de solde n'empêche pas l'affichage du reste */ }
+  }, []);
+  useEffect(() => { void loadSlots(); }, [loadSlots]);
+
   // X3 — charge les transactions DU VENDEUR (même lecture membre-scopée que l'acheteur,
   // `actorRole='seller'` renvoyé par le serveur). Aucune requête neuve.
   const loadSellerTransactions = useCallback(async () => {
@@ -138,6 +158,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
 
   const submitCreate = useCallback(async () => {
     setCreateError('');
+    setShadow(null);
     if (!facilityName.trim()) { setCreateError('Le nom de la facilité est requis.'); return; }
     if (facilityType !== 'digital' && (!facilityLat.trim() || !facilityLng.trim())) { setCreateError('Saisissez vos coordonnées (ou « Me localiser »).'); return; }
     const latitude = facilityLat.trim() ? Number(facilityLat) : null;
@@ -163,13 +184,34 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
         setFacilityRayon('5');
         setFacilityPhone('');
         setFacilityWhatsapp('');
+        void loadSlots();
         if (onRefresh) onRefresh(); else void load();
+      } else if (result.error?.code === 'FACILITY_SHADOWED' && result.error.existingFacilityId) {
+        // BRANCHES-IDENTITY — on ne refuse pas sèchement : on nomme le lieu existant et on
+        // route vers la REVENDICATION (c'est la voie légitime pour prendre un lieu déjà sur la carte).
+        setShadow({ id: result.error.existingFacilityId, name: result.error.existingFacilityName ?? facilityName.trim(), message: result.error.message });
+      } else if (result.error?.code === 'SLOT_REQUIRED') {
+        setCreateError(result.error.message);
+        void loadSlots();
       } else {
         setCreateError(result.error?.message ?? 'Création non enregistrée.');
       }
     } catch { setCreateError('Création non enregistrée.'); }
     finally { setCreateBusy(false); }
-  }, [facilityName, facilityType, facilityCategory, facilityAddress, facilityLat, facilityLng, facilityRayon, onRefresh, load]);
+  }, [facilityName, facilityType, facilityCategory, facilityAddress, facilityLat, facilityLng, facilityRayon, facilityPhone, facilityWhatsapp, ownerKind, onRefresh, load, loadSlots]);
+
+  // BRANCHES-SLOT — acheter un emplacement payant (débit wallet, D-J). Idempotent.
+  const buySlot = useCallback(async () => {
+    setSlotError(''); setSlotBusy(true);
+    try {
+      const token = await getAuthToken();
+      if (!token) { setSlotError('Connectez-vous pour acheter un emplacement.'); return; }
+      const result = await purchaseSellerSlot({ token, idempotencyKey: crypto.randomUUID() });
+      if (result.ok) { setToast('Emplacement ajouté. Vous pouvez créer une autre facilité.'); void loadSlots(); }
+      else setSlotError(result.error?.message ?? 'Achat non enregistré.');
+    } catch { setSlotError('Achat non enregistré.'); }
+    finally { setSlotBusy(false); }
+  }, [loadSlots]);
 
   const lang = sellerRouteLabels();
   const ws = buildSellerWorkspace({
@@ -462,6 +504,67 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
     </div>
   );
 
+  // BRANCHES-IDENTITY/SLOT — le formulaire de création est rendu à DEUX endroits (entrée vendeur
+  // sans facilité, et vendeur installé qui ouvre une facilité supplémentaire). Une seule définition
+  // ⇒ aucun risque de divergence entre les deux chemins (leçon portée de sélecteur / markup partagé).
+  const renderCreateForm = () => (
+    <div className="cardbox" style={{ marginTop: 9, padding: 11 }}>
+      {createError && <p className="sub" role="alert">{createError}</p>}
+      <label className="tiny muted" style={{ display: 'block' }}>Vous vendez en tant que</label>
+      <div className="btnrow" style={{ gap: 6, marginTop: 4 }}>
+        {(['individu', 'organisation'] as OfferOwnerKind[]).map((k) => (
+          <button key={k} type="button" className={ownerKind === k ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', flex: 1, minHeight: 30 }} onClick={() => setOwnerKind(k)}>{k === 'individu' ? 'Particulier' : 'Commerce / organisation'}</button>
+        ))}
+      </div>
+      <p className="tiny muted" style={{ marginTop: 6 }}>
+        {ownerKind === 'individu'
+          ? 'Un particulier : une vente confirmée suffit à confirmer votre confiance.'
+          : 'Un commerce : trois ventes à des acheteurs distincts confirment votre confiance.'}
+      </p>
+      <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Type d'établissement</label>
+      <div className="btnrow" style={{ gap: 6, marginTop: 4 }}>
+        {(['fixe', 'mobile', 'digital'] as FacilityType[]).map((t) => (
+          <button key={t} type="button" className={facilityType === t ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', flex: 1, minHeight: 30 }} onClick={() => setFacilityType(t)}>{t === 'fixe' ? 'Fixe' : t === 'mobile' ? 'Mobile / ambulant' : 'Digital / en ligne'}</button>
+        ))}
+      </div>
+      <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Nom</label>
+      <input className="input" type="text" value={facilityName} onChange={(e) => setFacilityName(e.target.value)} maxLength={180} placeholder="Ex: Le Fournil d'Or" style={{ width: '100%' }} />
+      <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Catégorie (optionnel)</label>
+      <input className="input" type="text" value={facilityCategory} onChange={(e) => setFacilityCategory(e.target.value)} maxLength={120} placeholder="Ex: Boulangerie & Pâtisserie" style={{ width: '100%' }} />
+      <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Adresse (optionnel)</label>
+      <input className="input" type="text" value={facilityAddress} onChange={(e) => setFacilityAddress(e.target.value)} maxLength={200} placeholder="Quartier, rue…" style={{ width: '100%' }} />
+      {facilityType !== 'digital' ? (
+        <>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginTop: 9 }}>
+            <label className="tiny muted">Position</label>
+            <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} type="button" onClick={locateMe}><LocateFixed size={13} /> Me localiser</button>
+          </div>
+          <div className="row" style={{ gap: 6, marginTop: 4 }}>
+            <input className="input" type="number" inputMode="decimal" value={facilityLat} onChange={(e) => setFacilityLat(e.target.value)} placeholder="Latitude" style={{ flex: 1, minWidth: 0 }} />
+            <input className="input" type="number" inputMode="decimal" value={facilityLng} onChange={(e) => setFacilityLng(e.target.value)} placeholder="Longitude" style={{ flex: 1, minWidth: 0 }} />
+          </div>
+        </>
+      ) : (
+        <p className="tiny muted" style={{ marginTop: 9 }}>Un établissement digital n'a pas de point physique : il sera découvert par nom ou catégorie.</p>
+      )}
+      {facilityType === 'mobile' && (
+        <>
+          <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Rayon de découverte (km)</label>
+          <input className="input" type="number" inputMode="decimal" min={1} max={500} value={facilityRayon} onChange={(e) => setFacilityRayon(e.target.value)} style={{ width: '100%' }} />
+        </>
+      )}
+      <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Téléphone (optionnel)</label>
+      <input className="input" type="tel" value={facilityPhone} onChange={(e) => setFacilityPhone(e.target.value)} maxLength={40} placeholder="+228 90 00 00 00" style={{ width: '100%' }} />
+      <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>WhatsApp (optionnel)</label>
+      <input className="input" type="tel" value={facilityWhatsapp} onChange={(e) => setFacilityWhatsapp(e.target.value)} maxLength={40} placeholder="+228 90 00 00 00" style={{ width: '100%' }} />
+      <p className="tiny muted" style={{ marginTop: 6 }}>Le contact n'est visible par les acheteurs qu'après une intention d'achat (jamais sur la fiche publique).</p>
+      <div className="btnrow" style={{ marginTop: 11 }}>
+        <button className="btn" type="button" disabled={createBusy} onClick={() => void submitCreate()}>{createBusy ? 'Création…' : 'Créer ma facilité'}</button>
+        <button className="btn ghost" type="button" disabled={createBusy} onClick={() => setShowCreateForm(false)}>Annuler</button>
+      </div>
+    </div>
+  );
+
   return (
     <section className="sheet h-mid" data-sheet="seller" role="region" aria-label="Espace vendeur">
       <div className="handle" />
@@ -506,66 +609,70 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
               <button className="btn ghost" type="button" onClick={() => { setCreateError(''); setShowCreateForm((v) => !v); }}>Créer une facilité</button>
             </div>
           )}
-          {showCreateForm && (
-            <div className="cardbox" style={{ marginTop: 9, padding: 11 }}>
-              {createError && <p className="sub" role="alert">{createError}</p>}
-              <label className="tiny muted" style={{ display: 'block' }}>Vous vendez en tant que</label>
-              <div className="btnrow" style={{ gap: 6, marginTop: 4 }}>
-                {(['individu', 'organisation'] as OfferOwnerKind[]).map((k) => (
-                  <button key={k} type="button" className={ownerKind === k ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', flex: 1, minHeight: 30 }} onClick={() => setOwnerKind(k)}>{k === 'individu' ? 'Particulier' : 'Commerce / organisation'}</button>
-                ))}
-              </div>
-              <p className="tiny muted" style={{ marginTop: 6 }}>
-                {ownerKind === 'individu'
-                  ? 'Un particulier : une vente confirmée suffit à confirmer votre confiance.'
-                  : 'Un commerce : trois ventes à des acheteurs distincts confirment votre confiance.'}
-              </p>
-              <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Type d'établissement</label>
-              <div className="btnrow" style={{ gap: 6, marginTop: 4 }}>
-                {(['fixe', 'mobile', 'digital'] as FacilityType[]).map((t) => (
-                  <button key={t} type="button" className={facilityType === t ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', flex: 1, minHeight: 30 }} onClick={() => setFacilityType(t)}>{t === 'fixe' ? 'Fixe' : t === 'mobile' ? 'Mobile / ambulant' : 'Digital / en ligne'}</button>
-                ))}
-              </div>
-              <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Nom</label>
-              <input className="input" type="text" value={facilityName} onChange={(e) => setFacilityName(e.target.value)} maxLength={180} placeholder="Ex: Le Fournil d'Or" style={{ width: '100%' }} />
-              <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Catégorie (optionnel)</label>
-              <input className="input" type="text" value={facilityCategory} onChange={(e) => setFacilityCategory(e.target.value)} maxLength={120} placeholder="Ex: Boulangerie & Pâtisserie" style={{ width: '100%' }} />
-              <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Adresse (optionnel)</label>
-              <input className="input" type="text" value={facilityAddress} onChange={(e) => setFacilityAddress(e.target.value)} maxLength={200} placeholder="Quartier, rue…" style={{ width: '100%' }} />
-              {facilityType !== 'digital' ? (
-                <>
-                  <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginTop: 9 }}>
-                    <label className="tiny muted">Position</label>
-                    <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} type="button" onClick={locateMe}><LocateFixed size={13} /> Me localiser</button>
-                  </div>
-                  <div className="row" style={{ gap: 6, marginTop: 4 }}>
-                    <input className="input" type="number" inputMode="decimal" value={facilityLat} onChange={(e) => setFacilityLat(e.target.value)} placeholder="Latitude" style={{ flex: 1, minWidth: 0 }} />
-                    <input className="input" type="number" inputMode="decimal" value={facilityLng} onChange={(e) => setFacilityLng(e.target.value)} placeholder="Longitude" style={{ flex: 1, minWidth: 0 }} />
-                  </div>
-                </>
-              ) : (
-                <p className="tiny muted" style={{ marginTop: 9 }}>Un établissement digital n'a pas de point physique : il sera découvert par nom ou catégorie.</p>
-              )}
-              {facilityType === 'mobile' && (
-                <>
-                  <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Rayon de découverte (km)</label>
-                  <input className="input" type="number" inputMode="decimal" min={1} max={500} value={facilityRayon} onChange={(e) => setFacilityRayon(e.target.value)} style={{ width: '100%' }} />
-                </>
-              )}
-              <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Téléphone (optionnel)</label>
-              <input className="input" type="tel" value={facilityPhone} onChange={(e) => setFacilityPhone(e.target.value)} maxLength={40} placeholder="+228 90 00 00 00" style={{ width: '100%' }} />
-              <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>WhatsApp (optionnel)</label>
-              <input className="input" type="tel" value={facilityWhatsapp} onChange={(e) => setFacilityWhatsapp(e.target.value)} maxLength={40} placeholder="+228 90 00 00 00" style={{ width: '100%' }} />
-              <p className="tiny muted" style={{ marginTop: 6 }}>Le contact n'est visible par les acheteurs qu'après une intention d'achat (jamais sur la fiche publique).</p>
-              <div className="btnrow" style={{ marginTop: 11 }}>
-                <button className="btn" type="button" disabled={createBusy} onClick={() => void submitCreate()}>{createBusy ? 'Création…' : 'Créer ma facilité'}</button>
-                <button className="btn ghost" type="button" disabled={createBusy} onClick={() => setShowCreateForm(false)}>Annuler</button>
+          {/* BRANCHES-IDENTITY — la création recouvre un lieu existant : on nomme le lieu et on
+              route vers la revendication (voie légitime), jamais un refus sec. */}
+          {shadow && (
+            <div className="cardbox" style={{ marginTop: 9, borderColor: 'var(--warn)' }} role="alert">
+              <div className="eyebrow">Lieu déjà sur la carte</div>
+              <p className="sub">{shadow.message}</p>
+              <div className="btnrow" style={{ marginTop: 7 }}>
+                <button className="btn" type="button" onClick={() => onClaimExisting?.(shadow.id)}>Revendiquer « {shadow.name} »</button>
+                <button className="btn ghost" type="button" onClick={() => setShadow(null)}>Changer le nom</button>
               </div>
             </div>
           )}
+          {/* BRANCHES-SLOT (D-J) — emplacements : 1 gratuit par compte, puis payants. Le solde
+              décide de la possibilité de créer, et l'achat est un débit wallet idempotent. */}
+          {slots && (
+            <div className="cardbox" style={{ marginTop: 9 }}>
+              <div className="eyebrow">Emplacements</div>
+              <p className="sub">
+                {slots.standing.freeUsed} / {Math.max(slots.standing.freeTotal, 1)} emplacement gratuit utilisé
+                {slots.standing.paidTotal > 0 ? ` · ${slots.standing.paidUsed} payant${slots.standing.paidUsed > 1 ? 's' : ''}` : ''}
+              </p>
+              {!slots.standing.canCreate && (
+                <>
+                  <p className="tiny muted" style={{ marginTop: 4 }}>Vos emplacements sont tous occupés. Achetez un emplacement pour créer une autre facilité.</p>
+                  {slotError && <p className="sub" role="alert">{slotError}</p>}
+                  <div className="btnrow" style={{ marginTop: 7 }}>
+                    <button className="btn" type="button" disabled={slotBusy} onClick={() => void buySlot()}>
+                      {slotBusy ? 'Achat…' : `Acheter un emplacement · ${formatMoney(slots.slotPriceMinor, slots.billingCurrency)}`}
+                    </button>
+                  </div>
+                </>
+              )}
+              {slots.standing.canCreate && slots.standing.paidAvailable > 0 && (
+                <p className="tiny muted" style={{ marginTop: 4 }}>Un emplacement payant est libre : il sera utilisé à la prochaine création.</p>
+              )}
+            </div>
+          )}
+          {showCreateForm && renderCreateForm()}
         </div>
       )}
       {hasFacility && renderStrip()}
+      {/* BRANCHES-SLOT — un vendeur déjà installé voit aussi son solde d'emplacements, et peut
+          en acheter un pour ouvrir une facilité supplémentaire (D-J : multi-facilités = slots payés). */}
+      {hasFacility && slots && (
+        <div className="cardbox" style={{ marginTop: 9 }}>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="eyebrow">Emplacements</div>
+            <span className="tiny muted">{slots.standing.freeUsed + slots.standing.paidUsed} occupé{slots.standing.freeUsed + slots.standing.paidUsed > 1 ? 's' : ''}</span>
+          </div>
+          <p className="sub" style={{ marginTop: 4 }}>
+            {slots.standing.freeUsed} / {Math.max(slots.standing.freeTotal, 1)} gratuit
+            {slots.standing.paidTotal > 0 ? ` · ${slots.standing.paidUsed} payant${slots.standing.paidUsed > 1 ? 's' : ''}` : ''}
+            {slots.standing.canCreate ? ` · ${slots.standing.freeAvailable + slots.standing.paidAvailable} libre${slots.standing.freeAvailable + slots.standing.paidAvailable > 1 ? 's' : ''}` : ' · aucun libre'}
+          </p>
+          {slotError && <p className="sub" role="alert">{slotError}</p>}
+          <div className="btnrow" style={{ marginTop: 7 }}>
+            <button className="btn ghost" type="button" disabled={slotBusy} onClick={() => void buySlot()}>
+              {slotBusy ? 'Achat…' : `Acheter un emplacement · ${formatMoney(slots.slotPriceMinor, slots.billingCurrency)}`}
+            </button>
+            <button className="btn ghost" type="button" onClick={() => { setCreateError(''); setShowCreateForm((v) => !v); }}>{showCreateForm ? 'Fermer le formulaire' : 'Créer une facilité'}</button>
+          </div>
+          {showCreateForm && renderCreateForm()}
+        </div>
+      )}
       {hasFacility && ws.selFacilityCatalogue?.name && (
         <div className="cardbox" style={{ marginTop: 9 }}>
           <div className="row" style={{ justifyContent: 'space-between' }}>

@@ -4,7 +4,7 @@ import { routingGate } from './routing-gate';
 import { recordRouteRequest, pruneRouteRequests, routeQuotaExceeded } from './route-quota';
 import { deliverPendingPush } from './web-push';
 import { isWebPushConfigured, sendWebPush, vapidConfig } from './web-push-provider';
-import { AvailabilityPolicyError, AvailabilityResponsePolicyError, BuyerSearchPolicyError, createTrunkRepository, ExternalPaymentMethod, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SellerCataloguePolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, AvailabilityResponsePolicyError, BuyerSearchPolicyError, createTrunkRepository, ExternalPaymentMethod, FacilityShadowError, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SellerCataloguePolicyError, SlotPolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration } from './evidence-contract';
 import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, handleVisitEvidenceUpload, readPrivateEvidence } from './evidence-storage';
 import { NeonWebhookError, parseNeonWebhookBody, readNeonWebhookHeaders, routeNeonWebhookEvent, verifyNeonWebhookSignature } from './neon-webhooks';
@@ -91,6 +91,13 @@ export function toApiErrorResponse(correlationId: string, error: unknown) {
   }
   if (error instanceof InsufficientCreditsError) {
     return { status: 403, body: errorBody(correlationId, 'INSUFFICIENT_CREDITS', error.message) };
+  }
+  if (error instanceof FacilityShadowError) {
+    // BRANCHES-IDENTITY : le client doit pouvoir router vers la REVENDICATION → on nomme le lieu.
+    return { status: 409, body: { ok: false, correlationId, error: { code: 'FACILITY_SHADOWED', message: error.message, retryable: false, existingFacilityId: error.existingFacilityId, existingFacilityName: error.existingFacilityName } } };
+  }
+  if (error instanceof SlotPolicyError) {
+    return { status: 409, body: errorBody(correlationId, 'SLOT_REQUIRED', error.message) };
   }
   if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof SellerCataloguePolicyError || error instanceof TransactionPolicyError || error instanceof FieldPilotPolicyError || error instanceof WalletPolicyError || error instanceof BuyerSearchPolicyError) {
     return { status: 409, body: errorBody(correlationId, 'POLICY_REJECTED', error.message) };
@@ -2110,6 +2117,32 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const validated = validateSellerFacilityCreate(input, idempotencyKey, authUserId);
       const result = await repository.createSellerFacility(validated);
       json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'GET' && pathname === '/api/v2/seller/slots') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to view your facility slots.'));
+        return true;
+      }
+      const result = await repository.getSellerSlotStanding({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/seller/slots') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to purchase a facility slot.'));
+        return true;
+      }
+      const rawIdempotencyKey = req.headers['idempotency-key'];
+      const idempotencyKey = Array.isArray(rawIdempotencyKey) ? rawIdempotencyKey[0] : rawIdempotencyKey ?? '';
+      if (typeof idempotencyKey !== 'string' || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'A valid idempotency key is required.'));
+        return true;
+      }
+      const result = await repository.purchaseFacilitySlot({ authUserId, idempotencyKey });
+      json(res, result.purchased ? 201 : 200, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === 'PATCH' && pathname.startsWith('/api/v2/seller/facilities/') && pathname.endsWith('/contact')) {

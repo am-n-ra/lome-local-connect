@@ -1,7 +1,7 @@
 import type { IncomingMessage } from 'node:http';
 import { describe, expect, it } from 'vitest';
 import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAcquisitionObjectiveCreate, validateAcquisitionObjectiveState, validateAdCampaignCreate, validateAvailabilityRequestCreate, validateBulkAvailabilityRequestCreate, validateClaimByOsmRef, validateDeclaredPhone, validateFacilityZoneAssignment, validateFieldVisitCreate, validateOfferReportCreate, validateOfferReportDecision, validateSellerFacilityCreate, validateTeamInviteAccept, validateVisitClaim, validateVisitReprogram, validateVisitReportSubmit } from './http';
-import { AvailabilityPolicyError, BuyerSearchPolicyError, EvidenceStoragePolicyError, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, BuyerSearchPolicyError, EvidenceStoragePolicyError, FacilityShadowError, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SlotPolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { ClaimEvidenceNotFoundError } from './evidence-storage';
 
 const requestWithBody = (value: string) => ({
@@ -58,6 +58,24 @@ describe('Root HTTP error boundary', () => {
     const response = toApiErrorResponse('corr-intent', new PurchaseIntentPolicyError('No eligible availability response belongs to the authenticated buyer.'));
     expect(response.status).toBe(409);
     expect(response.body.error.code).toBe('POLICY_REJECTED');
+    expect(response.body.error.retryable).toBe(false);
+  });
+
+  it('BRANCHES-IDENTITY — maps a facility shadow to 409 FACILITY_SHADOWED with the existing place named', () => {
+    const response = toApiErrorResponse('corr-shadow', new FacilityShadowError('facility-9', 'Boulangerie du Marché'));
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('FACILITY_SHADOWED');
+    expect(response.body.error.retryable).toBe(false);
+    // Le client a besoin de l'identité du lieu pour router vers la revendication, pas juste d'un refus.
+    const error = response.body.error as { existingFacilityId?: string; existingFacilityName?: string };
+    expect(error.existingFacilityId).toBe('facility-9');
+    expect(error.existingFacilityName).toBe('Boulangerie du Marché');
+  });
+
+  it('BRANCHES-SLOT — maps a missing slot to 409 SLOT_REQUIRED (actionnable, pas un refus sec)', () => {
+    const response = toApiErrorResponse('corr-slot', new SlotPolicyError('Aucun emplacement disponible : achetez un emplacement.'));
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('SLOT_REQUIRED');
     expect(response.body.error.retryable).toBe(false);
   });
 
