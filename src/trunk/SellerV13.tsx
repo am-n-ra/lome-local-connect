@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LocateFixed, RefreshCw, ScanLine } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { createSellerProductDraft, createSellerFacility, createFacilityAdCampaign, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, getSellerSlots, listClosedTransactions, listFacilityAdCampaigns, listTransactions, purchaseSellerSlot, refreshProductAvailability, renewFacilityPro, setFacilityRenewalOptIn, setProductAutoAvailability, setSellerFacilityOperationalState, unlockFacilityBonus, updateSellerFacilityContact } from './api';
+import { createSellerProductDraft, createSellerFacility, createFacilityAdCampaign, declareSellerFacilityPosition, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, getSellerSlots, listClosedTransactions, listFacilityAdCampaigns, listTransactions, purchaseSellerSlot, refreshProductAvailability, renewFacilityPro, setFacilityRenewalOptIn, setProductAutoAvailability, setSellerFacilityOperationalState, unlockFacilityBonus, updateSellerFacilityContact } from './api';
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
 import { isSinglePiece } from './offer-uniqueness';
 import { Skeleton, SkeletonDetail } from './Skeleton';
@@ -386,6 +386,34 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
     finally { setContactBusy(false); }
   }, [ws.selFacilityId, contactPhoneDraft, contactWhatsappDraft, onRefresh, load]);
 
+  // BRANCHES-MOBILE-POSITION — « Je suis ici ». One manual gesture: an ambulant (mobile) moves,
+  // a fixed place corrects its point. The declaration is timestamped but never called verified.
+  const [positionBusy, setPositionBusy] = useState(false);
+  const declarePosition = useCallback(() => {
+    const facilityId = ws.selFacilityId;
+    if (!facilityId) return;
+    if (!navigator.geolocation) { setError('Position indisponible sur cet appareil.'); return; }
+    setPositionBusy(true); setError('');
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const token = await getAuthToken();
+          if (!token) { setError('Connectez-vous pour déclarer votre position.'); return; }
+          const result = await declareSellerFacilityPosition({ token, facilityId, latitude: position.coords.latitude, longitude: position.coords.longitude });
+          if (result.ok && result.data) {
+            setToast(result.data.facilityType === 'mobile' ? 'Position mise à jour. Les acheteurs vous trouvent ici.' : 'Position corrigée.');
+            if (onRefresh) onRefresh(); else void load();
+          } else {
+            setError(result.error?.message === 'OUT_OF_ZONE' ? 'Position hors de la zone pilote (Lomé).' : result.error?.message ?? 'Position non enregistrée.');
+          }
+        } catch { setError('Position non enregistrée.'); }
+        finally { setPositionBusy(false); }
+      },
+      () => { setPositionBusy(false); setError('Géolocalisation refusée.'); },
+      { enableHighAccuracy: true, timeout: 10_000 },
+    );
+  }, [ws.selFacilityId, onRefresh, load]);
+
   // TRUNK-X2 : automatisation (Pro) — offres de la facilité sélectionnée.
   const facilityProducts = (propsCatalogue ?? catalogue)?.products?.filter((p) => p.facilityId === ws.selFacilityId) ?? [];
   const autoEligible = facilityProducts.some((p) => p.availabilityProEligible);
@@ -728,6 +756,21 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
               <button className="btn sm" style={{ marginTop: 8 }} type="button" disabled={contactBusy} onClick={() => void saveContact()}>{contactBusy ? 'Enregistrement…' : 'Enregistrer le contact'}</button>
             </div>
           )}
+        </div>
+      )}
+      {hasFacility && ws.selFacilityCatalogue?.name && activeFacility?.facilityType !== 'digital' && (
+        <div className="cardbox" style={{ marginTop: 9 }}>
+          <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+            <div>
+              <b className="tiny" style={{ display: 'block' }}>{activeFacility?.facilityType === 'mobile' ? 'Ma position · ambulant' : 'Position du lieu'}</b>
+              {activeFacility?.positionDeclaredAt ? (
+                <span className="tiny muted">Déclarée · {new Date(activeFacility.positionDeclaredAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}. Jamais vérifiée.</span>
+              ) : (
+                <span className="tiny muted">{activeFacility?.facilityType === 'mobile' ? 'Vous vous déplacez : dites où vous êtes maintenant.' : 'Corrigez le point du lieu si besoin.'}</span>
+              )}
+            </div>
+            <button className="btn ghost sm" style={{ width: 'auto', minHeight: 30 }} type="button" disabled={positionBusy} onClick={declarePosition}><LocateFixed size={13} /> {positionBusy ? '…' : 'Je suis ici'}</button>
+          </div>
         </div>
       )}
       {hasFacility && ws.selFacilityCatalogue?.name && (

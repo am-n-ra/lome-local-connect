@@ -93,8 +93,8 @@ describe('account context Root seam', () => {
       capabilities: { sellerWorkspace: true, operatorTools: false, reviewerWorkspace: true, adminTools: false },
       phoneDeclared: null,
     });
-    expect(call.queries[0]).toContain("ar.status = 'active'");
-    expect(call.queries[0]).not.toContain('select a.auth_user_id');
+    expect(call.queries.find((q) => q.includes("ar.status = 'active'"))).toContain("ar.status = 'active'");
+    expect(call.queries.every((q) => !q.includes('select a.auth_user_id'))).toBe(true);
   });
 
   it('exposes a declared phone number (S3-a) without ever calling it verified', async () => {
@@ -102,7 +102,22 @@ describe('account context Root seam', () => {
     const repository = createTrunkRepository(call.sql);
     const result = await repository.getAccountContext({ authUserId: 'auth-user-1' });
     expect(result?.phoneDeclared).toBe('+22890123456');
-    expect(call.queries[0]).toContain('a.phone_declared');
+    expect(call.queries.some((q) => q.includes('a.phone_declared'))).toBe(true);
+  });
+
+  it('heals a stale onboarding cache: an assigned slot implies the seller capability', async () => {
+    // The founder's real defect (BRANCHES-OFFER-CREATE): a facility + assigned slot, but the
+    // account still sat at `buyer_ready` because it was created before `account_promoted`
+    // existed. The seller workspace opened, yet offer creation refused FORBIDDEN_OR_SLOT_REQUIRED.
+    const call = stubSql([{ id: 'account-1', onboarding_state: 'seller_ready', suspended_at: null, phone_declared: null, facility_count: 1, facility_ids: ['facility-1'], roles: ['buyer'], has_seller_slot: true }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.getAccountContext({ authUserId: 'auth-user-1' });
+    expect(result?.capabilities.sellerWorkspace).toBe(true);
+    // The self-heal is written FIRST, and only for accounts that are actually inconsistent.
+    const heal = call.queries[0];
+    expect(heal).toContain("onboarding_state = 'seller_ready'");
+    expect(heal).toContain("fs.status = 'assigned'");
+    expect(heal).toContain("a.onboarding_state in ('new', 'buyer_ready')");
   });
 
   it('returns null when Auth is not linked to an Omni account', async () => {
@@ -3492,6 +3507,26 @@ describe('RAC-1 seller contact Root seam', () => {
     expect(result.created).toBe(true);
     expect(call.queries[2]).toContain('contact_phone');
     expect(call.queries[2]).toContain('contact_whatsapp');
+  });
+});
+describe('BRANCHES-MOBILE-POSITION declared position Root seam', () => {
+  it('moves the point and stamps it as declared, never verified', async () => {
+    const call = stubSql([{ facility_id: 'facility-1', latitude: 6.172, longitude: 1.24, position_declared_at: '2026-10-13T20:00:00.000Z', facility_type: 'mobile' }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.declareSellerFacilityPosition({ authUserId: 'auth-user-1', facilityId: 'facility-1', latitude: 6.172, longitude: 1.24 });
+    expect(result).toMatchObject({ facilityId: 'facility-1', latitude: 6.172, longitude: 1.24, facilityType: 'mobile' });
+    expect(call.queries[0]).toContain('position_declared_at = now()');
+    // The declaration must never touch the verified column — declared ≠ verified (S-31).
+    expect(call.queries[0]).not.toContain('position_verified_at');
+    // A digital origin has no place to move; the write is gated to fixe/mobile.
+    expect(call.queries[0]).toContain("f.facility_type in ('fixe', 'mobile')");
+  });
+
+  it('refuses out-of-zone coordinates without touching the database', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.declareSellerFacilityPosition({ authUserId: 'auth-user-1', facilityId: 'facility-1', latitude: -1, longitude: -1 })).rejects.toBeInstanceOf(SellerCataloguePolicyError);
+    expect(call.queries).toHaveLength(0);
   });
 });
 describe('FF-2 open transactions Root seam', () => {

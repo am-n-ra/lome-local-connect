@@ -636,6 +636,193 @@ function normalizeTogoPhone(input) {
   return null;
 }
 
+// src/server/routing-adapter.ts
+var PILOT_ZONE_BOUNDS = { west: 1, south: 5.85, east: 2.45, north: 6.5 };
+var RoutingOutOfZoneError = class extends Error {
+  constructor() {
+    super("This facility is outside the Omni pilot zone, so a road itinerary is not offered.");
+    this.name = "RoutingOutOfZoneError";
+  }
+};
+var RoutingConfigurationError = class extends Error {
+  constructor() {
+    super("Routing provider is not configured.");
+    this.name = "RoutingConfigurationError";
+  }
+};
+var RoutingProviderError = class extends Error {
+  /** Why the provider failed, kept so the caller can tell an operator problem
+   * (bad token) from a transient one (outage) instead of flattening both into
+   * one message the buyer cannot act on. */
+  causeKind;
+  providerStatus;
+  constructor(message, causeKind = "server", providerStatus = null) {
+    super(message);
+    this.name = "RoutingProviderError";
+    this.causeKind = causeKind;
+    this.providerStatus = providerStatus;
+  }
+};
+function isInsidePilotZone(point) {
+  return Number.isFinite(point.latitude) && Number.isFinite(point.longitude) && point.longitude >= PILOT_ZONE_BOUNDS.west && point.longitude <= PILOT_ZONE_BOUNDS.east && point.latitude >= PILOT_ZONE_BOUNDS.south && point.latitude <= PILOT_ZONE_BOUNDS.north;
+}
+function activeRoutingProvider() {
+  if (process.env.MAPBOX_ACCESS_TOKEN?.trim()) return "mapbox";
+  if (process.env.OSRM_BASE_URL?.trim()) return "osrm";
+  return null;
+}
+function classifyProviderStatus(status) {
+  if (status === 401 || status === 403) return "auth";
+  if (status === 429) return "rate_limit";
+  return "server";
+}
+var CACHE_TTL_MS = 5 * 60 * 1e3;
+var CACHE_MAX_ENTRIES = 200;
+var cache = /* @__PURE__ */ new Map();
+function cacheKey(provider, from, to, profile) {
+  const r = (n) => n.toFixed(5);
+  return `${provider}:${profile}:${r(from.latitude)},${r(from.longitude)}>${r(to.latitude)},${r(to.longitude)}`;
+}
+var REQUEST_TIMEOUT_MS = 6e3;
+async function fetchRoadRoute(input) {
+  const profile = input.profile ?? "driving";
+  if (!isInsidePilotZone(input.from) || !isInsidePilotZone(input.to)) {
+    throw new RoutingOutOfZoneError();
+  }
+  const provider = activeRoutingProvider();
+  if (!provider) throw new RoutingConfigurationError();
+  const key = cacheKey(provider, input.from, input.to, profile);
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.value;
+  const value = provider === "mapbox" ? await fetchFromMapbox(input.from, input.to, profile) : await fetchFromOsrm(input.from, input.to, profile);
+  if (cache.size >= CACHE_MAX_ENTRIES) cache.delete(cache.keys().next().value);
+  cache.set(key, { at: Date.now(), value });
+  return value;
+}
+async function fetchJson(url, providerLabel) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let response;
+  try {
+    response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
+  } catch (error) {
+    const timedOut = error instanceof Error && error.name === "AbortError";
+    throw new RoutingProviderError(
+      timedOut ? `The ${providerLabel} routing provider did not respond in time.` : `The ${providerLabel} routing provider could not be reached.`,
+      timedOut ? "timeout" : "unreachable"
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+  if (!response.ok) {
+    const kind = classifyProviderStatus(response.status);
+    const hint = kind === "auth" ? " (check MAPBOX_ACCESS_TOKEN: it must have no URL restriction, since these calls send no browser Referer)" : "";
+    throw new RoutingProviderError(`The ${providerLabel} routing provider returned ${response.status}.${hint}`, kind, response.status);
+  }
+  try {
+    return await response.json();
+  } catch {
+    throw new RoutingProviderError(`The ${providerLabel} routing provider returned a malformed response.`, "malformed");
+  }
+}
+async function fetchFromMapbox(from, to, profile) {
+  const token = process.env.MAPBOX_ACCESS_TOKEN?.trim();
+  if (!token) throw new RoutingConfigurationError();
+  const wantTraffic = profile === "driving" && process.env.MAPBOX_DRIVING_PROFILE?.trim() === "driving-traffic";
+  const mapboxProfile = profile === "foot" ? "mapbox/walking" : wantTraffic ? "mapbox/driving-traffic" : "mapbox/driving";
+  const params = new URLSearchParams({
+    geometries: "geojson",
+    overview: "full",
+    steps: "true",
+    language: "fr",
+    access_token: token
+  });
+  const url = `https://api.mapbox.com/directions/v5/${mapboxProfile}/${from.longitude},${from.latitude};${to.longitude},${to.latitude}?${params.toString()}`;
+  const payload = await fetchJson(url, "Mapbox");
+  if (payload.code && payload.code !== "Ok") {
+    throw new RoutingProviderError(
+      payload.code === "NoRoute" || payload.code === "NoSegment" ? "No road itinerary could be found between these two points." : payload.message?.trim() || `Mapbox refused the request (${payload.code}).`,
+      payload.code === "NoRoute" || payload.code === "NoSegment" ? "no_route" : "server"
+    );
+  }
+  const route = payload.routes?.[0];
+  const coordinates = route?.geometry?.coordinates ?? [];
+  if (!route || coordinates.length < 2 || typeof route.distance !== "number" || typeof route.duration !== "number") {
+    throw new RoutingProviderError("The Mapbox routing provider returned no usable itinerary.", "no_route");
+  }
+  return {
+    provider: "mapbox",
+    profile,
+    distanceMeters: route.distance,
+    durationSeconds: route.duration,
+    coordinates,
+    steps: (route.legs?.[0]?.steps ?? []).map((step) => ({
+      instruction: step.maneuver?.instruction?.trim() || formatStepInstruction(step),
+      distanceMeters: step.distance ?? 0,
+      durationSeconds: step.duration ?? 0
+    }))
+  };
+}
+async function fetchFromOsrm(from, to, profile) {
+  const baseUrl2 = process.env.OSRM_BASE_URL?.trim();
+  if (!baseUrl2) throw new RoutingConfigurationError();
+  const coords = `${from.longitude},${from.latitude};${to.longitude},${to.latitude}`;
+  const url = `${baseUrl2.replace(/\/+$/, "")}/route/v1/${profile}/${coords}?overview=full&geometries=geojson&steps=true`;
+  const payload = await fetchJson(url, "OSRM");
+  const route = payload.routes?.[0];
+  const coordinates = route?.geometry?.coordinates ?? [];
+  if (!route || coordinates.length < 2 || typeof route.distance !== "number" || typeof route.duration !== "number") {
+    throw new RoutingProviderError("The OSRM routing provider returned no usable itinerary.", "no_route");
+  }
+  return {
+    provider: "osrm",
+    profile,
+    distanceMeters: route.distance,
+    durationSeconds: route.duration,
+    coordinates,
+    steps: (route.legs?.[0]?.steps ?? []).map((step) => ({
+      instruction: formatStepInstruction(step),
+      distanceMeters: step.distance ?? 0,
+      durationSeconds: step.duration ?? 0
+    }))
+  };
+}
+function formatStepInstruction(step) {
+  const modifier = step.maneuver?.modifier;
+  const name = step.name?.trim();
+  const on = name ? ` sur ${name}` : "";
+  switch (step.maneuver?.type) {
+    case "depart":
+      return name ? `Partez${on}` : "Partez";
+    case "arrive":
+      return "Vous \xEAtes arriv\xE9";
+    case "roundabout":
+      return name ? `Au rond-point, continuez${on}` : "Au rond-point, continuez";
+    case "merge":
+      return `Ins\xE9rez-vous${on}`;
+    case "fork":
+      return `\xC0 la bifurcation, gardez${modifier === "left" ? " la gauche" : " la droite"}`;
+    case "end of road":
+      return `Au bout de la route, tournez${modifier === "left" ? " \xE0 gauche" : " \xE0 droite"}${on}`;
+    case "turn": {
+      const dir = modifier === "left" || modifier === "sharp left" || modifier === "slight left" ? " \xE0 gauche" : modifier === "right" || modifier === "sharp right" || modifier === "slight right" ? " \xE0 droite" : "";
+      return `Tournez${dir}${on}`;
+    }
+    case "new name":
+    case "continue":
+    default:
+      return name ? `Continuez${on}` : "Continuez tout droit";
+  }
+}
+function formatDistanceLabel(meters) {
+  return meters < 1e3 ? `${Math.round(meters)} m` : `${(meters / 1e3).toFixed(1).replace(".", ",")} km`;
+}
+function formatDurationLabel(seconds) {
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  if (minutes < 60) return `${minutes} min`;
+  return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")}`;
+}
+
 // src/server/trunk-repository.ts
 function database() {
   const url = process.env.V2_DATABASE_URL ?? process.env.DATABASE_URL;
@@ -888,11 +1075,26 @@ function listedPriceMinor(row) {
 function createTrunkRepository(sql = database()) {
   return {
     async getAccountContext(input) {
+      await retryDatabase(() => sql`
+        update v2_accounts a
+        set onboarding_state = 'seller_ready', updated_at = now()
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and a.onboarding_state in ('new', 'buyer_ready')
+          and exists (
+            select 1 from v2_facility_slots fs
+            where fs.account_id = a.id and fs.status = 'assigned'
+          )
+      `).catch(() => []);
       const rows = await retryDatabase(() => sql`
         select a.id, a.onboarding_state, a.suspended_at, a.phone_declared,
           count(distinct f.id)::int as facility_count,
           coalesce(array_agg(distinct f.id) filter (where f.id is not null), '{}') as facility_ids,
-          coalesce(array_agg(distinct ar.role) filter (where ar.role is not null and ar.status = 'active'), '{}') as roles
+          coalesce(array_agg(distinct ar.role) filter (where ar.role is not null and ar.status = 'active'), '{}') as roles,
+          exists (
+            select 1 from v2_facility_slots fs
+            where fs.account_id = a.id and fs.status = 'assigned'
+          ) as has_seller_slot
         from v2_accounts a
         left join v2_account_roles ar on ar.account_id = a.id and ar.status = 'active'
         left join v2_facilities f on f.account_id = a.id
@@ -913,7 +1115,7 @@ function createTrunkRepository(sql = database()) {
         facilityCount: Number(row.facility_count ?? 0),
         ownedFacilityIds: Array.isArray(row.facility_ids) ? row.facility_ids.map(String) : [],
         capabilities: {
-          sellerWorkspace: !suspended && String(row.onboarding_state) === "seller_ready",
+          sellerWorkspace: !suspended && (String(row.onboarding_state) === "seller_ready" || row.has_seller_slot === true),
           operatorTools: !suspended && roles.includes("operator"),
           reviewerWorkspace: !suspended && roles.includes("reviewer"),
           adminTools: !suspended && roles.includes("admin")
@@ -1568,11 +1770,11 @@ function createTrunkRepository(sql = database()) {
           returning f.id, f.operational_state, target.seller_id
         ), audit as (
           insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
-          select updated.seller_id,, 'facility_operational_state_changed', 'facility', updated.id::text,, ${input.correlationId}, ${reason}
+          select updated.seller_id, 'facility_operational_state_changed', 'facility', updated.id::text, ${input.correlationId}, ${reason}
           from updated
           returning entity_id
         )
-        select updated.id,, updated.operational_state
+        select updated.id, updated.operational_state
         from updated join audit on audit.entity_id = updated.id::text
       `);
       const row = rows[0];
@@ -1878,6 +2080,42 @@ function createTrunkRepository(sql = database()) {
         facilityId: String(row.facility_id),
         contactPhone: row.contact_phone === null || row.contact_phone === void 0 ? null : String(row.contact_phone),
         contactWhatsapp: row.contact_whatsapp === null || row.contact_whatsapp === void 0 ? null : String(row.contact_whatsapp)
+      };
+    },
+    // BRANCHES-MOBILE-POSITION — a mobile seller (ambulant) says "je suis ici". The point moves;
+    // the declaration is timestamped but NEVER marked verified (S-31): `position_declared_at`
+    // records the seller's own claim, `position_verified_at` stays untouched. A `digital`
+    // facility has an immaterial origin and no place to move — the write is refused. Out-of-zone
+    // coordinates are refused too (the same perimeter that gates routing and import, S-15).
+    async declareSellerFacilityPosition(input) {
+      if (!Number.isFinite(input.latitude) || input.latitude < -90 || input.latitude > 90 || !Number.isFinite(input.longitude) || input.longitude < -180 || input.longitude > 180) {
+        throw new SellerCataloguePolicyError("INVALID_COORDINATES");
+      }
+      if (!isInsidePilotZone({ latitude: input.latitude, longitude: input.longitude })) {
+        throw new SellerCataloguePolicyError("OUT_OF_ZONE");
+      }
+      const rows = await retryDatabase(() => sql`
+        update v2_facilities f
+        set latitude = ${input.latitude},
+            longitude = ${input.longitude},
+            position_declared_at = now(),
+            updated_at = now()
+        from v2_accounts a
+        where f.id = ${input.facilityId}::uuid
+          and f.account_id = a.id
+          and a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and f.facility_type in ('fixe', 'mobile')
+        returning f.id as facility_id, f.latitude, f.longitude, f.position_declared_at, f.facility_type
+      `);
+      const row = rows[0];
+      if (!row) throw new SellerCataloguePolicyError("FORBIDDEN_OR_FACILITY_NOT_FOUND");
+      return {
+        facilityId: String(row.facility_id),
+        latitude: Number(row.latitude),
+        longitude: Number(row.longitude),
+        positionDeclaredAt: String(row.position_declared_at),
+        facilityType: row.facility_type === "fixe" || row.facility_type === "mobile" || row.facility_type === "digital" ? String(row.facility_type) : null
       };
     },
     async createPublicFacilityImport(input) {
@@ -3223,6 +3461,7 @@ function createTrunkRepository(sql = database()) {
           coalesce(e.trust_state, f.trust_state) as trust_state,
           f.contact_phone,
           f.contact_whatsapp,
+          f.position_declared_at,
           'XOF' as currency,
           count(p.id)::int as product_count
         from v2_facilities f
@@ -3248,7 +3487,8 @@ function createTrunkRepository(sql = database()) {
         rayonKm: row.rayon_km === null ? null : Number(row.rayon_km),
         trustState: String(row.trust_state ?? "unclaimed"),
         contactPhone: row.contact_phone === null || row.contact_phone === void 0 ? null : String(row.contact_phone),
-        contactWhatsapp: row.contact_whatsapp === null || row.contact_whatsapp === void 0 ? null : String(row.contact_whatsapp)
+        contactWhatsapp: row.contact_whatsapp === null || row.contact_whatsapp === void 0 ? null : String(row.contact_whatsapp),
+        positionDeclaredAt: row.position_declared_at === null || row.position_declared_at === void 0 ? null : String(row.position_declared_at)
       }));
       const rows = await retryDatabase(() => sql`
         select
@@ -8249,193 +8489,6 @@ function admitIntakeBatch(items, scope, isPilotZone) {
   return { admitted, skippedOutOfZone, skippedQuarantine };
 }
 
-// src/server/routing-adapter.ts
-var PILOT_ZONE_BOUNDS = { west: 1, south: 5.85, east: 2.45, north: 6.5 };
-var RoutingOutOfZoneError = class extends Error {
-  constructor() {
-    super("This facility is outside the Omni pilot zone, so a road itinerary is not offered.");
-    this.name = "RoutingOutOfZoneError";
-  }
-};
-var RoutingConfigurationError = class extends Error {
-  constructor() {
-    super("Routing provider is not configured.");
-    this.name = "RoutingConfigurationError";
-  }
-};
-var RoutingProviderError = class extends Error {
-  /** Why the provider failed, kept so the caller can tell an operator problem
-   * (bad token) from a transient one (outage) instead of flattening both into
-   * one message the buyer cannot act on. */
-  causeKind;
-  providerStatus;
-  constructor(message, causeKind = "server", providerStatus = null) {
-    super(message);
-    this.name = "RoutingProviderError";
-    this.causeKind = causeKind;
-    this.providerStatus = providerStatus;
-  }
-};
-function isInsidePilotZone(point) {
-  return Number.isFinite(point.latitude) && Number.isFinite(point.longitude) && point.longitude >= PILOT_ZONE_BOUNDS.west && point.longitude <= PILOT_ZONE_BOUNDS.east && point.latitude >= PILOT_ZONE_BOUNDS.south && point.latitude <= PILOT_ZONE_BOUNDS.north;
-}
-function activeRoutingProvider() {
-  if (process.env.MAPBOX_ACCESS_TOKEN?.trim()) return "mapbox";
-  if (process.env.OSRM_BASE_URL?.trim()) return "osrm";
-  return null;
-}
-function classifyProviderStatus(status) {
-  if (status === 401 || status === 403) return "auth";
-  if (status === 429) return "rate_limit";
-  return "server";
-}
-var CACHE_TTL_MS = 5 * 60 * 1e3;
-var CACHE_MAX_ENTRIES = 200;
-var cache = /* @__PURE__ */ new Map();
-function cacheKey(provider, from, to, profile) {
-  const r = (n) => n.toFixed(5);
-  return `${provider}:${profile}:${r(from.latitude)},${r(from.longitude)}>${r(to.latitude)},${r(to.longitude)}`;
-}
-var REQUEST_TIMEOUT_MS = 6e3;
-async function fetchRoadRoute(input) {
-  const profile = input.profile ?? "driving";
-  if (!isInsidePilotZone(input.from) || !isInsidePilotZone(input.to)) {
-    throw new RoutingOutOfZoneError();
-  }
-  const provider = activeRoutingProvider();
-  if (!provider) throw new RoutingConfigurationError();
-  const key = cacheKey(provider, input.from, input.to, profile);
-  const hit = cache.get(key);
-  if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.value;
-  const value = provider === "mapbox" ? await fetchFromMapbox(input.from, input.to, profile) : await fetchFromOsrm(input.from, input.to, profile);
-  if (cache.size >= CACHE_MAX_ENTRIES) cache.delete(cache.keys().next().value);
-  cache.set(key, { at: Date.now(), value });
-  return value;
-}
-async function fetchJson(url, providerLabel) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  let response;
-  try {
-    response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
-  } catch (error) {
-    const timedOut = error instanceof Error && error.name === "AbortError";
-    throw new RoutingProviderError(
-      timedOut ? `The ${providerLabel} routing provider did not respond in time.` : `The ${providerLabel} routing provider could not be reached.`,
-      timedOut ? "timeout" : "unreachable"
-    );
-  } finally {
-    clearTimeout(timer);
-  }
-  if (!response.ok) {
-    const kind = classifyProviderStatus(response.status);
-    const hint = kind === "auth" ? " (check MAPBOX_ACCESS_TOKEN: it must have no URL restriction, since these calls send no browser Referer)" : "";
-    throw new RoutingProviderError(`The ${providerLabel} routing provider returned ${response.status}.${hint}`, kind, response.status);
-  }
-  try {
-    return await response.json();
-  } catch {
-    throw new RoutingProviderError(`The ${providerLabel} routing provider returned a malformed response.`, "malformed");
-  }
-}
-async function fetchFromMapbox(from, to, profile) {
-  const token = process.env.MAPBOX_ACCESS_TOKEN?.trim();
-  if (!token) throw new RoutingConfigurationError();
-  const wantTraffic = profile === "driving" && process.env.MAPBOX_DRIVING_PROFILE?.trim() === "driving-traffic";
-  const mapboxProfile = profile === "foot" ? "mapbox/walking" : wantTraffic ? "mapbox/driving-traffic" : "mapbox/driving";
-  const params = new URLSearchParams({
-    geometries: "geojson",
-    overview: "full",
-    steps: "true",
-    language: "fr",
-    access_token: token
-  });
-  const url = `https://api.mapbox.com/directions/v5/${mapboxProfile}/${from.longitude},${from.latitude};${to.longitude},${to.latitude}?${params.toString()}`;
-  const payload = await fetchJson(url, "Mapbox");
-  if (payload.code && payload.code !== "Ok") {
-    throw new RoutingProviderError(
-      payload.code === "NoRoute" || payload.code === "NoSegment" ? "No road itinerary could be found between these two points." : payload.message?.trim() || `Mapbox refused the request (${payload.code}).`,
-      payload.code === "NoRoute" || payload.code === "NoSegment" ? "no_route" : "server"
-    );
-  }
-  const route = payload.routes?.[0];
-  const coordinates = route?.geometry?.coordinates ?? [];
-  if (!route || coordinates.length < 2 || typeof route.distance !== "number" || typeof route.duration !== "number") {
-    throw new RoutingProviderError("The Mapbox routing provider returned no usable itinerary.", "no_route");
-  }
-  return {
-    provider: "mapbox",
-    profile,
-    distanceMeters: route.distance,
-    durationSeconds: route.duration,
-    coordinates,
-    steps: (route.legs?.[0]?.steps ?? []).map((step) => ({
-      instruction: step.maneuver?.instruction?.trim() || formatStepInstruction(step),
-      distanceMeters: step.distance ?? 0,
-      durationSeconds: step.duration ?? 0
-    }))
-  };
-}
-async function fetchFromOsrm(from, to, profile) {
-  const baseUrl2 = process.env.OSRM_BASE_URL?.trim();
-  if (!baseUrl2) throw new RoutingConfigurationError();
-  const coords = `${from.longitude},${from.latitude};${to.longitude},${to.latitude}`;
-  const url = `${baseUrl2.replace(/\/+$/, "")}/route/v1/${profile}/${coords}?overview=full&geometries=geojson&steps=true`;
-  const payload = await fetchJson(url, "OSRM");
-  const route = payload.routes?.[0];
-  const coordinates = route?.geometry?.coordinates ?? [];
-  if (!route || coordinates.length < 2 || typeof route.distance !== "number" || typeof route.duration !== "number") {
-    throw new RoutingProviderError("The OSRM routing provider returned no usable itinerary.", "no_route");
-  }
-  return {
-    provider: "osrm",
-    profile,
-    distanceMeters: route.distance,
-    durationSeconds: route.duration,
-    coordinates,
-    steps: (route.legs?.[0]?.steps ?? []).map((step) => ({
-      instruction: formatStepInstruction(step),
-      distanceMeters: step.distance ?? 0,
-      durationSeconds: step.duration ?? 0
-    }))
-  };
-}
-function formatStepInstruction(step) {
-  const modifier = step.maneuver?.modifier;
-  const name = step.name?.trim();
-  const on = name ? ` sur ${name}` : "";
-  switch (step.maneuver?.type) {
-    case "depart":
-      return name ? `Partez${on}` : "Partez";
-    case "arrive":
-      return "Vous \xEAtes arriv\xE9";
-    case "roundabout":
-      return name ? `Au rond-point, continuez${on}` : "Au rond-point, continuez";
-    case "merge":
-      return `Ins\xE9rez-vous${on}`;
-    case "fork":
-      return `\xC0 la bifurcation, gardez${modifier === "left" ? " la gauche" : " la droite"}`;
-    case "end of road":
-      return `Au bout de la route, tournez${modifier === "left" ? " \xE0 gauche" : " \xE0 droite"}${on}`;
-    case "turn": {
-      const dir = modifier === "left" || modifier === "sharp left" || modifier === "slight left" ? " \xE0 gauche" : modifier === "right" || modifier === "sharp right" || modifier === "slight right" ? " \xE0 droite" : "";
-      return `Tournez${dir}${on}`;
-    }
-    case "new name":
-    case "continue":
-    default:
-      return name ? `Continuez${on}` : "Continuez tout droit";
-  }
-}
-function formatDistanceLabel(meters) {
-  return meters < 1e3 ? `${Math.round(meters)} m` : `${(meters / 1e3).toFixed(1).replace(".", ",")} km`;
-}
-function formatDurationLabel(seconds) {
-  const minutes = Math.max(1, Math.round(seconds / 60));
-  if (minutes < 60) return `${minutes} min`;
-  return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")}`;
-}
-
 // src/server/http.ts
 var json = (res, status, body) => {
   res.statusCode = status;
@@ -10428,6 +10481,24 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.updateSellerFacilityContact({ authUserId, facilityId, contactPhone, contactWhatsapp });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname.startsWith("/api/v2/seller/facilities/") && pathname.endsWith("/position")) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as the facility owner to declare its position."));
+        return true;
+      }
+      const facilityId = pathname.slice("/api/v2/seller/facilities/".length, -"/position".length);
+      const input = await parseRequestBody(req);
+      const latitude = Number(input.latitude);
+      const longitude = Number(input.longitude);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "A latitude and longitude are required."));
+        return true;
+      }
+      const result = await repository.declareSellerFacilityPosition({ authUserId, facilityId, latitude, longitude });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

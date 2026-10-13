@@ -522,6 +522,17 @@ export async function updateSellerFacilityContact(input: { token: string; facili
   return parse(response);
 }
 
+// BRANCHES-MOBILE-POSITION — an ambulant says "je suis ici". One manual gesture; the position
+// is DECLARED, never verified (S-31).
+export async function declareSellerFacilityPosition(input: { token: string; facilityId: string; latitude: number; longitude: number }): Promise<ApiResult<{ facilityId: string; latitude: number; longitude: number; positionDeclaredAt: string; facilityType: string | null }>> {
+  const response = await fetchWithRecovery(`/api/v2/seller/facilities/${input.facilityId}/position`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ latitude: input.latitude, longitude: input.longitude }),
+  });
+  return parse(response);
+}
+
 // BRANCHES-SLOT (D-J) — solde d'emplacements + achat d'un emplacement payant.
 export async function getSellerSlots(input: { token: string }): Promise<ApiResult<SellerSlotStandingResult>> {
   const response = await fetchWithRecovery('/api/v2/seller/slots', { headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` } });

@@ -2207,6 +2207,26 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/seller/facilities/') && pathname.endsWith('/position')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as the facility owner to declare its position.'));
+        return true;
+      }
+      const facilityId = pathname.slice('/api/v2/seller/facilities/'.length, -'/position'.length);
+      const input = await parseRequestBody(req);
+      const latitude = Number(input.latitude);
+      const longitude = Number(input.longitude);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'A latitude and longitude are required.'));
+        return true;
+      }
+      // A mobile seller (ambulant) says "je suis ici"; a fixed place corrects its point. The
+      // repository refuses `digital` (immaterial origin) and any out-of-zone coordinate.
+      const result = await repository.declareSellerFacilityPosition({ authUserId, facilityId, latitude, longitude });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname === '/api/v2/seller/catalogue') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

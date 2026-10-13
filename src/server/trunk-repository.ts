@@ -14,6 +14,7 @@ import { computeIntegrity, computeReputation, existenceFor, normalizeProductMedi
 import { normalizeStockForUniqueness, uniquenessStockRejection } from '../trunk/offer-uniqueness';
 import { proposedPriceRejection } from '../trunk/offer-price';
 import { normalizeTogoPhone } from '../domain/phone';
+import { isInsidePilotZone } from './routing-adapter';
 
 export interface DatabaseClient {
   query(strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
@@ -772,11 +773,34 @@ function listedPriceMinor(row: Record<string, unknown>): number {
 export function createTrunkRepository(sql: ReturnType<typeof neon> = database()) {
   return {
     async getAccountContext(input: { authUserId: string }): Promise<AccountContextResult | null> {
+      // S-31 — self-heal a stale onboarding cache. Holding an ASSIGNED slot IS the seller
+      // capability (it is what `createSellerProductDraft`/`transitionSellerProduct`/
+      // `setSellerFacilityOperationalState` join on), so `onboarding_state` must never sit
+      // below `seller_ready` while a slot is assigned. This repairs accounts desynced by
+      // legacy paths that created the facility before `account_promoted` existed (BRANCHES-
+      // IDENTITY): their seller workspace opened, but offer creation refused
+      // FORBIDDEN_OR_SLOT_REQUIRED with no visible cause. Idempotent: it touches only rows
+      // that are already inconsistent, so a normal load is a 0-row no-op.
+      await retryDatabase(() => sql`
+        update v2_accounts a
+        set onboarding_state = 'seller_ready', updated_at = now()
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and a.onboarding_state in ('new', 'buyer_ready')
+          and exists (
+            select 1 from v2_facility_slots fs
+            where fs.account_id = a.id and fs.status = 'assigned'
+          )
+      `).catch(() => [] as unknown[]);
       const rows = await retryDatabase(() => sql`
         select a.id, a.onboarding_state, a.suspended_at, a.phone_declared,
           count(distinct f.id)::int as facility_count,
           coalesce(array_agg(distinct f.id) filter (where f.id is not null), '{}') as facility_ids,
-          coalesce(array_agg(distinct ar.role) filter (where ar.role is not null and ar.status = 'active'), '{}') as roles
+          coalesce(array_agg(distinct ar.role) filter (where ar.role is not null and ar.status = 'active'), '{}') as roles,
+          exists (
+            select 1 from v2_facility_slots fs
+            where fs.account_id = a.id and fs.status = 'assigned'
+          ) as has_seller_slot
         from v2_accounts a
         left join v2_account_roles ar on ar.account_id = a.id and ar.status = 'active'
         left join v2_facilities f on f.account_id = a.id
@@ -797,7 +821,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         facilityCount: Number(row.facility_count ?? 0),
         ownedFacilityIds: Array.isArray(row.facility_ids) ? row.facility_ids.map(String) : [],
         capabilities: {
-          sellerWorkspace: !suspended && String(row.onboarding_state) === 'seller_ready',
+          sellerWorkspace: !suspended && (String(row.onboarding_state) === 'seller_ready' || row.has_seller_slot === true),
           operatorTools: !suspended && roles.includes('operator'),
           reviewerWorkspace: !suspended && roles.includes('reviewer'),
           adminTools: !suspended && roles.includes('admin'),
@@ -1466,11 +1490,11 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           returning f.id, f.operational_state, target.seller_id
         ), audit as (
           insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
-          select updated.seller_id,, 'facility_operational_state_changed', 'facility', updated.id::text,, ${input.correlationId}, ${reason}
+          select updated.seller_id, 'facility_operational_state_changed', 'facility', updated.id::text, ${input.correlationId}, ${reason}
           from updated
           returning entity_id
         )
-        select updated.id,, updated.operational_state
+        select updated.id, updated.operational_state
         from updated join audit on audit.entity_id = updated.id::text
       `);
       const row = (rows as Record<string, unknown>[])[0];
@@ -1812,6 +1836,47 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         facilityId: String(row.facility_id),
         contactPhone: row.contact_phone === null || row.contact_phone === undefined ? null : String(row.contact_phone),
         contactWhatsapp: row.contact_whatsapp === null || row.contact_whatsapp === undefined ? null : String(row.contact_whatsapp),
+      };
+    },
+    // BRANCHES-MOBILE-POSITION — a mobile seller (ambulant) says "je suis ici". The point moves;
+    // the declaration is timestamped but NEVER marked verified (S-31): `position_declared_at`
+    // records the seller's own claim, `position_verified_at` stays untouched. A `digital`
+    // facility has an immaterial origin and no place to move — the write is refused. Out-of-zone
+    // coordinates are refused too (the same perimeter that gates routing and import, S-15).
+    async declareSellerFacilityPosition(input: {
+      authUserId: string;
+      facilityId: string;
+      latitude: number;
+      longitude: number;
+    }): Promise<{ facilityId: string; latitude: number; longitude: number; positionDeclaredAt: string; facilityType: FacilityType | null }> {
+      if (!Number.isFinite(input.latitude) || input.latitude < -90 || input.latitude > 90 || !Number.isFinite(input.longitude) || input.longitude < -180 || input.longitude > 180) {
+        throw new SellerCataloguePolicyError('INVALID_COORDINATES');
+      }
+      if (!isInsidePilotZone({ latitude: input.latitude, longitude: input.longitude })) {
+        throw new SellerCataloguePolicyError('OUT_OF_ZONE');
+      }
+      const rows = await retryDatabase(() => sql`
+        update v2_facilities f
+        set latitude = ${input.latitude},
+            longitude = ${input.longitude},
+            position_declared_at = now(),
+            updated_at = now()
+        from v2_accounts a
+        where f.id = ${input.facilityId}::uuid
+          and f.account_id = a.id
+          and a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and f.facility_type in ('fixe', 'mobile')
+        returning f.id as facility_id, f.latitude, f.longitude, f.position_declared_at, f.facility_type
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new SellerCataloguePolicyError('FORBIDDEN_OR_FACILITY_NOT_FOUND');
+      return {
+        facilityId: String(row.facility_id),
+        latitude: Number(row.latitude),
+        longitude: Number(row.longitude),
+        positionDeclaredAt: String(row.position_declared_at),
+        facilityType: (row.facility_type === 'fixe' || row.facility_type === 'mobile' || row.facility_type === 'digital' ? String(row.facility_type) : null) as FacilityType | null,
       };
     },
     async createPublicFacilityImport(input: PublicFacilityImportInput): Promise<PublicFacilityImportResult> {
@@ -3195,6 +3260,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           coalesce(e.trust_state, f.trust_state) as trust_state,
           f.contact_phone,
           f.contact_whatsapp,
+          f.position_declared_at,
           'XOF' as currency,
           count(p.id)::int as product_count
         from v2_facilities f
@@ -3221,6 +3287,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         trustState: String(row.trust_state ?? 'unclaimed'),
         contactPhone: row.contact_phone === null || row.contact_phone === undefined ? null : String(row.contact_phone),
         contactWhatsapp: row.contact_whatsapp === null || row.contact_whatsapp === undefined ? null : String(row.contact_whatsapp),
+        positionDeclaredAt: row.position_declared_at === null || row.position_declared_at === undefined ? null : String(row.position_declared_at),
       }));
       const rows = await retryDatabase(() => sql`
         select

@@ -415,6 +415,8 @@ export interface SellerCatalogueFacility {
   /** Contact vendeur — visible uniquement dans le contexte transactionnel (RAC-1). */
   contactPhone: string | null;
   contactWhatsapp: string | null;
+  /** BRANCHES-MOBILE-POSITION — date du dernier « je suis ici » déclaré (S-31). Null = jamais déclarée. */
+  positionDeclaredAt: string | null;
 }
 
 export interface CreateSellerFacilityResult {
