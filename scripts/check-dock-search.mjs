@@ -20,6 +20,7 @@ const MAP = 'src/trunk/TrunkMap.tsx';
 const FRESH = 'src/trunk/offer-freshness.ts';
 const SELLER_FRESH = 'src/trunk/SellerFreshnessV13.tsx';
 const SELLER_VERIF = 'src/trunk/SellerVerificationV13.tsx';
+const BUYER_FLOW = 'src/trunk/BuyerFlowV13.tsx';
 
 // [id, description, (sources) => boolean]
 const RULES = [
@@ -68,9 +69,9 @@ const RULES = [
     /className="linkbtn"[^\n]*>Recherches sauvegardées<\/button>/.test(s[APP]) && /void openSaved\(\)/.test(s[APP])],
   ['vocab-linkbtn-defined', 'the .linkbtn and .textbtn classes are actually defined in the stylesheet', (s) =>
     /\.linkbtn\{/.test(s[CSS]) && /\.textbtn\{/.test(s[CSS])],
-  ['search-sheet-structure', 'constraint-zone + sim-chips are SIBLINGS of searchdock, not nested inside it', (s) =>
+  ['search-sheet-structure', 'the constraint zone is a SIBLING of searchdock, and no demo simulation chips remain', (s) =>
     /<\/button>\s*<\/div>\s*<\/div>\s*\{constraintsOpen &&/.test(s[APP]) &&
-    /<div className="sim-chips"[\s\S]*?<\/div>\s*<\/form>/.test(s[APP])],
+    !/className="sim-chips"/.test(s[APP])],
   ['search-sheet-bleed', 'mobile sheets respect the horizontal safe areas (notch/landscape)', (s) =>
     /\.omni-v13-stage \.sheet\{padding-bottom:calc\(92px \+ var\(--safe-bottom, 0px\)\);padding-left:max\(15px,env\(safe-area-inset-left\)\);padding-right:max\(15px,env\(safe-area-inset-right\)\)\}/.test(s[CSS])],
   ['map-padding-clamp', 'the map bottom padding is clamped (never squeezes the globe into a singular matrix)', (s) =>
@@ -110,6 +111,29 @@ const RULES = [
     /sellerVerificationStep\(\{ trustState: data\.trustState/.test(s[SELLER_VERIF]) &&
     !/trustState = /.test(s[SELLER_VERIF]) &&
     /case 'certified':/.test(read('src/trunk/verification-status.ts'))],
+  // BRANCHES (2026-10-13) — the recovery sheet renders EXACTLY once. A duplicated
+  // `{sheet === 'recovery'}` block mounted TWO sheets at once (founder-reported).
+  ['recovery-01-single', 'the recovery sheet is rendered exactly once (no duplicated block)', (s) =>
+    (s[APP].match(/\{sheet === 'recovery' && \(/g) ?? []).length === 1 &&
+    (s[APP].match(/data-sheet="recovery"/g) ?? []).length === 1],
+  // BRANCHES — "Revenir à ma recherche" restores the level too: an entity search
+  // reopens entity results, never offer results (the founder landed on the wrong surface).
+  ['recovery-02-level', 'recovery resume carries the search level and reopens the matching surface', (s) =>
+    /lastSearchRef\.current = \{ query: trimmed, level: 'entity' \}/.test(s[APP]) &&
+    /lastSearchRef\.current = \{ query: trimmed, level: 'offer' \}/.test(s[APP]) &&
+    /lastLevel=\{lastSearchRef\.current\.level\}/.test(s[APP]) &&
+    /if \(level === 'entity'\) \{ setSearchLevel\('entity'\); void runEntitySearch\(query\)/.test(s[APP]) &&
+    /lastLevel: 'offer' \| 'entity'/.test(read('src/trunk/RecoveryV13.tsx'))],
+  // BRANCHES — no demo/simulation behavior reaches the buyer. "Simuler la réponse"
+  // and the sim-mode chips are gone: we are not in a demo.
+  ['no-demo-01-sim', 'no demo simulation reaches the user (Simuler la réponse / simMode / Simulated network error)', (s) =>
+    !/Simuler la réponse/.test(read('src/trunk/BuyerFlowV13.tsx')) &&
+    !/simMode/.test(s[APP]) &&
+    !/Simulated network error/.test(s[APP])],
+  // BRANCHES — the availability poll guards the responses LIST: an unexpected payload
+  // must never throw inside the poll (founder clicked "Envoyer la demande").
+  ['avail-01-poll-hardened', 'the availability poll reads the response list defensively (never .length off undefined)', (s) =>
+    /const list = responses\.ok \? \(responses\.data\?\.responses \?\? \[\]\) : \[\]/.test(s[BUYER_FLOW])],
 ];
 
 function run(sources) {
@@ -122,7 +146,7 @@ function run(sources) {
   return failures;
 }
 
-const sources = { [APP]: read(APP), [SORT]: read(SORT), [CSS]: read(CSS), [MAP]: read(MAP), [FRESH]: read(FRESH), [SELLER_FRESH]: read(SELLER_FRESH), [SELLER_VERIF]: read(SELLER_VERIF) };
+const sources = { [APP]: read(APP), [SORT]: read(SORT), [CSS]: read(CSS), [MAP]: read(MAP), [FRESH]: read(FRESH), [SELLER_FRESH]: read(SELLER_FRESH), [SELLER_VERIF]: read(SELLER_VERIF), [BUYER_FLOW]: read(BUYER_FLOW) };
 
 if (process.argv.includes('--selftest')) {
   // Each mutation should make at least its rule fire.
@@ -142,6 +166,7 @@ if (process.argv.includes('--selftest')) {
     [APP, 'Recherches sauvegardées</button>', 'Recherches</button>'],
     [CSS, '.linkbtn{', '.linkbtn-x{'],
     [APP, '</div>\n          </div>\n          {constraintsOpen &&', '</div>\n          {constraintsOpen &&'],
+    [APP, '<div className="constraint-zone">', '<div className="constraint-zone" className="sim-chips">'],
     [CSS, 'padding-left:max(15px,env(safe-area-inset-left));padding-right:max(15px,env(safe-area-inset-right))}', ''],
     [MAP, 'bottomPaddingFor(sheetHeight, viewportHeight)', 'Math.min(sheetHeight + 56, window.innerHeight - 110)'],
     [FRESH, 'now >= (expiresAtMs as number) - FRESHNESS_STALE_WINDOW_MS', 'false'],
@@ -153,6 +178,10 @@ if (process.argv.includes('--selftest')) {
     [SELLER_FRESH, 'expiresInHours: windowHours', 'expiresInHours: null'],
     [APP, "setSheet('verification')", "setSheet('seller')"],
     [SELLER_VERIF, 'sellerVerificationBadge(data.trustState)', "sellerVerificationBadge('confirmed')"],
+    [APP, "{sheet === 'signal' && signalTarget && (", "{sheet === 'recovery' && (\n      {sheet === 'signal' && signalTarget && ("],
+    [APP, "lastSearchRef.current = { query: trimmed, level: 'entity' }", "lastSearchRef.current = { query: trimmed, level: 'offer' }"],
+    [APP, 'const [bounds, setBounds]', "const simMode = 'normal';\n  const [bounds, setBounds]"],
+    [BUYER_FLOW, 'const list = responses.ok ? (responses.data?.responses ?? []) : []', 'const list = responses.data.responses'],
   ];
   let fired = 0;
   for (const [file, from, to] of mutations) {

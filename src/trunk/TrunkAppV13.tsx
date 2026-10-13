@@ -412,9 +412,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const [viewportLoading, setViewportLoading] = useState(false);
   const lastLoadedBoundsRef = useRef<[number, number, number, number] | null>(null);
   const viewportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // TF-8 recovery : dernière recherche commise (pour « Revenir à ma recherche »).
-  const lastSearchRef = useRef<string>('');
-  const [simMode, setSimMode] = useState<'normal' | 'vide' | 'lent' | 'erreur'>('normal');
+  // TF-8 recovery : dernière recherche commise — la requête ET son niveau (S-11), pour que
+  // « Revenir à ma recherche » rouvre la BONNE surface (résultats d'offres ou d'entités).
+  const lastSearchRef = useRef<{ query: string; level: 'offer' | 'entity' }>({ query: '', level: 'offer' });
 
   const bulkCost = useMemo(() => {
     const facilities = bulkFacilities ?? [];
@@ -542,22 +542,6 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   }, [carts]);
 
   const loadPublic = useCallback(async (bbox?: [number, number, number, number]) => {
-    if (simMode === 'vide') {
-      await new Promise((r) => setTimeout(r, 300));
-      setFacilities([]);
-      setMapState('empty');
-      setError('');
-      return;
-    }
-    if (simMode === 'lent') {
-      await new Promise((r) => setTimeout(r, 8000));
-    }
-    if (simMode === 'erreur') {
-      await new Promise((r) => setTimeout(r, 500));
-      setMapState('error');
-      setError('Simulated network error');
-      return;
-    }
     const result = await listPublicFacilities(bbox ?? undefined);
     if (result.ok && result.data) {
       setFacilities(result.data);
@@ -567,7 +551,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       setMapState('error');
       setError(result.error?.message ?? 'La découverte publique est temporairement indisponible.');
     }
-  }, [simMode]);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -677,28 +661,13 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const runSearch = useCallback(async (raw: string, opts?: SearchOptions) => {
     const trimmed = raw.trim();
     if (!trimmed) return;
-    lastSearchRef.current = trimmed;
+    lastSearchRef.current = { query: trimmed, level: 'offer' };
     setSearchedTerm(trimmed);
     // Nouvelle recherche = nouvelle cinématique : l'acheteur n'a encore rien ouvert.
     openedDuringRevealRef.current = false;
     setResultsLoading(true);
     setSheet('none');
     try {
-      if (simMode === 'vide') {
-        await new Promise((r) => setTimeout(r, 300));
-        setResults([]);
-        setResultsLoading(false);
-        setRevealKey(`v13-${Date.now()}`);
-        setRevealPending(true);
-        return;
-      }
-      if (simMode === 'lent') {
-        await new Promise((r) => setTimeout(r, 8000));
-      }
-      if (simMode === 'erreur') {
-        await new Promise((r) => setTimeout(r, 500));
-        throw new Error('Simulated network error');
-      }
       const result = await listPublicFacilities(bounds ?? undefined, trimmed, opts);
       if (result.ok && result.data) {
         setResults(result.data);
@@ -716,7 +685,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       setError(caught instanceof Error ? caught.message : 'Recherche indisponible.');
       setSheet('results');
     }
-  }, [bounds, simMode]);
+  }, [bounds]);
 
   const handleRevealStateChange = useCallback((active: boolean) => {
     setRevealActive(active);
@@ -883,14 +852,6 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     if (!productRef) { setBulkErrors('Aucun produit de référence publié dans les facilités sélectionnées.'); return; }
     setBulkSending(true); setBulkErrors(null);
     try {
-      if (simMode === 'erreur') {
-        await new Promise((r) => setTimeout(r, 500));
-        setBulkResults(bulkCost.targets.map((facility) => ({
-          facilityId: facility.id, facilityName: facility.name, productId: productRef.id, productName: productRef.name, status: 'error' as const, quantityAvailable: null, observedAt: null,
-        })));
-        setBulkSending(false);
-        return;
-      }
       const result = await requestBulkAvailability({
         productId: productRef.id,
         facilityIds: bulkCost.targets.map((facility) => facility.id),
@@ -2054,6 +2015,8 @@ const [compareBlocked, setCompareBlocked] = useState(0);
    *  SEARCH-04 : si aucune entité ne correspond, un LIEU connu (non revendiqué) peut exister
    *  pour ce nom (S-05). On le dit, et on renvoie au niveau offre — jamais « introuvable » sec. */
   const runEntitySearch = useCallback(async (raw: string) => {
+    const trimmed = raw.trim();
+    if (trimmed) lastSearchRef.current = { query: trimmed, level: 'entity' };
     setEntityLoading(true);
     setEntityPlaceHint(null);
     setSheet('results');
@@ -2346,12 +2309,6 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               })()}
             </div>
           )}
-          <div className="sim-chips" style={{ display: 'none', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>
-            <span className={`chip${simMode === 'normal' ? ' active' : ''}`} onClick={() => setSimMode('normal')} role="button" tabIndex={0}><span className="dot" />normal</span>
-            <span className={`chip${simMode === 'vide' ? ' active' : ''}`} onClick={() => setSimMode('vide')} role="button" tabIndex={0}><span className="dot" />vide</span>
-            <span className={`chip${simMode === 'lent' ? ' active' : ''}`} onClick={() => setSimMode('lent')} role="button" tabIndex={0}><span className="dot" />lent</span>
-            <span className={`chip${simMode === 'erreur' ? ' active' : ''}`} onClick={() => setSimMode('erreur')} role="button" tabIndex={0}><span className="dot" />erreur</span>
-          </div>
         </form>
       )}
       {(sheet === 'results') && (
@@ -3468,7 +3425,15 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           </div>
           <p className="sub">Après une panne : rien n’est perdu. Panier, recherche et transaction se reprennent.</p>
           <RecoveryCartRow carts={carts} facilities={facilities} onOpenFacility={(facility) => void handlePinSelect(facility)} />
-          <RecoverySearchRow lastQuery={lastSearchRef.current} onResume={(query) => { setQuery(query); void runSearch(query, currentSearchOptions()); }} />
+          <RecoverySearchRow
+            lastQuery={lastSearchRef.current.query}
+            lastLevel={lastSearchRef.current.level}
+            onResume={(query, level) => {
+              setQuery(query);
+              if (level === 'entity') { setSearchLevel('entity'); void runEntitySearch(query); }
+              else { setSearchLevel('offer'); void runSearch(query, currentSearchOptions()); }
+            }}
+          />
           <RecoveryTxnsRow transactions={openTxn} state={openTxnState} onResume={(transaction) => void resumeTransaction(transaction)} />
         </section>
       )}
@@ -3603,19 +3568,6 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               </>
             );
           })()}
-        </section>
-      )}
-      {sheet === 'recovery' && (
-        <section className="sheet h-mid" data-sheet="recovery" role="region" aria-label="Reprendre">
-          <div className="handle" />
-          <div className="sheet-head">
-            <div><div className="eyebrow">Reprise</div><h1>Reprendre où j'en étais</h1></div>
-            <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
-          </div>
-          <p className="sub">Après une panne : rien n’est perdu. Panier, recherche et transaction se reprennent.</p>
-          <RecoveryCartRow carts={carts} facilities={facilities} onOpenFacility={(facility) => void handlePinSelect(facility)} />
-          <RecoverySearchRow lastQuery={lastSearchRef.current} onResume={(query) => { setQuery(query); void runSearch(query, currentSearchOptions()); }} />
-          <RecoveryTxnsRow transactions={openTxn} state={openTxnState} onResume={(transaction) => void resumeTransaction(transaction)} />
         </section>
       )}
       {sheet === 'claim' && claimResult && (

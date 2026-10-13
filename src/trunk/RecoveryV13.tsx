@@ -40,17 +40,18 @@ export function RecoveryCartRow({ carts, facilities, onOpenFacility }: {
   );
 }
 
-export function RecoverySearchRow({ lastQuery, onResume }: {
+export function RecoverySearchRow({ lastQuery, lastLevel, onResume }: {
   lastQuery: string;
-  onResume: (query: string) => void;
+  lastLevel: 'offer' | 'entity';
+  onResume: (query: string, level: 'offer' | 'entity') => void;
 }) {
   return (
     <div className="cardbox" style={{ marginTop: 8 }}>
-      <div className="kv"><span>Votre recherche</span><b>{lastQuery ? 'Conservée' : 'Aucune'}</b></div>
+      <div className="kv"><span>Votre recherche</span><b>{lastQuery ? (lastLevel === 'entity' ? 'Conservée · entité' : 'Conservée · offre') : 'Aucune'}</b></div>
       {lastQuery && (
         <div className="kv">
           <span>{lastQuery}</span>
-          <button className="btn ghost sm" type="button" style={{ width: 'auto', minHeight: 26 }} onClick={() => onResume(lastQuery)}>
+          <button className="btn ghost sm" type="button" style={{ width: 'auto', minHeight: 26 }} onClick={() => onResume(lastQuery, lastLevel)}>
             Revenir à ma recherche
           </button>
         </div>

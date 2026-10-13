@@ -35,7 +35,7 @@ describe('recovery sheet contract (maquette recovery)', () => {
       root.render(
         <>
           <RecoveryCartRow carts={{}} facilities={[]} onOpenFacility={() => undefined} />
-          <RecoverySearchRow lastQuery="" onResume={() => undefined} />
+          <RecoverySearchRow lastQuery="" lastLevel="offer" onResume={() => undefined} />
           <RecoveryTxnsRow transactions={[]} state="idle" onResume={() => undefined} />
         </>,
       );
@@ -53,7 +53,7 @@ describe('recovery sheet contract (maquette recovery)', () => {
       root.render(
         <>
           <RecoveryCartRow carts={{ 'facility-1': ['product-1', 'product-2'] }} facilities={[facility]} onOpenFacility={onOpenFacility} />
-          <RecoverySearchRow lastQuery="boulangerie" onResume={onResumeSearch} />
+          <RecoverySearchRow lastQuery="boulangerie" lastLevel="offer" onResume={onResumeSearch} />
           <RecoveryTxnsRow transactions={[openTx]} state="idle" onResume={onResumeTxn} />
         </>,
       );
@@ -71,11 +71,22 @@ describe('recovery sheet contract (maquette recovery)', () => {
     await act(async () => {
       buttons.find((b) => b.textContent?.includes('Revenir'))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
-    expect(onResumeSearch).toHaveBeenCalledWith('boulangerie');
+    expect(onResumeSearch).toHaveBeenCalledWith('boulangerie', 'offer');
     await act(async () => {
       buttons.find((b) => b.textContent?.includes('Reprendre'))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
     expect(onResumeTxn).toHaveBeenCalledTimes(1);
+  });
+
+  it('carries an entity-level search back to the entity surface', async () => {
+    const onResumeSearch = vi.fn();
+    await act(async () => {
+      root.render(<RecoverySearchRow lastQuery="omni" lastLevel="entity" onResume={onResumeSearch} />);
+    });
+    expect(container.textContent ?? '').toContain('Conservée · entité');
+    const button = [...container.querySelectorAll('button')].find((b) => b.textContent?.includes('Revenir'));
+    await act(async () => { button?.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(onResumeSearch).toHaveBeenCalledWith('omni', 'entity');
   });
 
   it('names an off-view vendor without inventing a tap target', async () => {

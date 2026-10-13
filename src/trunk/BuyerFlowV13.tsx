@@ -166,8 +166,9 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
           const t2 = await getAuthToken();
           if (!t2 || !result.data?.requestId) return;
           const responses = await getAvailabilityResponses({ requestId: result.data.requestId, token: t2 });
-          if (responses.ok && responses.data && responses.data.responses.length > 0) {
-            const r = responses.data.responses[0];
+          const list = responses.ok ? (responses.data?.responses ?? []) : [];
+          if (list.length > 0) {
+            const r = list[0];
             setLiveResponse({ priceMinor: r.priceMinor ?? 0, quantityAvailable: r.quantityAvailable ?? 0, status: r.status, observedAt: r.observedAt ?? null });
             setStage('result');
           } else {
@@ -361,8 +362,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
           <div className="cardbox" style={{ marginTop: 8 }}>
             <div className="kv"><span>{product.name} ×{quantity}</span><b className="status gray">En attente</b></div>
           </div>
-          <p className="tiny muted" style={{ marginTop: 7 }}>Sans réponse, Omni ne transforme jamais le silence en « disponible ».</p>
-          <button className="btn sm" style={{ marginTop: 10 }} type="button" onClick={() => { if (requestId) { void (async () => { const t = await getAuthToken(); if (t) { const r = await getAvailabilityResponses({ requestId, token: t }); if (r.ok && r.data && r.data.responses.length > 0) { const resp = r.data.responses[0]; setLiveResponse({ priceMinor: resp.priceMinor ?? 0, quantityAvailable: resp.quantityAvailable ?? 0, status: resp.status, observedAt: resp.observedAt ?? null }); setStage('result'); } } })(); } }}>Simuler la réponse</button>
+          <p className="tiny muted" style={{ marginTop: 7 }}>Sans réponse, Omni ne transforme jamais le silence en « disponible ». Cette page se met à jour dès que le vendeur répond.</p>
         </div>
       )}
       {stage === 'result' && liveResponse && (
