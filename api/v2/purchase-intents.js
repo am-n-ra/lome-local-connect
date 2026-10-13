@@ -917,7 +917,6 @@ function createTrunkRepository(sql = database()) {
           from v2_accounts a cross join admin
           where a.id = ${input.accountId}::uuid
             and a.suspended_at is null
-            and a.id <> admin.id
         ), upserted as (
           insert into v2_account_roles (account_id, role, status, granted_by_account_id, revoked_at)
           select target.id, ${input.role}, ${input.status}, target.admin_id, case when ${input.status} = 'revoked' then now() else null end

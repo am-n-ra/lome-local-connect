@@ -67,6 +67,9 @@ describe('admin role management Root seam ( NW-12.5)', () => {
     expect(call.queries[0]).toContain("ar.role = 'admin'");
     expect(call.queries[0]).toContain('on conflict (account_id, role) do update set status = excluded.status');
     expect(call.queries[0]).toContain("'staff_role_granted'");
+    // ROLE-SELF — un admin DOIT pouvoir s'octroyer opérateur/réviseur ; l'ancien garde
+    // `a.id <> admin.id` rejetait silencieusement l'auto-octroi (target vide → 0 ligne).
+    expect(call.queries[0]).not.toContain('a.id <> admin.id');
   });
 
   it('rejects invalid managed role inputs before any query', async () => {

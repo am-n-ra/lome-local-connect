@@ -704,7 +704,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
           )}
           <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>Le compteur de ventes ne se modifie pas ici. Chaque décision est motivée & auditée.</p>
           <div className="btnrow">
-            <button className="btn ghost sm" type="button" disabled>Compteur · volet opérateur</button>
+            <button className="btn ghost sm" type="button" onClick={() => void load()}><RefreshCw size={14} /> Actualiser la console</button>
           </div>
         </>
       )}

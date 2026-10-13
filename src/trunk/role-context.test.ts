@@ -56,13 +56,15 @@ describe('surfaces contextuelles au rôle', () => {
     expect(line).toContain("setSheet('products')");
   });
 
-  it('admin et opérateur sont deux capacités DISTINCTES (pas adminTools pour les deux)', () => {
+  it('admin et opérateur sont deux capacités DISTINCTES (jamais opérateur ← adminTools seul)', () => {
     const start = APP.indexOf('const eligibleRoles');
     const block = APP.slice(start, APP.indexOf('], [sessionUser', start));
     expect(block).toMatch(/if \(adminTools\) base\.push\('admin'\)/);
-    expect(block).toMatch(/if \(operatorTools\) base\.push\('operator'\)/);
-    // l'ancien bug : operator dérivé de adminTools
+    // operator vient d'un drapeau de capacité d'ÉQUIPE, jamais directement de adminTools
+    expect(block).toMatch(/if \(showOperator\) base\.push\('operator'\)/);
     expect(block).not.toMatch(/if \(adminTools\) base\.push\('operator'\)/);
+    // showOperator lit operatorTools en source de vérité ET couvre un membre d'équipe
+    expect(APP).toMatch(/const showOperator = operatorTools \|\| adminTools \|\| reviewerTools/);
   });
 
   it('le menu ADMIN contient « Console », le menu OPÉRATEUR ne l’a pas', () => {

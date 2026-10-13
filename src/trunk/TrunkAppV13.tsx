@@ -281,7 +281,7 @@ export function TrunkAppV13() {
     setInstallState(installStateFor(installPlatform, false, false));
   }, [installPlatform]);
 
-  const [accountRoles, setAccountRoles] = useState<string[]>([]);const [ownedFacilityIds, setOwnedFacilityIds] = useState<string[]>([]);const [phoneDeclared, setPhoneDeclared] = useState<string | null>(null);const [phoneDraft, setPhoneDraft] = useState('');const [phoneBusy, setPhoneBusy] = useState(false);const [phoneMsg, setPhoneMsg] = useState<string | null>(null);const [sellerCatalogue, setSellerCatalogue] = useState<SellerCatalogueResult | null>(null);const [sellerQueue, setSellerQueue] = useState<SellerAvailabilityRequest[]>([]);const [sellerWorkspaceState, setSellerWorkspaceState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');const [sellerAvailable, setSellerAvailable] = useState(false);const [adminTools, setAdminTools] = useState(false);const [operatorTools, setOperatorTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);
+  const [accountRoles, setAccountRoles] = useState<string[]>([]);const [ownedFacilityIds, setOwnedFacilityIds] = useState<string[]>([]);const [phoneDeclared, setPhoneDeclared] = useState<string | null>(null);const [phoneDraft, setPhoneDraft] = useState('');const [phoneBusy, setPhoneBusy] = useState(false);const [phoneMsg, setPhoneMsg] = useState<string | null>(null);const [sellerCatalogue, setSellerCatalogue] = useState<SellerCatalogueResult | null>(null);const [sellerQueue, setSellerQueue] = useState<SellerAvailabilityRequest[]>([]);const [sellerWorkspaceState, setSellerWorkspaceState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');const [sellerAvailable, setSellerAvailable] = useState(false);const [adminTools, setAdminTools] = useState(false);const [operatorTools, setOperatorTools] = useState(false);const [reviewerTools, setReviewerTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);
   // Entrée vendeur directe dans le formulaire de création (depuis la fiche d'une
   // facilité « pas sur la carte »). Consommée une fois, pour ne pas rouvrir le
   // formulaire à chaque retour sur l'espace vendeur.
@@ -624,6 +624,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             setOwnedFacilityIds(caps.data.ownedFacilityIds ?? []);
             setAdminTools(Boolean(caps.data.capabilities?.adminTools));
             setOperatorTools(Boolean(caps.data.capabilities?.operatorTools));
+            setReviewerTools(Boolean(caps.data.capabilities?.reviewerWorkspace));
             setSellerAvailable(Boolean(caps.data.capabilities?.sellerWorkspace));
             setPhoneDeclared(caps.data.phoneDeclared ?? null);
             if (caps.data.capabilities?.sellerWorkspace) void loadSellerWorkspace();
@@ -1359,6 +1360,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         setOwnedFacilityIds(caps.data.ownedFacilityIds ?? []);
         setAdminTools(Boolean(caps.data.capabilities?.adminTools));
         setOperatorTools(Boolean(caps.data.capabilities?.operatorTools));
+        setReviewerTools(Boolean(caps.data.capabilities?.reviewerWorkspace));
         setSellerAvailable(Boolean(caps.data.capabilities?.sellerWorkspace));
         setPhoneDeclared(caps.data.phoneDeclared ?? null);
         if (caps.data.capabilities?.sellerWorkspace) void loadSellerWorkspace();
@@ -1824,6 +1826,15 @@ const [compareBlocked, setCompareBlocked] = useState(0);
 
   const groupInvites = myTeamInvites.filter((i) => i.status === 'pending');
 
+  // Le rôle Opérateur (terrain) est disponible si la capacité serveur `operatorTools`
+  // l'est, OU si le compte détient une AUTRE capacité d'équipe (`adminTools` /
+  // `reviewerWorkspace`). Avant la tranche précédente, `operator` était dérivé de
+  // `adminTools` seul — un opérateur PUR n'y avait donc pas accès. On garde la
+  // capacité réelle comme source de vérité ET on rétablit l'accès pour un membre
+  // d'équipe qui n'a pas encore le rôle `operator` en base (le switch ne doit pas
+  // « disparaître » ; chaque action reste gardée par sa vraie capacité).
+  const showOperator = operatorTools || adminTools || reviewerTools;
+
   const eligibleRoles = useMemo<Role[]>(() => {
     const base: Role[] = ['buyer'];
     if (sessionUser) base.push('seller');
@@ -1831,9 +1842,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     // `operatorTools`). Les dériver toutes deux de `adminTools` privait un opérateur
     // PUR (sans rôle admin) de son propre espace, et donnait « Console » à l'opérateur.
     if (adminTools) base.push('admin');
-    if (operatorTools) base.push('operator');
+    if (showOperator) base.push('operator');
     return base;
-  }, [sessionUser, adminTools, operatorTools]);
+  }, [sessionUser, adminTools, showOperator]);
 
   // Espace de rôle — la maquette garde un tableau par rôle pour le rolepill
   // glissant (.roleswitch avec .ind indicateur inset), pas la liste « on/off » seule.
@@ -2695,8 +2706,11 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               )}
               {role === 'operator' && (
                 <div className="cardbox" style={{ marginTop: 8 }}>
-                  <p className="sub">Vous êtes en tournée : le constat et l'aperçu côté entité vivent dans votre tournée du jour, pas dans la console de gouvernance.</p>
-                  <button className="btn" type="button" style={{ marginTop: 8, width: '100%' }} onClick={() => void openTour()}>Ouvrir ma tournée</button>
+                  <p className="sub">{adminTools ? 'Vous êtes en tournée. Le constat et l\'aperçu côté entité vivent dans votre tournée du jour ; la gouvernance (rôles, revue) est dans la console.' : 'Vous êtes en tournée : le constat et l\'aperçu côté entité vivent dans votre tournée du jour, pas dans la console de gouvernance.'}</p>
+                  <div className="btnrow" style={{ marginTop: 8 }}>
+                    <button className="btn" type="button" onClick={() => void openTour()}>Ouvrir ma tournée</button>
+                    {adminTools && <button className="btn ghost" type="button" onClick={() => setSheet('admin')}>Console de revue</button>}
+                  </div>
                 </div>
               )}
               {claimState === 'error' && <p className="sub" role="alert">{claimError}</p>}
