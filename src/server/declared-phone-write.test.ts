@@ -17,7 +17,9 @@ const source = readFileSync(new URL('../server/trunk-repository.ts', import.meta
 
 describe('S3-a — setDeclaredPhone écrit en une seule instruction', () => {
   const start = source.indexOf('async setDeclaredPhone');
-  const end = source.indexOf('async listRoleManagementAccounts', start);
+  // Borne à la fin de la méthode (la prochaine méthode `async `), pas au nom d'une méthode
+  // précise : insérer une nouvelle méthode entre les deux ne doit pas élargir le contrôle.
+  const end = source.indexOf('\n    async ', start + 1);
   const block = source.slice(start, end);
 
   it('existe et cible la bonne table', () => {

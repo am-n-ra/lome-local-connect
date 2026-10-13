@@ -1,7 +1,7 @@
 import type { IncomingMessage } from 'node:http';
 import { describe, expect, it } from 'vitest';
 import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAcquisitionObjectiveCreate, validateAcquisitionObjectiveState, validateAdCampaignCreate, validateAvailabilityRequestCreate, validateBulkAvailabilityRequestCreate, validateClaimByOsmRef, validateDeclaredPhone, validateFacilityZoneAssignment, validateFieldVisitCreate, validateOfferReportCreate, validateOfferReportDecision, validateSellerFacilityCreate, validateTeamInviteAccept, validateVisitClaim, validateVisitReprogram, validateVisitReportSubmit } from './http';
-import { AvailabilityPolicyError, BuyerSearchPolicyError, EvidenceStoragePolicyError, FacilityShadowError, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SlotPolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, BuyerSearchPolicyError, EvidenceStoragePolicyError, FacilityShadowError, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SlotPolicyError, TransactionPolicyError, WalletPolicyError, AccountDeletionPolicyError } from './trunk-repository';
 import { ClaimEvidenceNotFoundError } from './evidence-storage';
 
 const requestWithBody = (value: string) => ({
@@ -77,6 +77,15 @@ describe('Root HTTP error boundary', () => {
     expect(response.status).toBe(409);
     expect(response.body.error.code).toBe('SLOT_REQUIRED');
     expect(response.body.error.retryable).toBe(false);
+  });
+
+  it('BRANCHES-DELETE — maps an open transaction to 409 ACCOUNT_DELETION_BLOCKED with the count named', () => {
+    const response = toApiErrorResponse('corr-delete', new AccountDeletionPolicyError(2));
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('ACCOUNT_DELETION_BLOCKED');
+    expect(response.body.error.retryable).toBe(true);
+    const error = response.body.error as { openTransactions?: number };
+    expect(error.openTransactions).toBe(2);
   });
 
   it('maps insufficient bulk credits to a non-retryable 403 INSUFFICIENT_CREDITS', () => {

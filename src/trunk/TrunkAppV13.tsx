@@ -18,6 +18,7 @@ import {
   searchPublicEntities, getPublicEntity, createOfferReport,
   listVisitQueue, claimVisit, submitVisitReport, reprogramVisit, uploadVisitEvidence,
   getWebPushKey, getWebPushStatus, subscribeWebPush, revokeWebPush,
+  deleteAccount,
 } from './api';
 import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, trapDrawerFocus, walletBucketTotals, sheetDismissTarget, type PendingAction } from './ui-helpers';
 import { useSheetDrag } from './use-sheet-drag';
@@ -535,6 +536,11 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const [opSideVisitId, setOpSideVisitId] = useState<string | null>(null);
   const [visitBusy, setVisitBusy] = useState<string | null>(null);
   const [visitToast, setVisitToast] = useState('');
+  // BRANCHES-DELETE — suppression de compte : confirmation en deux temps + message honnête.
+  const [deleteArm, setDeleteArm] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteMsg, setDeleteMsg] = useState('');
+  const [deleteReason, setDeleteReason] = useState('');
   const [findingLieu, setFindingLieu] = useState(true);
   const [findingActivite, setFindingActivite] = useState('');
   const [findingContact, setFindingContact] = useState(true);
@@ -1316,6 +1322,43 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       setMyTeamInviteBusy(null);
     }
   }, [requireAuth]);
+
+  // BRANCHES-DELETE — suppression de compte (Option A). Détache les lieux (non revendiqués),
+  // dépublie les offres, anonymise, puis ferme la session. Refusé si une transaction est ouverte.
+  const performAccountDeletion = useCallback(async () => {
+    const token = await requireAuth();
+    if (!token) return;
+    setDeleteBusy(true);
+    setDeleteMsg('');
+    try {
+      const result = await deleteAccount({ token, reason: deleteReason.trim() || null });
+      if (result.ok && result.data) {
+        setDeleteMsg(`Compte supprimé. ${result.data.facilitiesDetached} lieu(x) redeviennent « Non revendiquée ».`);
+        // L'identité auth Neon est supprimée en dernier (best-effort) : le serveur a déjà
+        // détaché et anonymisé. Si l'endpoint n'est pas disponible, la session est tout de
+        // même invalidée côté Omni (deleted_at) et signOut() ferme le cookie.
+        const client = authClient as unknown as { deleteUser?: () => Promise<unknown> } | null;
+        await client?.deleteUser?.().catch(() => undefined);
+        await authClient?.signOut?.().catch(() => undefined);
+        setSessionUser(null);
+        setAdminTools(false);
+        setSellerAvailable(false);
+        setAccountRoles([]);
+        setRole('buyer');
+        setSheet('none');
+        setDeleteArm(false);
+        setDeleteReason('');
+      } else if (result.error?.code === 'ACCOUNT_DELETION_BLOCKED') {
+        setDeleteMsg(result.error.message);
+      } else {
+        setDeleteMsg(result.error?.message ?? 'Suppression impossible pour le moment.');
+      }
+    } catch (caught) {
+      setDeleteMsg(caught instanceof Error ? caught.message : 'Suppression impossible pour le moment.');
+    } finally {
+      setDeleteBusy(false);
+    }
+  }, [requireAuth, deleteReason]);
 
   // S3-a — déclaration d'un numéro Togo. DÉCLARÉ, jamais « vérifié » (S3-0 = A + B).
   const declarePhone = useCallback(async () => {
@@ -3214,8 +3257,23 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div className="row" style={{ gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
               <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} type="button" onClick={() => { setLegalSection('confidentialite'); setSheet('legal'); }}>Confidentialité</button>
               <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} type="button" onClick={() => { setLegalSection('conditions'); setSheet('legal'); }}>Conditions</button>
-              <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} type="button" onClick={() => { setLegalSection('supprimer'); setSheet('legal'); }}>Supprimer mes données</button>
             </div>
+            <div className="kv" style={{ marginTop: 8 }}><span>Supprimer mon compte</span></div>
+            <p className="tiny muted" style={{ marginTop: 4 }}>
+              Vos lieux redeviennent « Non revendiquée » et vos offres sont dépubliées. Vos transactions passées sont conservées (obligation légale) mais votre identité est effacée. Impossible tant qu’une transaction est en cours.
+            </p>
+            {!deleteArm ? (
+              <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" onClick={() => { setDeleteArm(true); setDeleteMsg(''); }}>Supprimer mon compte</button>
+            ) : (
+              <>
+                <input className="input" style={{ marginTop: 6 }} placeholder="Motif (facultatif)" value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)} aria-label="Motif de suppression (facultatif)" />
+                <div className="row" style={{ gap: 6, marginTop: 6 }}>
+                  <button className="btn sm" style={{ width: 'auto', minHeight: 28 }} type="button" disabled={deleteBusy} onClick={() => void performAccountDeletion()}>{deleteBusy ? 'Suppression…' : 'Confirmer la suppression'}</button>
+                  <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} type="button" disabled={deleteBusy} onClick={() => { setDeleteArm(false); setDeleteReason(''); setDeleteMsg(''); }}>Renoncer</button>
+                </div>
+              </>
+            )}
+            {deleteMsg && <p className="tiny" role="status" style={{ marginTop: 6 }}>{deleteMsg}</p>}
           </div>
           <button className="btn ghost" style={{ marginTop: 10, width: '100%' }} type="button" onClick={() => { void authClient.signOut(); setSessionUser(null); setSheet('search'); }}><LogOut size={15} /> Déconnexion</button>
         </section>

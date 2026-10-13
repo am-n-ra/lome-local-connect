@@ -4,7 +4,7 @@ import { routingGate } from './routing-gate';
 import { recordRouteRequest, pruneRouteRequests, routeQuotaExceeded } from './route-quota';
 import { deliverPendingPush } from './web-push';
 import { isWebPushConfigured, sendWebPush, vapidConfig } from './web-push-provider';
-import { AvailabilityPolicyError, AvailabilityResponsePolicyError, BuyerSearchPolicyError, createTrunkRepository, ExternalPaymentMethod, FacilityShadowError, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SellerCataloguePolicyError, SlotPolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, AvailabilityResponsePolicyError, BuyerSearchPolicyError, createTrunkRepository, ExternalPaymentMethod, FacilityShadowError, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SellerCataloguePolicyError, SlotPolicyError, TransactionPolicyError, WalletPolicyError, AccountDeletionPolicyError } from './trunk-repository';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration } from './evidence-contract';
 import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, handleVisitEvidenceUpload, readPrivateEvidence } from './evidence-storage';
 import { NeonWebhookError, parseNeonWebhookBody, readNeonWebhookHeaders, routeNeonWebhookEvent, verifyNeonWebhookSignature } from './neon-webhooks';
@@ -95,6 +95,10 @@ export function toApiErrorResponse(correlationId: string, error: unknown) {
   if (error instanceof FacilityShadowError) {
     // BRANCHES-IDENTITY : le client doit pouvoir router vers la REVENDICATION → on nomme le lieu.
     return { status: 409, body: { ok: false, correlationId, error: { code: 'FACILITY_SHADOWED', message: error.message, retryable: false, existingFacilityId: error.existingFacilityId, existingFacilityName: error.existingFacilityName } } };
+  }
+  if (error instanceof AccountDeletionPolicyError) {
+    // BRANCHES-DELETE : refus honnête — une transaction ouverte bloque la suppression.
+    return { status: 409, body: { ok: false, correlationId, error: { code: 'ACCOUNT_DELETION_BLOCKED', message: error.message, retryable: true, openTransactions: error.openTransactions } } };
   }
   if (error instanceof SlotPolicyError) {
     return { status: 409, body: errorBody(correlationId, 'SLOT_REQUIRED', error.message) };
@@ -633,6 +637,41 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       json(res, 200, { ok: true, correlationId, data: { phoneDeclared: result.phoneDeclared, declaration: 'declared_unverified' } });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/account/delete') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to delete your account.'));
+        return true;
+      }
+      let payload: Record<string, unknown> = {};
+      try {
+        payload = await parseRequestBody(req);
+      } catch {
+        // Un corps absent est acceptable : le motif est facultatif.
+        payload = {};
+      }
+      const reason = typeof payload.reason === 'string' ? payload.reason : null;
+      let result: { accountId: string; facilitiesDetached: number; offersArchived: number } | null;
+      try {
+        result = await repository.deleteAccount({ authUserId, reason });
+      } catch (error) {
+        if (error instanceof AccountDeletionPolicyError) {
+          json(res, 409, { ok: false, correlationId, error: { code: 'ACCOUNT_DELETION_BLOCKED', message: error.message, retryable: true, openTransactions: error.openTransactions } });
+          return true;
+        }
+        if (error instanceof SellerCataloguePolicyError) {
+          json(res, 403, errorBody(correlationId, 'ACCOUNT_UNAVAILABLE', 'Your Omni account is not available for deletion.'));
+          return true;
+        }
+        throw error;
+      }
+      if (!result) {
+        json(res, 403, errorBody(correlationId, 'ACCOUNT_UNAVAILABLE', 'Your Omni account is not available for deletion.'));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: { ...result, detachedAs: 'unclaimed' } });
       return true;
     }
     if (req.method === 'GET' && pathname === '/api/v2/admin/role-management') {

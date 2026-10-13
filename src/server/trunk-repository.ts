@@ -205,6 +205,24 @@ export class SlotPolicyError extends Error {
   }
 }
 
+/**
+ * BRANCHES-DELETE — la suppression de compte est refusée tant qu'une transaction est
+ * ouverte. Le motif nomme le fait (nombre de transactions) pour que le client puisse
+ * agir (terminer ou laisser expirer), pas seulement afficher un refus.
+ */
+export class AccountDeletionPolicyError extends Error {
+  openTransactions: number;
+  constructor(openTransactions: number) {
+    super(
+      openTransactions > 0
+        ? `Vous avez ${openTransactions} transaction${openTransactions > 1 ? 's' : ''} en cours. Terminez-la (ou laissez-la expirer) avant de supprimer votre compte.`
+        : 'La suppression du compte a été refusée.',
+    );
+    this.name = 'AccountDeletionPolicyError';
+    this.openTransactions = openTransactions;
+  }
+}
+
 export class BuyerSearchPolicyError extends Error {
   constructor(message: string) {
     super(message);
@@ -763,6 +781,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         left join v2_account_roles ar on ar.account_id = a.id and ar.status = 'active'
         left join v2_facilities f on f.account_id = a.id
         where a.auth_user_id = ${input.authUserId}
+          and a.deleted_at is null
         group by a.id, a.onboarding_state, a.suspended_at, a.phone_declared
         limit 1
       `);
@@ -815,6 +834,158 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) return null;
       return { phoneDeclared: row.phone_declared === null ? null : String(row.phone_declared) };
+    },
+    async deleteAccount(input: { authUserId: string; reason?: string | null }): Promise<{ accountId: string; facilitiesDetached: number; offersArchived: number }> {
+      const reason = input.reason?.trim() ? input.reason.trim().slice(0, 280) : null;
+      const rows = await retryDatabase(() => sql`
+        with actor as (
+          select a.id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+            and a.deleted_at is null
+          limit 1
+        ),
+        mine as (
+          select f.id
+          from v2_facilities f
+          join actor a on a.id = f.account_id
+        ),
+        -- BRANCHES-DELETE : une transaction ouverte bloque la suppression. On compte les
+        -- états NON TERMINAUX (mêmes bornes que listOpenTransactions : closed/expired sortent).
+        open_txn as (
+          select count(distinct s.transaction_id)::int as n
+          from v2_transaction_snapshots s
+          join v2_transaction_members m on m.transaction_id = s.transaction_id
+          join actor a on a.id = m.account_id
+          where coalesce((
+            select e.state
+            from v2_transaction_events e
+            where e.transaction_id = s.transaction_id
+            order by e.created_at desc, e.state_rank desc
+            limit 1
+          ), 'intent_created') not in ('closed', 'expired')
+        ),
+        -- Le refus est un GATE : aucun des CTE destructifs ne s'exécute quand une
+        -- transaction est ouverte. Sans ce gate, ils s'exécuteraient tous et le CTE
+        -- marked seul resterait vide (les CTE de données modifient la base indépendamment).
+        gate as (
+          select 1 as ok where (select n from open_txn) = 0
+        ),
+        archived as (
+          update v2_products p
+          set publication_state = 'archived', updated_at = now()
+          where p.facility_id in (select id from mine)
+            and p.publication_state <> 'archived'
+            and exists (select 1 from gate)
+          returning p.id
+        ),
+        detached as (
+          update v2_facilities f
+          set account_id = null,
+              entity_id = null,
+              trust_state = 'unclaimed',
+              commercial_plan = 'free',
+              contact_phone = null,
+              contact_whatsapp = null,
+              updated_at = now()
+          where f.id in (select id from mine)
+            and exists (select 1 from gate)
+          returning f.id
+        ),
+        freed_slots as (
+          update v2_facility_slots fs
+          set status = 'revoked', facility_id = null
+          from actor a
+          where fs.account_id = a.id and fs.status = 'assigned'
+            and exists (select 1 from gate)
+          returning fs.id
+        ),
+        cleared_roles as (
+          update v2_account_roles ar
+          set status = 'revoked', revoked_at = now()
+          from actor a
+          where ar.account_id = a.id and ar.status = 'active'
+            and exists (select 1 from gate)
+          returning ar.id
+        ),
+        purged as (
+          delete from v2_account_favorites fav
+          using actor a
+          where fav.account_id = a.id
+            and exists (select 1 from gate)
+          returning fav.id
+        ),
+        purged_saved as (
+          delete from v2_saved_searches ss
+          using actor a
+          where ss.account_id = a.id
+            and exists (select 1 from gate)
+          returning ss.id
+        ),
+        purged_push as (
+          delete from v2_web_push_subscriptions ws
+          using actor a
+          where ws.account_id = a.id
+            and exists (select 1 from gate)
+          returning ws.id
+        ),
+        marked as (
+          update v2_accounts a
+          set deleted_at = now(),
+              deletion_reason = ${reason},
+              phone_declared = null,
+              phone_declared_at = null,
+              updated_at = now()
+          from actor act
+          where a.id = act.id
+            and exists (select 1 from gate)
+          returning a.id
+        ),
+        audited as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select marked.id, 'account_deleted', 'account', marked.id::text, gen_random_uuid()::text, ${reason}
+          from marked
+          returning id
+        )
+        select
+          marked.id as account_id,
+          (select count(*)::int from detached) as facilities_detached,
+          (select count(*)::int from archived) as offers_archived,
+          (select n from open_txn) as open_transactions
+        from marked
+        left join audited on true
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) {
+        // Aucune ligne : soit le compte n'existe pas / est déjà supprimé, soit une
+        // transaction est ouverte. On distingue les deux pour un message honnête.
+        const probe = await retryDatabase(() => sql`
+          select a.id, a.deleted_at,
+            (select count(distinct s.transaction_id)::int
+             from v2_transaction_snapshots s
+             join v2_transaction_members m on m.transaction_id = s.transaction_id
+             where m.account_id = a.id
+               and coalesce((
+                 select e.state from v2_transaction_events e
+                 where e.transaction_id = s.transaction_id
+                 order by e.created_at desc, e.state_rank desc limit 1
+               ), 'intent_created') not in ('closed', 'expired')) as open_txn
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+          limit 1
+        `);
+        const probeRow = (probe as Record<string, unknown>[])[0];
+        if (probeRow && Number(probeRow.open_txn ?? 0) > 0) {
+          throw new AccountDeletionPolicyError(Number(probeRow.open_txn));
+        }
+        throw new SellerCataloguePolicyError('FORBIDDEN_OR_ACCOUNT_UNAVAILABLE');
+      }
+      return {
+        accountId: String(row.account_id),
+        facilitiesDetached: Number(row.facilities_detached ?? 0),
+        offersArchived: Number(row.offers_archived ?? 0),
+      };
     },
     async listRoleManagementAccounts(input: { authUserId: string }): Promise<{ authorized: boolean; accounts: RoleManagementAccount[] }> {
       const rows = await retryDatabase(() => sql`

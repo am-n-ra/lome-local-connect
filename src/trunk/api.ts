@@ -38,6 +38,17 @@ export async function setDeclaredPhone(input: { token: string; phone: string | n
   return parse(response);
 }
 
+// BRANCHES-DELETE — supprime le compte (Option A) : détache les lieux (non revendiqués),
+// dépublie les offres, anonymise. Refusé si une transaction est ouverte.
+export async function deleteAccount(input: { token: string; reason?: string | null }): Promise<ApiResult<{ accountId: string; facilitiesDetached: number; offersArchived: number; detachedAs: string }>> {
+  const response = await fetchWithRecovery('/api/v2/account/delete', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ reason: input.reason ?? null }),
+  });
+  return parse(response);
+}
+
 export async function getRoleManagementAccounts(input: { token: string }): Promise<ApiResult<{ authorized: boolean; accounts: RoleManagementAccount[] }>> {
   const response = await fetchWithRecovery('/api/v2/admin/role-management', {
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
