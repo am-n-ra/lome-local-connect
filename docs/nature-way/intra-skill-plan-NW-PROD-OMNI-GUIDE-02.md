@@ -92,10 +92,19 @@
 ## Handoff to Founder HQ
 
 > **Local status:** `done` — les trois surfaces livrées et prouvées, non bloquantes.
-> **Gate decision:** `advance` (livraison complète A+B+C ; reste push + T-07d).
-> **Closed:** `GU-1` (forme choisie), `GU-2` (source unique + vocabulaire S-06), `GU-3` (3 surfaces), `GU-4` (garde + preuve navigateur).
-> **Open or blocked:** `GU-5-1` — push + vérification prod (hash prod === local).
+> **Gate decision:** `advance` → **`closed`** (push + T-07d vérifiés).
+> **Closed:** `GU-1` (forme choisie), `GU-2` (source unique + vocabulaire S-06), `GU-3` (3 surfaces), `GU-4` (garde + preuve navigateur), `GU-5` (push + T-07d).
+> **Open or blocked:** aucun.
 > **Resource Receipt:** skills + templates + Seed + maquette + code (voir ci-dessus)
 > **Residual gap:** le guide montre l'échelle et les 3 temps ; il ne liste pas chaque écran de la maquette (choix : un guide court, pas un manuel).
-> **Next smallest action:** push puis vérifier que la prod sert le build (T-07d).
+> **Next smallest action:** —
 > **Re-plan trigger:** le fondateur veut une autre forme, ou un contenu plus long.
+
+## T-07d — push ≠ deploy (vérifié)
+
+| Étape | Preuve |
+|---|---|
+| Commit | `e99c195` poussé (`7b42c03..e99c195`) |
+| Déploiement GitHub | `deployments?per_page=1` → `sha=e99c1959b` (Production) |
+| Prod = local | prod sert `assets/index-BV2tFHif.js` === build local `index-BV2tFHif.js` |
+| Preuve navigateur prod | `TARGET=https://omni.sparkafrika.online` → **44/0** (3 passes stables) |
