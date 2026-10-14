@@ -866,6 +866,9 @@ var toFacility = (row) => ({
   // SEARCH-01 — real entry price of the place's cheapest published offer (discount
   // applied), with its OWN currency. Absent on read paths that don't aggregate it.
   minPriceMinor: row.min_price_minor === null || row.min_price_minor === void 0 ? void 0 : Number(row.min_price_minor),
+  // BRANCHES-PRICE-DISPLAY : l'origine (sans remise) de cette même offre la moins chère.
+  // Présente seulement quand le chemin de lecture agrège les prix.
+  minPriceOriginalMinor: row.min_price_original_minor === null || row.min_price_original_minor === void 0 ? void 0 : Number(row.min_price_original_minor),
   priceCurrency: row.price_currency === null || row.price_currency === void 0 ? void 0 : String(row.price_currency),
   maxDiscountPercent: row.max_discount_percent === null || row.max_discount_percent === void 0 ? void 0 : Number(row.max_discount_percent),
   // R-E (S-11): the entity behind the place. A place may exist without one (cold-start, S-05).
@@ -3071,6 +3074,13 @@ function createTrunkRepository(sql = database()) {
                 order by (p.price_minor - (case when p.discount_kind = 'percentage' and p.discount_value between 1 and 90
                 then floor(p.price_minor * p.discount_value / 100.0) else 0 end)))
                 filter (where p.id is not null))[1] as min_price_minor,
+            -- BRANCHES-PRICE-DISPLAY : l'origine (prix sans remise) de LA MÊME offre la moins
+            -- chère — même tri que min_price_minor, donc les deux décrivent une seule offre
+            -- et ne peuvent pas afficher un prix d'origine d'une autre ligne.
+            (array_agg(p.price_minor
+                order by (p.price_minor - (case when p.discount_kind = 'percentage' and p.discount_value between 1 and 90
+                then floor(p.price_minor * p.discount_value / 100.0) else 0 end)))
+                filter (where p.id is not null))[1] as min_price_original_minor,
             (array_agg(upper(coalesce(p.currency, 'XOF'))
                 order by (p.price_minor - (case when p.discount_kind = 'percentage' and p.discount_value between 1 and 90
                 then floor(p.price_minor * p.discount_value / 100.0) else 0 end)))

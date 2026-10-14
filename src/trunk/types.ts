@@ -41,6 +41,9 @@ export interface PublicFacility {
   productCount: number;
   /** SEARCH-01 — entry price of the cheapest published offer (discount applied), with its own currency. */
   minPriceMinor?: number;
+  /** BRANCHES-PRICE-DISPLAY — original (pre-discount) price of that same cheapest offer, so the
+   * card can show the struck-through price next to the Omni price. Absent when not aggregated. */
+  minPriceOriginalMinor?: number;
   priceCurrency?: string;
   /** SEARCH-01 — best Omni discount (%) across published offers; drives the "Remise Omni" sort. */
   maxDiscountPercent?: number;

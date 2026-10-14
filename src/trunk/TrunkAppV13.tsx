@@ -68,9 +68,10 @@ import { entityBenefitLabel } from './entity-benefits';
 import { facilityFormLabel } from './facility-form';
 import { RESULTS_SORTS, sortResults, type ResultsSortKey } from './results-sort';
 import { worstFreshness, freshnessLabel } from './offer-freshness';
+import { priceDisplay } from './price-display';
 import { compareFacilities } from './v13-compare';
 import { OMNI_BASE_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, convertUsdMinorToLocal } from '../domain/pricing';
-import { resolveUserCurrency, currencyFor, formatAmount, formatMoney, type ResolvedCurrency } from '../domain/currency';
+import { resolveUserCurrency, formatMoney, type ResolvedCurrency } from '../domain/currency';
 import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
 import { normalizeTogoPhone, phoneDeclarationLabel, whatsappDeclareLink } from '../domain/phone';
 import './ui-v13.css';
@@ -2659,21 +2660,31 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             </div>
           )}
           <div className="hgrid" id="hgrid" onScroll={handleResultsScroll}>
-            {orderedResults.map((facility) => (
+            {orderedResults.map((facility) => {
+              const facilityCardPrice = typeof facility.minPriceMinor === 'number'
+                ? priceDisplay({
+                    prixOriginal: facility.minPriceOriginalMinor ?? facility.minPriceMinor,
+                    prixReduit: facility.minPriceMinor,
+                    currency: facility.priceCurrency ?? null,
+                  })
+                : null;
+              return (
               <button key={facility.id} data-fid={facility.id} type="button" className={`hcard${resultsFollowId === facility.id ? ' focused' : ''}`} onClick={() => void handlePinSelect(facility)}>
                 <div className={`thumb${facility.trust === 'unconfirmed' ? ' unclaimed' : ''}`}>
                   {facility.trust === 'confirmed' && <span className="vmark">✓</span>}
+                  {facilityCardPrice?.promo && <span className="promo">{facilityCardPrice.promo}</span>}
                 </div>
                 <div className="body">
                   <b>{facility.name}</b>
                   <small>{facility.category} · {facility.productCount} produits</small>
-                  {typeof facility.minPriceMinor === 'number' && (
-                    <span className="pr">dès {formatAmount(facility.minPriceMinor, currencyFor(facility.priceCurrency))}</span>
+                  {facilityCardPrice && (
+                    <span className="pr">dès {facilityCardPrice.price}{facilityCardPrice.original && <span className="old">{facilityCardPrice.original}</span>}</span>
                   )}
                   {facility.sponsored && <span className="status ok" style={{ display: 'inline-block', marginTop: 3, fontSize: 9 }}>Sponsorisé</span>}
                 </div>
               </button>
-            ))}
+              );
+            })}
           </div>
           {/* SEARCH-02 (D-03) — la barre de fraîcheur de la maquette (results L537), dérivée
               de la fenêtre d'expiration des offres : vivante / vieillissante / non confirmée.
@@ -2812,11 +2823,12 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               const product = detail?.products?.find((p) => p.stockLoueOmni > 0) ?? detail?.products?.[0];
               // An offer price carries its OWN currency, not the viewer's market (D-LOC-3).
               const cheapest = detail?.products?.length ? detail.products.reduce((a, b) => (b.prixReduit < a.prixReduit ? b : a)) : null;
+              const cheapestPd = cheapest ? priceDisplay(cheapest) : null;
               return (
                 <button key={facility.id} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => { if (facility.trust !== 'unclaimed' && product) { startFlow({ id: facility.id, name: facility.name, latitude: facility.latitude, longitude: facility.longitude }, { id: product.id, name: product.name, priceKind: product.priceKind ?? null, listedPriceMinor: product.prixReduit ?? null }); } else { setSheet('facility'); void handlePinSelect(facility); } }}>
                   <div className="row" style={{ justifyContent: 'space-between' }}>
                     <div><b>{facility.name}</b><br /><span className="tiny muted">{facility.category} · {facility.plan}</span></div>
-                    {cheapest ? <span className="status ok">dès {formatMoney(cheapest.prixReduit, currencyFor(cheapest.currency).currency)}</span> : <span className="status gray">Indisponible</span>}
+                    {cheapestPd ? <span className="status ok">dès {cheapestPd.price}{cheapestPd.original && <span className="old">{cheapestPd.original}</span>}</span> : <span className="status gray">Indisponible</span>}
                   </div>
                   {product && <p className="tiny muted" style={{ marginTop: 4 }}>{product.name} · {moneyOrQty(product.stockLoueOmni)}</p>}
                 </button>
@@ -2962,6 +2974,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 const highlighted = product.id === highlightedProductId;
                 const carac = offerCharacteristics(product);
                 const trust = offerTrustLabel({ integrity: product.integrity, reputation: product.reputation });
+                const pd = priceDisplay(product);
                 return (
                   <div className={`pitem${on ? ' sel' : ''}${highlighted ? ' searched' : ''}`} key={product.id} role={buyerControlsVisible ? 'button' : undefined} tabIndex={buyerControlsVisible ? 0 : undefined} style={{ cursor: buyerControlsVisible ? 'pointer' : 'default', ...(highlighted ? { boxShadow: 'inset 0 0 0 1.5px var(--ink-faint)', borderRadius: 12 } : {}) }} onClick={buyerControlsVisible ? () => setCarts((current) => toggleCartProduct(current, selectedFacility.id, product.id)) : undefined}>
                     {buyerControlsVisible && <span className={`chk${on ? ' on' : ''}`} aria-hidden="true">{on ? '✓' : ''}</span>}
@@ -2969,7 +2982,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     <span><b>{product.name}</b>{highlighted && <span className="status ink" style={{ marginLeft: 6 }}>Recherché</span>}<small>{product.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small>{carac.length > 0 && <small style={{ display: 'block', marginTop: 2 }}>{carac.map((c) => c.value).join(' · ')}</small>}
                       <span className={`trust${trust.ok ? ' ok' : ''}${trust.muted ? ' muted' : ''}`}>{trust.text}{trust.missing.length > 0 && <span className="miss"> · {trust.missing.join(', ')}</span>}</span>
                     </span>
-                    <span className="pr">{formatMoney(product.prixReduit, currencyFor(product.currency).currency)}</span>
+                    <span className="pr">{pd.price}{pd.original && <span className="old">{pd.original}</span>}{pd.promo && <span className="promo">{pd.promo}</span>}</span>
                     {buyerControlsVisible && (
                       <button className="btn ghost sm" type="button" style={{ width: 'auto', minHeight: 26, fontSize: 11 }} title="Signaler un problème sur cette offre" onClick={(e) => { e.stopPropagation(); openSignal(product.id, product.name); }}>Signaler</button>
                     )}
@@ -3037,12 +3050,13 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           {selectedEntity.offers.length > 0 && <div className="label" style={{ marginTop: 8 }}>Ses offres</div>}
           {selectedEntity.offers.map((offer) => {
             const carac = offerCharacteristics(offer);
+            const pd = priceDisplay(offer);
             return (
               <div className="pitem" key={offer.id} role="button" tabIndex={0} style={{ cursor: 'pointer' }} onClick={() => { setSheet('facility'); setSelectedId(offer.facilityId); void handlePinSelect({ id: offer.facilityId }); }}>
                 <span className="chk" aria-hidden="true" />
                 <span className="pthumb" />
                 <span><b>{offer.name}</b><small>{offer.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small>{carac.length > 0 && <small style={{ display: 'block', marginTop: 2 }}>{carac.map((c) => c.value).join(' · ')}</small>}</span>
-                <span className="pr">{formatMoney(offer.prixReduit, currencyFor(offer.currency).currency)}</span>
+                <span className="pr">{pd.price}{pd.original && <span className="old">{pd.original}</span>}{pd.promo && <span className="promo">{pd.promo}</span>}</span>
               </div>
             );
           })}

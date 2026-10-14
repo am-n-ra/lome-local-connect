@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ImagePlus, PackageOpen } from 'lucide-react';
 import { getAuthToken } from '../auth';
 import { getSellerCatalogue, transitionSellerProduct, uploadSellerProductMedia } from './api';
-import { currencyFor, formatMoney } from '../domain/currency';
+import { priceDisplay } from './price-display';
 import { occasionDetailMissing } from './offer-condition';
 import { handoverIncoherent } from './offer-handover';
 import type { SellerCatalogueProduct } from './types';
@@ -134,7 +134,7 @@ export function ProductCatalogueV13({ onClose, onStockEvent }: ProductCatalogueV
                   </small>
                 )}
               </span>
-              <span className="pr">{formatMoney(product.prixReduit, currencyFor(product.currency).currency)}</span>
+              <span className="pr">{(() => { const pd = priceDisplay(product); return <>{pd.price}{pd.original && <span className="old">{pd.original}</span>}{pd.promo && <span className="promo">{pd.promo}</span>}</>; })()}</span>
               <span className="btnrow" style={{ gap: 6, marginTop: 6 }}>
                 <button
                   className="btn ghost sm"
