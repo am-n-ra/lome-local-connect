@@ -32,35 +32,35 @@
 
 | Order | Workstream | Gate condition | Evidence required | Status | Re-plan trigger |
 |---|---|---|---|---|---|
-| 1 | `PD-1` Root lecture | la carte résultat expose l'origine du prix d'appel (même ligne que le réduit) | SQL réel + mapping + type | `in_progress` | fait contredit |
-| 2 | `PD-2` Trunk UI | 4 surfaces : réduit + ~~origine~~ + `%` quand remise réelle ; rien sinon | rendu + preuve navigateur | `todo` | faux `−0 %` |
-| 3 | `PD-3` Heartwood | garde unitaire « pas de faux `−0 %` » ; CSS porté 1:1 | test falsifié | `todo` | garde qui ne peut échouer |
-| 4 | `AUDIT` écarts maquette | liste ordonnée et code-vérifiée des écarts restants | registre d'écarts | `todo` | écart inventé |
-| 5 | `RING` | push + T-07d | hash prod === local | `todo` | déploiement |
+| 1 | `PD-1` Root lecture | la carte résultat expose l'origine du prix d'appel (même ligne que le réduit) | SQL réel + mapping + type | `done` | fait contredit |
+| 2 | `PD-2` Trunk UI | 4 surfaces : réduit + ~~origine~~ + `%` quand remise réelle ; rien sinon | rendu + preuve navigateur | `done` | faux `−0 %` |
+| 3 | `PD-3` Heartwood | garde unitaire « pas de faux `−0 %` » ; CSS porté 1:1 | test falsifié | `done` | garde qui ne peut échouer |
+| 4 | `AUDIT` écarts maquette | liste ordonnée et code-vérifiée des écarts restants | registre d'écarts | `done` | écart inventé |
+| 5 | `RING` | push + T-07d | hash prod === local | `done` | déploiement |
 
 ## Dependency-aware task tree
 
 | ID | Parent | Phase | Objective | Depends on | Status | Acceptance / proof | Risk/debt | Re-plan trigger |
 |---|---|---|---|---|---|---|---|---|
-| PD-1-1 | PD-1 | Root | `listPublicFacilities` renvoie `min_price_original_minor` (origine de la même offre la moins chère) | — | `in_progress` | SQL réel (les deux prix cohérents) | lecture seule | colonne mal groupée |
-| PD-1-2 | PD-1 | Root | `toFacility` mappe `minPriceOriginalMinor` ; `types.ts` | PD-1-1 | `todo` | type + mapping | — | — |
-| PD-2-1 | PD-2 | Trunk | fiche offre — lignes produit : réduit + ~~origine~~ + `−N %` | PD-1-2 | `todo` | rendu jsdom | monochrome | faux zéro |
-| PD-2-2 | PD-2 | Trunk | « Ses offres » (entité) : idem | PD-2-1 | `todo` | rendu | — | — |
-| PD-2-3 | PD-2 | Trunk | carte résultat `hcard` : `dès <réduit>` + ~~origine~~ + badge `.promo` | PD-2-1 | `todo` | rendu | — | — |
-| PD-2-4 | PD-2 | Trunk | `ProductCatalogueV13` (vendeur) : idem | PD-2-1 | `todo` | rendu | — | — |
-| PD-2-5 | PD-2 | Trunk | CSS `.old` + `.promo` porté 1:1 de la maquette | PD-2-1 | `todo` | `check:dead-css` vert | accent réservé | classe fantôme |
-| PD-3-1 | PD-3 | Heartwood | helper pur `priceDisplay` (décide quoi montrer) + test | PD-2 | `todo` | falsifié | — | — |
-| PD-3-2 | PD-3 | Heartwood | preuve navigateur prod (2 prix + %, et rien sans remise) | PD-3-1 | `todo` | script `prove-*` | — | — |
-| AUDIT-1 | AUDIT | Heartwood | comparer maquette ↔ app surface par surface | — | `todo` | registre d'écarts | — | — |
-| RING-1 | RING | Ring | suite + gardes + push + T-07d | PD-3-2, AUDIT-1 | `todo` | hash === local | — | déploiement |
+| PD-1-1 | PD-1 | Root | `listPublicFacilities` renvoie `min_price_original_minor` (origine de la même offre la moins chère) | — | `done` | SQL réel (les deux prix cohérents) | lecture seule | colonne mal groupée |
+| PD-1-2 | PD-1 | Root | `toFacility` mappe `minPriceOriginalMinor` ; `types.ts` | PD-1-1 | `done` | type + mapping | — | — |
+| PD-2-1 | PD-2 | Trunk | fiche offre — lignes produit : réduit + ~~origine~~ + `−N %` | PD-1-2 | `done` | rendu jsdom | monochrome | faux zéro |
+| PD-2-2 | PD-2 | Trunk | « Ses offres » (entité) : idem | PD-2-1 | `done` | rendu | — | — |
+| PD-2-3 | PD-2 | Trunk | carte résultat `hcard` : `dès <réduit>` + ~~origine~~ + badge `.promo` | PD-2-1 | `done` | rendu | — | — |
+| PD-2-4 | PD-2 | Trunk | `ProductCatalogueV13` (vendeur) : idem | PD-2-1 | `done` | rendu | — | — |
+| PD-2-5 | PD-2 | Trunk | CSS `.old` + `.promo` porté 1:1 de la maquette | PD-2-1 | `done` | `check:dead-css` vert | accent réservé | classe fantôme |
+| PD-3-1 | PD-3 | Heartwood | helper pur `priceDisplay` (décide quoi montrer) + test | PD-2 | `done` | falsifié | — | — |
+| PD-3-2 | PD-3 | Heartwood | preuve navigateur prod (2 prix + %, et rien sans remise) | PD-3-1 | `done` | script `prove-*` | — | — |
+| AUDIT-1 | AUDIT | Heartwood | comparer maquette ↔ app surface par surface | — | `done` | registre d'écarts | — | — |
+| RING-1 | RING | Ring | suite + gardes + push + T-07d | PD-3-2, AUDIT-1 | `done` | hash === local | — | déploiement |
 
 ## Handoff to Founder HQ
 
-> **Local status:** `in_progress`
-> **Gate decision:** `advance`
-> **Closed:** —
-> **Open or blocked:** `PD-1-1` (en cours)
+> **Local status:** `done`
+> **Gate decision:** `advance` (tranche livrée, prod vérifiée)
+> **Closed:** `PD-1…PD-3` (prix sans/avec remise), `AUDIT` (registre d’écarts `omni-branches-maquette-gaps-2026-10-13.md`), `RING` (push `ada8844` + T-07d).
+> **Open or blocked:** — (écarts maquette restants = décision fondateur : `G-1`/`G-2`/`G-3`)
 > **Resource Receipt:** Founder HQ + Nature Way + controller + template + maquette + design.md chargés
-> **Residual gap:** à mesurer en fin de tranche
+> **Residual gap:** `G-2` (aperçu de pin) = décision `T-10p` à re-confirmer ; `G-1`/`G-3` = durcissements possibles
 > **Next smallest action:** `PD-1-1` (Root lecture de l'origine du prix d'appel)
 > **Re-plan trigger:** un faux `−0 %` ou un prix réduit sans contexte
