@@ -185,7 +185,16 @@ for (const f of ['qte', 'depletion', 'unique', 'position', 'temporalite', 'remis
 // lags the territory. Guards below pin the two that were really missing, plus the
 // two genuinely present, so the claim cannot drift either way.
 check(/Partager \(WhatsApp\/SMS\)/.test(js), 'QR circulates off-Omni (WhatsApp/SMS) (S-22)');
-check(/3 \/ 20 \(gratuit\)/.test(js), 'free offer ceiling is stated as 3 / 20 (economy)');
+// BRANCHES-GUIDE-1a (2026-10-14) : le plafond gratuit est DÉRIVÉ d'une constante unique,
+// jamais recopié. Le garde exige la forme calculée `${SELLER_OFFERS_USED} / ${FREE_OFFER_LIMIT}`
+// ET l'absence du littéral « 3 / 20 » : un nombre recopié dans un écran dérive en silence
+// (l'app affichait « 5 offres max » là où la règle dit 20).
+check(/\$\{SELLER_OFFERS_USED\} \/ \$\{FREE_OFFER_LIMIT\} \(gratuit\)/.test(js),
+  'free offer ceiling is DERIVED from the constant, not copied (economy)');
+check(!/3 \/ 20 \(gratuit\)/.test(js),
+  'no hardcoded "3 / 20 (gratuit)" literal (economy)');
+check(/const FREE_OFFER_LIMIT = 20/.test(js),
+  'free offer ceiling constant declared once (economy)');
 check(/Cette offre appartient \u00e0/.test(js) && /dit <i>o\u00f9<\/i>, jamais <i>\u00e0 qui<\/i>/.test(js),
   'owning ENTITY is explicit; place says where, never whose (S-25)');
 check(/Bonus confiance<\/span><b>20 USD verrouill\u00e9 \u2192 3 ventes \u00e0 des acheteurs distincts/.test(js),

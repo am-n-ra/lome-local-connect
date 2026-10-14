@@ -2,6 +2,13 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const getPublicStats = vi.fn(async () => ({ ok: true as const, data: { facilities: 13743, offers: 10 } }));
+vi.mock('./api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./api')>();
+  return { ...actual, getPublicStats: () => getPublicStats() };
+});
+
 import { WelcomeV13, WELCOME_SEARCH_EXAMPLES } from './WelcomeV13';
 
 let container: HTMLDivElement;
@@ -58,6 +65,14 @@ describe('WelcomeV13 — parcours immersif après création (3 moments réels)',
     expect(dots.length).toBe(4);
     expect(dots[0].className).toContain('active');
     expect(dots[1].className).not.toContain('active');
+  });
+
+  it('montre le VRAI total de lieux (dérivé de getPublicStats), jamais un plafond', async () => {
+    render(base);
+    await act(async () => { await Promise.resolve(); });
+    expect(getPublicStats).toHaveBeenCalled();
+    expect(container.textContent).toContain('Lieux connus');
+    expect(container.textContent).toContain('13743');
   });
 
   it('le moment 2 propose les deux rôles, et le choix appelle le vrai routage', () => {

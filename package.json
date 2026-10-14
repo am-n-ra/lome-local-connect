@@ -38,6 +38,7 @@
     "proof:branches-legal": "node scripts/prove-branches-legal.mjs",
     "proof:branches-drag-otp-filter-search": "node scripts/prove-branches-drag-otp-filter-search.mjs",
     "proof:branches-auth-loop": "node scripts/prove-branches-auth-loop.mjs",
+    "proof:number-truth": "node scripts/prove-number-truth.mjs",
     "proof:branches-input-zoom": "node scripts/prove-branches-input-zoom.mjs",
     "proof:branches-desktop-onboarding": "node scripts/prove-branches-desktop-onboarding.mjs",
     "proof:branches-price-display": "node scripts/prove-branches-price-display.mjs",

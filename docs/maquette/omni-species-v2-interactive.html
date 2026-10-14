@@ -217,7 +217,7 @@
 <body>
 <div class="stage" id="stage">
   <div class="mapbase"><div class="land a"></div><div class="land b"></div><div class="grid"></div><div id="pins"></div>
-    <div class="countmark" id="countmark">206<small>OFFRES</small></div>
+    <div class="countmark" id="countmark">206<small>LIEUX</small></div>
     <div class="mapctrl"><button onclick="zoom(1)">+</button><button onclick="zoom(-1)">−</button><button onclick="centerMe()">◎</button></div>
     <div class="filterrail" id="filterrail"></div>
     <div class="usermarker" style="left:48%;top:62%"></div>
@@ -232,6 +232,10 @@
 <script>
 /* ===== Omni Species V2 — prototype interactif ===== */
 /* S-06 : échelle d'existence 0→4 — Discoverable ≠ Queryable ≠ Available ≠ Transactable */
+/* D-C4 : plafond gratuit — UNE seule constante, jamais un nombre recopié dans un écran
+   (leçon 2026-10-14 : l'app affichait « 5 offres max » là où la règle dit 20). */
+const FREE_OFFER_LIMIT = 20;
+const SELLER_OFFERS_USED = 3;
 const LEVELS = [
   ['Présente', 'sur la carte, pas encore gérée'],
   ['Revendiquée', 'une entité en a pris la responsabilité'],
@@ -1098,7 +1102,7 @@ SHEETS['seller-dash'] = () => `
   <button class="btn ghost" onclick="go('seller-orders')">Commandes à honorer (2)</button>
   <button class="btn ghost" onclick="go('seller-txn')">Toutes les transactions</button>
   <button class="btn ghost" onclick="go('seller-publish')">Publier une offre</button>
-  <button class="btn ghost" onclick="go('seller-offers')">Mes offres (3 / 20 en gratuit)</button>
+  <button class="btn ghost" onclick="go('seller-offers')">Mes offres (${SELLER_OFFERS_USED} / ${FREE_OFFER_LIMIT} en gratuit)</button>
   <button class="btn ghost" onclick="go('seller-stock')">Stock alloué Omni</button>
   <button class="btn ghost" onclick="go('seller-entity-fiche')">Fiche de l’entité</button>
   <button class="btn ghost" onclick="go('seller-scan')">Scanner le code d’un acheteur</button>
@@ -1134,7 +1138,7 @@ SHEETS['seller-publish'] = () => `
   <p class="lead">Publication possible <b>dès maintenant</b> (badge « Non vérifié ») → « Vérifié » après contrôle opérateur. Intégrité automatique + réputation par offre (S-32).</p>`;
 
 SHEETS['seller-offers'] = () => `
-  <div class="handle"></div><div class="eyebrow">Mes offres · 3 / 20 (gratuit)</div>
+  <div class="handle"></div><div class="eyebrow">Mes offres · ${SELLER_OFFERS_USED} / ${FREE_OFFER_LIMIT} (gratuit)</div>
   <h1 style="margin-top:3px">Catalogue</h1>
   <div class="cardbox">
     <div class="kv"><span>Spaghetti 500 g</span><b>En stock · 4,6 ★</b></div>
@@ -1142,7 +1146,7 @@ SHEETS['seller-offers'] = () => `
     <div class="kv"><span>Huile 1 L</span><b>Rupture</b></div>
   </div>
   <button class="btn" onclick="go('seller-publish')">Ajouter une offre</button>
-  <p class="lead">17 offres restantes avant le plafond gratuit. <b>Pro</b> = illimité + dispo automatique.</p>
+  <p class="lead">${FREE_OFFER_LIMIT - SELLER_OFFERS_USED} offres restantes avant le plafond gratuit. <b>Pro</b> = illimité + dispo automatique.</p>
   <button class="btn ghost" onclick="go('seller-pro')">Passer Pro</button>`;
 
 SHEETS['seller-pro'] = () => `
@@ -1553,7 +1557,7 @@ SHEETS['admin-signal'] = () => `
 /* ---------- PARTIELS comblés 2026-09-23 (audit) ---------- */
 SHEETS.home = () => `
   <div class="handle"></div>
-  <div class="sheet-head"><div><div class="eyebrow">Accueil · carte</div><h1>Omni · voir avant de bouger</h1></div><span class="status gray">206 offres</span></div>
+  <div class="sheet-head"><div><div class="eyebrow">Accueil · carte</div><h1>Omni · voir avant de bouger</h1></div><span class="status gray">206 lieux</span></div>
   <div class="chips" style="margin-top:8px">
     <span class="chip on" onclick="go('search')">Rechercher</span>
     <span class="chip" onclick="go('scan-entity')">Scanner un QR</span>

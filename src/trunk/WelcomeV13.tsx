@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import { listPublicFacilities } from './api';
+import { getPublicStats } from './api';
+import type { PublicStats } from './types';
+import { FREE_OFFER_LIMIT, COMPARE_QUOTA_FREE, COMPARE_QUOTA_PRO } from '../domain/invariants';
 import { trapDrawerFocus } from './ui-helpers';
 
 /**
@@ -57,14 +59,18 @@ export function WelcomeV13({ firstName, onChooseRole, onTrySearch, onOpenPlans, 
   const [shareNotice, setShareNotice] = useState<string | null>(null);
 
   // Nombre de lieux RÉEL : mesuré depuis la carte, jamais une constante décorative.
+  // BRANCHES-GUIDE-1a — on lit le TOTAL public (`getPublicStats`), jamais la longueur
+  // de `listPublicFacilities` : celle-ci est plafonnée PAR FENÊTRE (D-MAP-1, 2 000),
+  // donc elle montrerait un plafond comme s'il était un total. Le chiffre peut changer
+  // demain : il est TOUJOURS dérivé de la base au moment de l'affichage.
   // Silence honnête : en échec (hors-ligne, sandbox de test), on ne montre
   // rien plutôt qu'un zéro mensonger — et on ne laisse pas de rejet non géré.
   useEffect(() => {
     let live = true;
     void (async () => {
       try {
-        const result = await listPublicFacilities();
-        if (live && result.ok && result.data) setCount(result.data.length);
+        const result = await getPublicStats();
+        if (live && result.ok && result.data) setCount(result.data.facilities);
       } catch {
         /* hors-ligne : le compteur reste absent, pas zéro */
       }
@@ -112,9 +118,10 @@ export function WelcomeV13({ firstName, onChooseRole, onTrySearch, onOpenPlans, 
           <div className="cardbox" style={{ marginTop: 10 }}>
             <p className="sub">Trouvez où quelque chose existe près de vous, confirmez qu’il peut satisfaire votre demande maintenant, puis transformez-le en transaction tracée.</p>
             <div className="kv" style={{ marginTop: 8 }}>
-              <span>Lieux sur la carte</span>
+              <span>Lieux connus d’Omni</span>
               <b className="status ink">{count === null ? 'Chargement…' : count}</b>
             </div>
+            <p className="tiny muted" style={{ marginTop: 6 }}>Des lieux réels existent déjà. Peu sont encore revendiqués : c’est vous qui les rendez transactables.</p>
           </div>
           <button className="btn ok" type="button" style={{ marginTop: 12 }} onClick={() => setStep(2)}>Continuer</button>
           <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>Vous pouvez passer : la carte reste disponible.</p>
@@ -163,8 +170,8 @@ export function WelcomeV13({ firstName, onChooseRole, onTrySearch, onOpenPlans, 
           <div className="cardbox" style={{ marginTop: 10 }}>
             <p className="sub">
               {role === 'seller'
-                ? 'Gratuit pour commencer : 20 offres, vérifications manuelles. Pro : offres illimitées, dispo en direct, campagnes.'
-                : 'Gratuit pour commencer : recherche, favoris, 1 comparaison. Pro : 5 comparaisons, 100 demandes bulk par mois.'}
+                ? `Gratuit pour commencer : ${FREE_OFFER_LIMIT} offres, vérifications manuelles. Pro : offres illimitées, dispo en direct, campagnes.`
+                : `Gratuit pour commencer : recherche, favoris, ${COMPARE_QUOTA_FREE} comparaisons. Pro : ${COMPARE_QUOTA_PRO} comparaisons, 100 demandes bulk par mois.`}
             </p>
           </div>
           <button className="btn ok" type="button" style={{ marginTop: 12 }} onClick={onOpenPlans}>Comparer les plans</button>

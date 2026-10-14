@@ -36,7 +36,7 @@ import { relativeAge, transactionStateLabel } from './transaction-time';
 import { viewportMovedSignificantly, isUsableViewportBounds } from './viewport-bounds';
 import { resolveTilePlace, type ResolvedTilePlace, type TileTapPoint } from './tile-place-resolve';
 import { TransactionReceiptV13 } from './TransactionReceiptV13';
-import { compareQuotaFor, COMPARE_QUOTA_PRO } from '../domain/invariants';
+import { compareQuotaFor, COMPARE_QUOTA_FREE, COMPARE_QUOTA_PRO, FREE_OFFER_LIMIT } from '../domain/invariants';
 import { NotificationCenterV13 } from './NotificationCenterV13';
 import { RecoveryCartRow, RecoverySearchRow, RecoveryTxnsRow } from './RecoveryV13';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
@@ -3535,7 +3535,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                           </span>
                         )}
                       </span>
-                      <b>{facility.plan === 'pro_active' ? `Pro actif${facility.daysLeft > 0 ? ` · ${facility.daysLeft} j` : ''}` : facility.plan === 'pro_expired' ? 'Pro expiré' : 'Gratuit · 5 offres max'}</b>
+                      <b>{facility.plan === 'pro_active' ? `Pro actif${facility.daysLeft > 0 ? ` · ${facility.daysLeft} j` : ''}` : facility.plan === 'pro_expired' ? 'Pro expiré' : `Gratuit · ${FREE_OFFER_LIMIT} offres max`}</b>
                     </div>
                   ))}
                 </div>
@@ -3611,14 +3611,14 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <>
               <div className="cardbox">
                 <div className="row" style={{ justifyContent: 'space-between' }}>
-                  <div><b>Découverte</b><br /><span className="tiny muted">Recherche + favoris + 1 comparaison</span></div>
+                  <div><b>Découverte</b><br /><span className="tiny muted">Recherche + favoris + {COMPARE_QUOTA_FREE} comparaisons</span></div>
                   <span className="status gray">Actuel</span>
                 </div>
-                <p className="tiny muted" style={{ marginTop: 6 }}>Le comparateur est limité à <b>1 établissement</b>. Passez Pro pour comparer jusqu’à 5.</p>
+                <p className="tiny muted" style={{ marginTop: 6 }}>Le comparateur est limité à <b>{COMPARE_QUOTA_FREE} établissements</b>. Passez Pro pour comparer jusqu’à {COMPARE_QUOTA_PRO}.</p>
               </div>
               <div className="cardbox">
                 <div className="row" style={{ justifyContent: 'space-between' }}>
-                  <div><b>Acheteur Pro</b><br /><span className="tiny muted">Comparateur 5 établissements + alertes</span></div>
+                  <div><b>Acheteur Pro</b><br /><span className="tiny muted">Comparateur {COMPARE_QUOTA_PRO} établissements + alertes</span></div>
                   <span className="status ink">{planPriceLabel('buyerPro', userCurrency)}</span>
                 </div>
                 {buyerProState === 'loading' && <Skeleton variant="kv" count={2} />}
