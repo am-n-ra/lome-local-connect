@@ -46,7 +46,19 @@ function buttons() {
   return [...container.querySelectorAll('button')].map((b) => b.textContent || '');
 }
 
-describe('WelcomeV13 — parcours immersif après création (3 moments réels)', () => {
+function click(pattern: RegExp) {
+  act(() => {
+    [...container.querySelectorAll('button')].find((b) => pattern.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  });
+}
+
+/** 1 → 2 (rôle) → 3 (comment ça marche) : chemin commun jusqu'au guide. */
+function advanceToGuide(role: 'buyer' | 'seller') {
+  click(/Continuer/);
+  click(role === 'buyer' ? /Je cherche autour de moi/ : /Je propose quelque chose/);
+}
+
+describe('WelcomeV13 — parcours immersif après création (moments réels)', () => {
   it('salue par le prénom quand il est fourni', () => {
     render(base);
     expect(container.textContent).toContain('Bienvenue, Ama.');
@@ -58,11 +70,11 @@ describe('WelcomeV13 — parcours immersif après création (3 moments réels)',
     expect(container.textContent).not.toContain('undefined');
   });
 
-  it('affiche la progression honnête (étape 1 sur 4, dots reflétant l’état réel)', () => {
+  it('affiche la progression honnête (étape 1 sur 5, dots reflétant l’état réel)', () => {
     render(base);
-    expect(container.textContent).toContain('étape 1 sur 4');
+    expect(container.textContent).toContain('étape 1 sur 5');
     const dots = container.querySelectorAll('.onboard-dot');
-    expect(dots.length).toBe(4);
+    expect(dots.length).toBe(5);
     expect(dots[0].className).toContain('active');
     expect(dots[1].className).not.toContain('active');
   });
@@ -78,32 +90,39 @@ describe('WelcomeV13 — parcours immersif après création (3 moments réels)',
   it('le moment 2 propose les deux rôles, et le choix appelle le vrai routage', () => {
     const onChooseRole = vi.fn();
     render({ ...base, onChooseRole });
-    act(() => {
-      container.querySelectorAll('button');
-      [...container.querySelectorAll('button')].find((b) => /Continuer/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-    expect(container.textContent).toContain('étape 2 sur 4');
+    click(/Continuer/);
+    expect(container.textContent).toContain('étape 2 sur 5');
     const labels = buttons();
     expect(labels.some((t) => /Je cherche autour de moi/.test(t))).toBe(true);
     expect(labels.some((t) => /Je propose quelque chose/.test(t))).toBe(true);
-    act(() => {
-      [...container.querySelectorAll('button')].find((b) => /Je propose quelque chose/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
+    click(/Je propose quelque chose/);
     expect(onChooseRole).toHaveBeenCalledWith('seller');
-    expect(container.textContent).toContain('étape 3 sur 4');
+    expect(container.textContent).toContain('étape 3 sur 5');
   });
 
-  it('le moment 3 acheteur propose des exemples qui lancent une VRAIE recherche', () => {
+  it('le moment 3 « comment ça marche » enseigne les éléments cœur (GUIDE-1b)', () => {
+    render(base);
+    advanceToGuide('buyer');
+    expect(container.textContent).toContain('étape 3 sur 5');
+    // Les 3 temps du cœur (mots du Seed).
+    expect(container.textContent).toContain('Découvrir');
+    expect(container.textContent).toContain('Interroger');
+    expect(container.textContent).toContain('Vérifier & transiger');
+    // L'échelle 0→4 avec les mots VERROUILLÉS (S-06), jamais les anciens.
+    expect(container.textContent).toContain('Disponibilité vivante');
+    expect(container.textContent).toContain('Transactable');
+    expect(container.textContent).not.toContain('Disponibilité confirmée');
+    // Non bloquant (S-31) : « passer » reste possible.
+    expect(container.textContent).toContain('Vous pouvez passer');
+  });
+
+  it('le moment 4 acheteur propose des exemples qui lancent une VRAIE recherche', () => {
     const onTrySearch = vi.fn();
     const onChooseRole = vi.fn();
     render({ ...base, onTrySearch, onChooseRole });
     expect(WELCOME_SEARCH_EXAMPLES.length).toBeGreaterThan(0);
-    act(() => {
-      [...container.querySelectorAll('button')].find((b) => /Continuer/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-    act(() => {
-      [...container.querySelectorAll('button')].find((b) => /Je cherche autour de moi/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
+    advanceToGuide('buyer');
+    click(/Continuer/);
     expect(onChooseRole).toHaveBeenCalledWith('buyer');
     for (const example of WELCOME_SEARCH_EXAMPLES) {
       expect(container.textContent).toContain(example);
@@ -114,14 +133,10 @@ describe('WelcomeV13 — parcours immersif après création (3 moments réels)',
     expect(onTrySearch).toHaveBeenCalledWith(WELCOME_SEARCH_EXAMPLES[0]);
   });
 
-  it('le moment 3 vendeur garde les deux gestes réels : explorer et publier', () => {
+  it('le moment 4 vendeur garde les deux gestes réels : explorer et publier', () => {
     render(base);
-    act(() => {
-      [...container.querySelectorAll('button')].find((b) => /Continuer/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-    act(() => {
-      [...container.querySelectorAll('button')].find((b) => /Je propose quelque chose/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
+    advanceToGuide('seller');
+    click(/Continuer/);
     const labels = buttons();
     expect(labels.some((t) => /Explorer la carte/.test(t))).toBe(true);
     expect(labels.some((t) => /Publier ce que je vends/.test(t))).toBe(true);
@@ -130,50 +145,30 @@ describe('WelcomeV13 — parcours immersif après création (3 moments réels)',
   it('« Publier » déclenche le geste réel, pas une promesse', () => {
     let published = false;
     render({ ...base, onPublish: () => { published = true; } });
-    act(() => {
-      [...container.querySelectorAll('button')].find((b) => /Continuer/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-    act(() => {
-      [...container.querySelectorAll('button')].find((b) => /Je propose quelque chose/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-    act(() => {
-      [...container.querySelectorAll('button')].find((b) => /Publier ce que je vends/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
+    advanceToGuide('seller');
+    click(/Continuer/);
+    click(/Publier ce que je vends/);
     expect(published).toBe(true);
   });
 
   it('présente les plans en info + lien, jamais en mur (décision fondateur 2026-10-07)', () => {
     let plansOpened = false;
     render({ ...base, onOpenPlans: () => { plansOpened = true; } });
-    act(() => {
-      [...container.querySelectorAll('button')].find((b) => /Continuer/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-    act(() => {
-      [...container.querySelectorAll('button')].find((b) => /Je cherche autour de moi/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-    act(() => {
-      [...container.querySelectorAll('button')].find((b) => /Voir les plans/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-    expect(container.textContent).toContain('étape 4 sur 4');
+    advanceToGuide('buyer');
+    click(/Continuer/);
+    click(/Voir les plans/);
+    expect(container.textContent).toContain('étape 5 sur 5');
     expect(container.textContent).toMatch(/Gratuit|Pro/);
     expect(plansOpened).toBe(false);
-    act(() => {
-      [...container.querySelectorAll('button')].find((b) => /Comparer les plans/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
+    click(/Comparer les plans/);
     expect(plansOpened).toBe(true);
   });
 
   it('partage sans PII et affiche le retour réel', async () => {
     render({ ...base, onShare: async () => 'Lien copié ! Partagez-le autour de vous.' });
-    act(() => {
-      [...container.querySelectorAll('button')].find((b) => /Continuer/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-    act(() => {
-      [...container.querySelectorAll('button')].find((b) => /Je cherche autour de moi/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
-    act(() => {
-      [...container.querySelectorAll('button')].find((b) => /Voir les plans/.test(b.textContent || ''))?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
+    advanceToGuide('buyer');
+    click(/Continuer/);
+    click(/Voir les plans/);
     await act(async () => {
       const btn = [...container.querySelectorAll('button')].find((b) => /Partager Omni/.test(b.textContent || ''));
       expect(btn).toBeTruthy();

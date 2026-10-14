@@ -61,6 +61,8 @@ import { CompanyV13 } from './CompanyV13';
 import { LegalSheetV13, type LegalSectionId } from './LegalSheetV13';
 import { AuthSheetV13 } from './AuthSheetV13';
 import { WelcomeV13 } from './WelcomeV13';
+import { HowItWorksBody } from './HowItWorksV13';
+import { MapSpotlightV13, MAP_SPOTLIGHT_STORAGE_KEY } from './MapSpotlightV13';
 import { PlansCompareV13 } from './PlansCompareV13';
 import { chipHintFor, chipStatusFor, chipsToSearchOptions, CONSTRAINT_GROUPS, emptyConstraints, activeConstraintCount, QUANTITY_DEFAULT, BUDGET_DEFAULT_LOCAL_MINOR, budgetFieldToMinor, RAYON_SCOPE_LABELS, summarizeActiveChips, type SearchConstraints } from './search-constraints';
 import { MAP_FILTERS, filterFacilities, type MapFilter } from './map-filters';
@@ -69,6 +71,7 @@ import { entityBenefitLabel } from './entity-benefits';
 import { facilityFormLabel } from './facility-form';
 import { RESULTS_SORTS, sortResults, type ResultsSortKey } from './results-sort';
 import { worstFreshness, freshnessLabel } from './offer-freshness';
+import { EXISTENCE_LEVELS } from './offer-existence';
 import { priceDisplay } from './price-display';
 import { compareFacilities } from './v13-compare';
 import { OMNI_BASE_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, convertUsdMinorToLocal } from '../domain/pricing';
@@ -77,7 +80,7 @@ import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
 import { normalizeTogoPhone, phoneDeclarationLabel, whatsappDeclareLink } from '../domain/phone';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal' | 'tour' | 'freshness' |   'op-side' | 'verification' | 'room' | 'install' | 'legal' | 'welcome';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal' | 'tour' | 'freshness' |   'op-side' | 'verification' | 'room' | 'install' | 'legal' | 'welcome' | 'how-it-works';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -116,8 +119,9 @@ function statusLabel(requestStatus: string): string {
 
 const LOME = [1.22, 6.13] as const;
 
-// S-06 — libellés de l'échelle d'existence (maquette : Discoverable ≠ Queryable ≠ Available ≠ Transactable).
-const EXISTENCE_LABELS = ['Présente', 'Revendiquée', 'Offre publiée', 'Disponibilité confirmée', 'Disponible'] as const;
+// S-06 — libellés de l'échelle d'existence : source UNIQUE (`EXISTENCE_LEVELS`),
+// alignée sur les mots verrouillés par le Seed et la maquette (Disponibilité vivante /
+// Transactable). Aucune copie locale : le guide et la fiche lisent la même source.
 
 /**
  * D-CON-5 — the buyer's constraints are the three explicit families from
@@ -264,6 +268,12 @@ export function TrunkAppV13() {
   const [role, setRole] = useState<Role>('buyer');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
 
+  // GUIDE-1b (surface B) — spotlight de première fois sur la carte. Montré UNE fois
+  // (mémoire locale), seulement au repos (carte nue, pas de feuille ouverte), et
+  // JAMAIS un mur : « Passer » ferme et n'affiche plus jamais (S-31).
+  const [spotlightOpen, setSpotlightOpen] = useState(false);
+  const spotlightCheckedRef = useRef(false);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const platform = detectInstallPlatform(navigator.userAgent);
@@ -289,6 +299,24 @@ export function TrunkAppV13() {
     setInstallBannerDismissed(true);
     try { localStorage.setItem('omni-install-dismissed', '1'); } catch { /* stockage indisponible */ }
   }, []);
+
+  // GUIDE-1b (surface B) — déclenche le spotlight UNE fois, quand la carte est au repos.
+  // Il ne se substitue à aucun geste : il attend `sheet === 'none'` (carte nue) et la
+  // disponibilité des ancres réelles. On n'attend PAS `mapState === 'ready'` : les
+  // éléments cœur (rôle, filtres, dock) existent aussi quand les tuiles échouent
+  // (repli carte) — le guide doit rester utile en dégradé. On évite seulement le
+  // `loading` (la carte n'est pas encore posée). Refus mémorisé (`omni-map-guide-seen`).
+  useEffect(() => {
+    if (spotlightCheckedRef.current || typeof window === 'undefined') return;
+    if (sheet !== 'none' || mapState === 'loading') return;
+    let seen = false;
+    try { seen = localStorage.getItem(MAP_SPOTLIGHT_STORAGE_KEY) === '1'; } catch { /* stockage indisponible */ }
+    if (seen) { spotlightCheckedRef.current = true; return; }
+    spotlightCheckedRef.current = true;
+    setSpotlightOpen(true);
+  }, [sheet, mapState]);
+
+  const closeSpotlight = useCallback(() => setSpotlightOpen(false), []);
 
   const runInstall = useCallback(async () => {
     const prompt = deferredInstallRef.current;
@@ -571,7 +599,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
   // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
 
-  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'recovery', 'signal', 'tour', 'op-side', 'seller', 'seller-reply', 'freshness', 'verification', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity', 'room', 'install', 'welcome']), []);
+  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'recovery', 'signal', 'tour', 'op-side', 'seller', 'seller-reply', 'freshness', 'verification', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity', 'room', 'install', 'welcome', 'how-it-works']), []);
   const isJourney = journeySheets.has(sheet);
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width:1040px)');
@@ -2441,7 +2469,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           />
         </Suspense>
         {role === 'buyer' && sheet === 'none' && (
-          <div className="filterrail" role="group" aria-label="Filtrer la carte">
+          <div className="filterrail" role="group" aria-label="Filtrer la carte" data-spot="filterrail">
             {MAP_FILTERS.map((option) => (
               <button
                 key={option.id}
@@ -2468,7 +2496,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           <span>{`Aucun ${MAP_FILTERS.find((f) => f.id === mapFilter)?.label.toLowerCase() ?? ''} dans cette zone. Élargissez ou revenez à « Tout ».`}</span>
         </div>
       )}
-      <div className="topstack">
+      <div className="topstack" data-spot="rolepill">
       <div className="rolepill" role="tablist" aria-label="Changer de rôle">
         <div className="roleswitch" ref={rolesRef}>
           <span className="ind" ref={rolesIndRef} />
@@ -2496,7 +2524,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           previous dock node on every role/sheet change, stacking identical `.navpill`
           siblings (2 then 3, same rect, duplicate a11y landmarks). A stable dock just
           reconciles its buttons (`key={item.icon}`); measured 1 node across all paths. */}
-      <div className="navpill" role="navigation" aria-label="Actions principales">
+      <div className="navpill" role="navigation" aria-label="Actions principales" data-spot="dock">
         {dockItems.map((item) => (
           <button
             key={item.icon}
@@ -2513,6 +2541,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         ))}
       </div>
       <div className="dockmask" aria-hidden="true" />
+      {spotlightOpen && <MapSpotlightV13 stage={stageRef.current} onDone={closeSpotlight} />}
       {(sheet === 'search' || (desktop && (isJourney || sheet === 'qr'))) && (
 
         <form className="sheet h-low" data-sheet="search" onSubmit={handleSubmitSearch}>
@@ -2991,9 +3020,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               {highlightedProductId && <p className="tiny" style={{ marginTop: 4 }}><span className="status ink">Produit recherché</span> mis en avant pour « {searchedTerm} ».</p>}
               {typeof selectedFacility.existenceLevel === 'number' && (
                 <div style={{ marginTop: 8 }}>
-                  <span className="exlevel">Niveau {selectedFacility.existenceLevel} · {EXISTENCE_LABELS[selectedFacility.existenceLevel]}</span>
+                  <span className="exlevel">Niveau {selectedFacility.existenceLevel} · {EXISTENCE_LEVELS[selectedFacility.existenceLevel]?.label}</span>
                   <div className="stepline" aria-hidden="true">{[0, 1, 2, 3, 4].map((i) => <i key={i} className={i <= selectedFacility.existenceLevel! ? 'on' : ''} />)}</div>
-                  <div className="steplabels"><span>0 Présente</span><span>4 Disponible</span></div>
+                  <div className="steplabels"><span>0 {EXISTENCE_LEVELS[0]?.label}</span><span>4 {EXISTENCE_LEVELS[4]?.label}</span></div>
                 </div>
               )}
               {rankedFacilityProducts.map((product) => {
@@ -3143,6 +3172,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             {/* BRANCHES — accessible même sans compte : la confidentialité n'est pas
                 réservée aux inscrits (loi togolaise 2019-014, information préalable). */}
             <button className="menuitem" type="button" onClick={() => { setLegalSection('confidentialite'); setSheet('legal'); }}><span className="mi"><ShieldCheck size={15} /></span><span><b>Informations légales</b><small>confidentialité, conditions, vos droits</small></span></button>
+            {/* GUIDE-1b — « Comment ça marche » : récupérable à tout moment, sans compte.
+                Le guide explique, il ne bloque jamais (S-31). */}
+            <button className="menuitem" type="button" onClick={() => setSheet('how-it-works')}><span className="mi"><Compass size={15} /></span><span><b>Comment ça marche</b><small>les 3 temps & l’échelle 0→4</small></span></button>
             {sessionUser && (
               <>
                 {role === 'buyer' && (
@@ -4033,6 +4065,17 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           onPublish={() => { setRole('seller'); setSheet('seller'); if (sessionUser) void loadSellerWorkspace(); }}
           onClose={() => setSheet('menu')}
         />
+      )}
+      {sheet === 'how-it-works' && (
+        <section className="sheet h-mid" data-sheet="how-it-works" role="dialog" aria-modal="false" aria-label="Comment ça marche" onKeyDown={trapDrawerFocus}>
+          <div className="handle" />
+          <div className="sheet-head">
+            <div><div className="eyebrow">Aide</div><h1>Comment ça marche</h1></div>
+            <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
+          </div>
+          <HowItWorksBody />
+          <p className="tiny muted" style={{ marginTop: 10 }}>Rien n’est imposé : la carte reste disponible, et vous pouvez revoir ce guide depuis le menu à tout moment.</p>
+        </section>
       )}
       {sheet === 'auth' && (
         <AuthSheetV13

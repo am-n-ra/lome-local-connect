@@ -61,9 +61,11 @@ describe('S-06 existence scale 0→4', () => {
     expect(computeExistenceLevel({ ...base, quantityAllocated: 1, quantityReserved: 5 })).toBe(3);
   });
 
-  it('labels and hints match the maquette wording', () => {
-    expect(existenceFor(base)).toEqual({ level: 4, label: 'Disponible', hint: 'vous pouvez lancer une transaction maintenant' });
+  it('labels and hints match the Seed + maquette wording (S-06 locked words)', () => {
+    expect(existenceFor(base)).toEqual({ level: 4, label: 'Transactable', hint: 'transaction Omni possible maintenant' });
     expect(existenceFor({ ...base, hasEntity: false, publicationState: 'draft' }).label).toBe('Présente');
+    // Niveau 3 = « Disponibilité vivante » (Seed S-06), jamais « Disponibilité confirmée ».
+    expect(existenceFor({ ...base, quantityAllocated: 0 }).label).toBe('Disponibilité vivante');
   });
 
   it('the place shows the max level of its offers', () => {

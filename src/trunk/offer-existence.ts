@@ -36,13 +36,25 @@ export interface OfferReputation {
   score: number | null;
 }
 
-const LEVELS: readonly { label: string; hint: string }[] = [
+/**
+ * S-06 — échelle d'existence (0→4). **Source unique** des libellés de niveau.
+ *
+ * Les mots sont ceux VERROUILLÉS par le Seed (`S-06`) et la maquette acceptée :
+ * `Présente → Revendiquée → Offre publiée → Disponibilité vivante → Transactable`.
+ * L'app les affichait « Disponibilité confirmée / Disponible » : deux sources
+ * (`LEVELS` ici + `EXISTENCE_LABELS` dans `TrunkAppV13`) qui s'accordaient entre
+ * elles mais divergeaient de la source acceptée. Le guide (`GUIDE-1b`) doit
+ * enseigner le mot juste : on corrige donc à la racine et on supprime le doublon.
+ */
+export const EXISTENCE_LEVELS: readonly { label: string; hint: string }[] = [
   { label: 'Présente', hint: 'sur la carte, pas encore gérée' },
   { label: 'Revendiquée', hint: 'une entité en a pris la responsabilité' },
   { label: 'Offre publiée', hint: 'le vendeur a publié une offre' },
-  { label: 'Disponibilité confirmée', hint: 'confirmée récemment' },
-  { label: 'Disponible', hint: 'vous pouvez lancer une transaction maintenant' },
+  { label: 'Disponibilité vivante', hint: 'confirmée récemment' },
+  { label: 'Transactable', hint: 'transaction Omni possible maintenant' },
 ];
+
+const LEVELS = EXISTENCE_LEVELS;
 
 /** The 4 checks S-32 names, in the order the UI lists them. */
 export const INTEGRITY_CHECKS: readonly OfferIntegrityCheck[] = ['visuel', 'prix', 'description', 'doublon'];

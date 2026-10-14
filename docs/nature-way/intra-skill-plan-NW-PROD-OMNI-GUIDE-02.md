@@ -73,14 +73,29 @@
 |---|---|---|---|---|---|
 | 2026-10-14 | Demande fondateur = chiffres **+** guide ; `GUIDE-1a` livré, `1b` = le guide | `GU-1-1` ouvert | `pause` (attente choix de forme) | Nature Way | décision fondateur |
 | 2026-10-14 | Maquette = 0 écran d'onboarding → pattern NEUF | `GU-2` requiert mini-species | `pause` | Nature Way | direction acceptée |
+| 2026-10-14 | Fondateur : **« je veux a b et c »** = guide COMPLET (une source, trois surfaces) | `GU-1-1` tranché, `GU-2-1` débloqué | `advance` (A+B+C) | Fondateur | — |
+| 2026-10-14 | **Collision mesurée** : le garde copie (2026-10-11) bannissait `Disponibilité vivante`/`Transactable` — or le Seed `S-06` (confirmé) les verrouille et la maquette les rend à l'utilisateur | garde **narrowé** avec preuve | `advance` (source acceptée prévaut) | Nature Way | — |
+| 2026-10-14 | Preuve navigateur **44/0** (4 largeurs) ; trigger corrigé (le guide doit survivre au repli carte, `mapState=error`) | `GU-3-1`/`GU-4-1` livrés | `advance` | Nature Way | — |
+
+## Livré (2026-10-14)
+
+| Surface | Fichier | Preuve |
+|---|---|---|
+| **Source unique** (contenu) | `src/trunk/how-it-works.ts` | `how-it-works.test.ts` (4) |
+| **Corps partagé** (A+C) | `src/trunk/HowItWorksV13.tsx` | `guide-guard.test.ts` |
+| **A — accueil** | `src/trunk/WelcomeV13.tsx` (étape 3/5) | `welcome.test.tsx` (12) |
+| **B — spotlight carte** | `src/trunk/MapSpotlightV13.tsx` + CSS | preuve navigateur (44/0) |
+| **C — surface menu** | `TrunkAppV13.tsx` (sheet `how-it-works`, sans compte) | preuve navigateur (44/0) |
+| **Vocabulaire S-06** | `offer-existence.ts` (source unique) | `offer-existence.test.ts` + repo test |
+| **Garde falsifiable** | `guide-guard.test.ts` (6) | falsifié : source cassée → FAIL ; restauré → PASS |
 
 ## Handoff to Founder HQ
 
-> **Local status:** `blocked` (mini-seed : choix de la forme du guide par le fondateur)
-> **Gate decision:** `pause`
-> **Closed:** aucun
-> **Open or blocked:** `GU-1-1` — bloqué sur la décision fondateur (option A/B/C) ; débloqueur = le fondateur choisit
+> **Local status:** `done` — les trois surfaces livrées et prouvées, non bloquantes.
+> **Gate decision:** `advance` (livraison complète A+B+C ; reste push + T-07d).
+> **Closed:** `GU-1` (forme choisie), `GU-2` (source unique + vocabulaire S-06), `GU-3` (3 surfaces), `GU-4` (garde + preuve navigateur).
+> **Open or blocked:** `GU-5-1` — push + vérification prod (hash prod === local).
 > **Resource Receipt:** skills + templates + Seed + maquette + code (voir ci-dessus)
-> **Residual gap:** la forme du guide n'est pas décidée ; pattern visuel absent de la maquette
-> **Next smallest action:** présenter les 3 formes mesurées et laisser le fondateur choisir
-> **Re-plan trigger:** le fondateur choisit une forme, ou change d'objet
+> **Residual gap:** le guide montre l'échelle et les 3 temps ; il ne liste pas chaque écran de la maquette (choix : un guide court, pas un manuel).
+> **Next smallest action:** push puis vérifier que la prod sert le build (T-07d).
+> **Re-plan trigger:** le fondateur veut une autre forme, ou un contenu plus long.

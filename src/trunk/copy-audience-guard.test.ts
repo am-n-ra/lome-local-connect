@@ -35,8 +35,12 @@ const FORBIDDEN: Forbidden[] = [
   { id: 'protocol-json', re: /\bJSON\b/, why: 'format technique' },
   { id: 'team-voice', re: /Omni ne v[ée]rifie pas ce num[ée]ro/i, why: 'explication interne, pas une copie utilisateur' },
   { id: 'internal-ledger', re: /\bLedger\b/, why: 'vocabulaire produit interne' },
-  { id: 'internal-transactable', re: /\btransactable\b/i, why: 'vocabulaire produit interne' },
-  { id: 'internal-vivante', re: /Disponibilit[ée] vivante/i, why: 'vocabulaire produit interne' },
+  // NOTE (GUIDE-1b) : `Disponibilité vivante` / `Transactable` sont les mots VERROUILLÉS
+  // par le Seed `S-06` (fondateur-confirmé 2026-09-23) et RENDUS à l'utilisateur par la
+  // maquette acceptée (`Niv. 4 · Transactable`, steplabels 0→4). Ce ne sont donc PAS du
+  // vocabulaire interne : les bannir contredisait la source acceptée. Le commit `50c2bd4`
+  // les avait classés « interne » par sur-interprétation d'une directive générale sur la
+  // voix dev. Retirés ici ; la décision est verrouillée par `guide-guard.test.ts`.
   { id: 'internal-serveur', re: /c[ôo]t[ée] serveur|Donn[ée]es r[ée]elles serveur|sur ce serveur|filtre serveur/i, why: 'voix d’équipe (infrastructure)' },
   { id: 'internal-socle', re: /\bsocle\b/i, why: 'vocabulaire produit interne' },
   { id: 'english-readonly', re: /Read-only/, why: 'anglais resté dans l’UI' },
@@ -111,6 +115,11 @@ describe('copie — l’interface parle à l’utilisateur, jamais à l’équip
     expect(probe('Omni ne vérifie pas ce numéro.')).toBe(true);
     expect(probe('Ledger des changements')).toBe(true);
     expect(probe('Re-vérifier les paiements FedaPay en attente')).toBe(true);
+    // GUIDE-1b : les mots VERROUILLÉS par le Seed S-06 ne sont PAS du vocabulaire
+    // interne (la maquette acceptée les rend à l'utilisateur) — le garde ne doit
+    // plus les bannir, sinon il contredit la source acceptée.
+    expect(probe('Niv. 4 · Transactable')).toBe(false);
+    expect(probe('Disponibilité vivante')).toBe(false);
     // Ce qui est légitime reste légitime :
     expect(probe('Numéro déclaré · Non vérifié')).toBe(false);
     expect(probe('Continuer le paiement')).toBe(false);

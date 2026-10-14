@@ -4,6 +4,7 @@ import { getPublicStats } from './api';
 import type { PublicStats } from './types';
 import { FREE_OFFER_LIMIT, COMPARE_QUOTA_FREE, COMPARE_QUOTA_PRO } from '../domain/invariants';
 import { trapDrawerFocus } from './ui-helpers';
+import { HowItWorksBody } from './HowItWorksV13';
 
 /**
  * BRANCHES — parcours d'accueil après CRÉATION de compte (fondateur 2026-10-07 :
@@ -14,10 +15,12 @@ import { trapDrawerFocus } from './ui-helpers';
  *  1. Bienvenue : ce qu'est Omni + compteur RÉEL de lieux (comme avant).
  *  2. Rôle : « vous êtes plutôt acheteur ou vendeur ? » → `onChooseRole`
  *     (vrai `setRole` + vrai routage, pas une préférence décorative).
- *  3. Premier geste : acheteur → exemples qui lancent une VRAIE recherche
+ *  3. Comment ça marche (GUIDE-1b) : les éléments cœur — les 3 temps + l'échelle 0→4
+ *     (mots verrouillés S-06). Purement explicatif : « passer » reste possible (S-31).
+ *  4. Premier geste : acheteur → exemples qui lancent une VRAIE recherche
  *     (résultats réels, y compris vides honnêtes) ; vendeur → entrée espace
  *     vendeur (revendiquer/créer, chemins réels existants).
- *  4. Plans : carte info Free vs Pro + lien vers la sheet Plans + partage.
+ *  5. Plans : carte info Free vs Pro + lien vers la sheet Plans + partage.
  *     Présenter n'est PAS gater : aucun choix imposé, tout reste accessible
  *     sans compte Pro (décision fondateur 2026-10-07).
  *
@@ -26,7 +29,7 @@ import { trapDrawerFocus } from './ui-helpers';
  * - jamais quand une action gardée est en reprise (`pendingAction` prioritaire) ;
  * - le partage n'envoie que l'URL + le nom (zéro PII).
  */
-type WelcomeStep = 1 | 2 | 3 | 4;
+type WelcomeStep = 1 | 2 | 3 | 4 | 5;
 export type WelcomeRole = 'buyer' | 'seller';
 
 type WelcomeV13Props = {
@@ -83,6 +86,7 @@ export function WelcomeV13({ firstName, onChooseRole, onTrySearch, onOpenPlans, 
   const chooseRole = (next: WelcomeRole) => {
     setRole(next);
     onChooseRole(next);
+    // Après le rôle, on montre « comment ça marche » (GUIDE-1b) AVANT le premier geste.
     setStep(3);
   };
 
@@ -102,13 +106,13 @@ export function WelcomeV13({ firstName, onChooseRole, onTrySearch, onOpenPlans, 
     <section className="sheet h-mid" data-sheet="welcome" role="dialog" aria-modal="false" aria-label="Bienvenue" onKeyDown={trapDrawerFocus}>
       <div className="sheet-head">
         <div>
-          <div className="eyebrow">Bienvenue · étape {step} sur 4</div>
+          <div className="eyebrow">Bienvenue · étape {step} sur 5</div>
           <h2>{hello}</h2>
         </div>
         <button className="iconbtn" type="button" aria-label="Fermer" onClick={onClose}><X size={16} /></button>
       </div>
       <div className="onboard-dots" aria-hidden="true">
-        {([1, 2, 3, 4] as const).map((dot) => (
+        {([1, 2, 3, 4, 5] as const).map((dot) => (
           <span key={dot} className={`onboard-dot${dot === step ? ' active' : dot < step ? ' done' : ''}`} />
         ))}
       </div>
@@ -138,7 +142,15 @@ export function WelcomeV13({ firstName, onChooseRole, onTrySearch, onOpenPlans, 
         </>
       )}
 
-      {step === 3 && role === 'buyer' && (
+      {step === 3 && (
+        <>
+          <HowItWorksBody />
+          <button className="btn ok" type="button" style={{ marginTop: 12 }} onClick={() => setStep(4)}>Continuer</button>
+          <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>Vous pouvez passer : la carte reste disponible.</p>
+        </>
+      )}
+
+      {step === 4 && role === 'buyer' && (
         <>
           <div className="cardbox" style={{ marginTop: 10 }}>
             <p className="sub">Touchez un exemple : c’est une vraie recherche, sur les vrais lieux ci-dessus.</p>
@@ -152,20 +164,20 @@ export function WelcomeV13({ firstName, onChooseRole, onTrySearch, onOpenPlans, 
         </>
       )}
 
-      {step === 3 && role === 'seller' && (
+      {step === 4 && role === 'seller' && (
         <>
           <button className="btn ok" type="button" style={{ marginTop: 12 }} onClick={onExplore}>Explorer la carte</button>
           <button className="btn" type="button" style={{ marginTop: 8 }} onClick={onPublish}>Publier ce que je vends</button>
           <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>Vous pouvez faire les deux plus tard. Publier est libre : la confiance se gagne ensuite.</p>
-          <button className="btn ghost" type="button" style={{ marginTop: 8 }} onClick={() => setStep(4)}>Voir les plans</button>
+          <button className="btn ghost" type="button" style={{ marginTop: 8 }} onClick={() => setStep(5)}>Voir les plans</button>
         </>
       )}
 
-      {step === 3 && role === 'buyer' && (
-        <button className="btn ghost" type="button" style={{ marginTop: 10 }} onClick={() => setStep(4)}>Voir les plans</button>
+      {step === 4 && role === 'buyer' && (
+        <button className="btn ghost" type="button" style={{ marginTop: 10 }} onClick={() => setStep(5)}>Voir les plans</button>
       )}
 
-      {step === 4 && (
+      {step === 5 && (
         <>
           <div className="cardbox" style={{ marginTop: 10 }}>
             <p className="sub">

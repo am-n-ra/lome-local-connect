@@ -531,13 +531,14 @@ function isReservable(input) {
 }
 
 // src/trunk/offer-existence.ts
-var LEVELS = [
+var EXISTENCE_LEVELS = [
   { label: "Pr\xE9sente", hint: "sur la carte, pas encore g\xE9r\xE9e" },
   { label: "Revendiqu\xE9e", hint: "une entit\xE9 en a pris la responsabilit\xE9" },
   { label: "Offre publi\xE9e", hint: "le vendeur a publi\xE9 une offre" },
-  { label: "Disponibilit\xE9 confirm\xE9e", hint: "confirm\xE9e r\xE9cemment" },
-  { label: "Disponible", hint: "vous pouvez lancer une transaction maintenant" }
+  { label: "Disponibilit\xE9 vivante", hint: "confirm\xE9e r\xE9cemment" },
+  { label: "Transactable", hint: "transaction Omni possible maintenant" }
 ];
+var LEVELS = EXISTENCE_LEVELS;
 var INTEGRITY_CHECKS = ["visuel", "prix", "description", "doublon"];
 function isExpired(value, now) {
   if (value === null || value === void 0) return false;
