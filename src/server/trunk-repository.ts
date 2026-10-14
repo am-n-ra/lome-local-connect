@@ -6292,6 +6292,37 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           where exists (select 1 from inserted i where i.id = r.id)
           on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
           returning entity_id
+        ),
+        -- BRANCHES-NOTIF-1 : l'acheteur attend HORS ÉCRAN (il poll 4 s tant qu'il est là).
+        -- Sans cet événement, la réponse du vendeur n'a nulle part où surgir. On ne notifie
+        -- QUE sur une réponse réellement insérée (rejeu idempotent ⇒ pas de double avis).
+        -- On joint la demande pour le destinataire ; la livraison in_app est toujours créée,
+        -- le push web seulement si l'acheteur a déjà un abonnement actif.
+        notified as (
+          insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
+          select rq.buyer_account_id, 'availability_response_created', 'availability_request', i.request_id::text,
+                 i.id::text || ':response_created',
+                 jsonb_build_object('status', i.status, 'productId', rq.product_id::text, 'responseId', i.id::text),
+                 ${input.correlationId}
+          from inserted i
+          join v2_availability_requests rq on rq.id = i.request_id
+          on conflict (recipient_account_id, dedupe_key) do nothing
+          returning id, recipient_account_id
+        ),
+        deliveries as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select id, 'in_app', 'queued' from notified
+          on conflict (event_id, channel) do nothing
+          returning id
+        ),
+        push_deliveries as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select n.id, 'web_push', 'queued'
+          from notified n
+          join v2_web_push_subscriptions s on s.account_id = n.recipient_account_id
+          where s.permission_state = 'granted' and s.revoked_at is null
+          on conflict (event_id, channel) do nothing
+          returning id
         )
         select id, request_id, facility_id, product_id, status, quantity_available, price_minor, observed_at
         from result
@@ -8051,6 +8082,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       deliveryMode: 'retrait' | 'livraison';
       note: string | null;
       idempotencyKey: string;
+      correlationId: string;
     }): Promise<AvailabilityResult> {
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
       // R-H — la caractéristique DÉCIDE, elle ne décore pas. Une proposition de prix n'est
@@ -8138,6 +8170,41 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           from v2_availability_requests r
           where r.buyer_account_id = (select id from account)
             and r.idempotency_key = ${input.idempotencyKey}
+        ),
+        -- BRANCHES-NOTIF-1 : le VENDEUR est prévenu qu'une demande l'attend. Sans ce
+        -- producteur, inviter un vendeur à activer les notifications serait un mensonge :
+        -- il n'aurait aucun événement à recevoir. On notifie le propriétaire de la facilité
+        -- visée, seulement à la création réelle (le rejeu idempotent ne re-notifie pas).
+        seller_targets as (
+          select distinct f.account_id as seller_account_id, ri.id as request_id, ri.product_id
+          from request_insert ri
+          join v2_facilities f on f.id = ri.facility_id
+          where f.account_id is not null
+        ),
+        seller_notified as (
+          insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
+          select st.seller_account_id, 'availability_request_created', 'availability_request', st.request_id::text,
+                 st.request_id::text || ':request_created',
+                 jsonb_build_object('productId', st.product_id::text, 'requestId', st.request_id::text),
+                 ${input.correlationId}
+          from seller_targets st
+          on conflict (recipient_account_id, dedupe_key) do nothing
+          returning id, recipient_account_id
+        ),
+        seller_deliveries as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select id, 'in_app', 'queued' from seller_notified
+          on conflict (event_id, channel) do nothing
+          returning id
+        ),
+        seller_push_deliveries as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select n.id, 'web_push', 'queued'
+          from seller_notified n
+          join v2_web_push_subscriptions s on s.account_id = n.recipient_account_id
+          where s.permission_state = 'granted' and s.revoked_at is null
+          on conflict (event_id, channel) do nothing
+          returning id
         )
         select * from request_result limit 1
       `);
@@ -8183,6 +8250,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       deliveryMode: 'retrait' | 'livraison';
       note: string | null;
       idempotencyKey: string;
+      correlationId: string;
     }): Promise<BulkAvailabilityResult> {
       if (input.facilityIds.length < 2) {
         throw new AvailabilityPolicyError('A bulk request must target at least 2 facilities. Use single availability request for one facility.');
@@ -8259,6 +8327,40 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           from v2_availability_requests r
           where r.buyer_account_id = (select id from account)
             and r.idempotency_key = ${input.idempotencyKey}
+        ),
+        -- BRANCHES-NOTIF-1 : chaque VENDEUR visé par un besoin groupé est prévenu. On
+        -- déplie le périmètre (facility_scope) pour joindre le propriétaire de chaque lieu.
+        seller_targets as (
+          select distinct f.account_id as seller_account_id, ri.id as request_id, ri.product_id
+          from request_insert ri
+          join lateral unnest(ri.facility_scope) as scope(facility_id) on true
+          join v2_facilities f on f.id = scope.facility_id
+          where f.account_id is not null
+        ),
+        seller_notified as (
+          insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
+          select st.seller_account_id, 'availability_request_created', 'availability_request', st.request_id::text,
+                 st.request_id::text || ':request_created',
+                 jsonb_build_object('productId', st.product_id::text, 'requestId', st.request_id::text),
+                 ${input.correlationId}
+          from seller_targets st
+          on conflict (recipient_account_id, dedupe_key) do nothing
+          returning id, recipient_account_id
+        ),
+        seller_deliveries as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select id, 'in_app', 'queued' from seller_notified
+          on conflict (event_id, channel) do nothing
+          returning id
+        ),
+        seller_push_deliveries as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select n.id, 'web_push', 'queued'
+          from seller_notified n
+          join v2_web_push_subscriptions s on s.account_id = n.recipient_account_id
+          where s.permission_state = 'granted' and s.revoked_at is null
+          on conflict (event_id, channel) do nothing
+          returning id
         ),
         final as (
           select rr.id, rr.product_id, rr.facility_scope, rr.requested_quantity, rr.budget_mode, rr.budget_minor, rr.delivery_mode, rr.request_note, rr.status, rr.expires_at,

@@ -7,7 +7,7 @@ import { occasionDetailMissing } from './offer-condition';
 import { handoverIncoherent } from './offer-handover';
 import type { SellerCatalogueProduct } from './types';
 
-type ProductCatalogueV13Props = { onClose: () => void; onStockEvent: (productId: string) => void };
+type ProductCatalogueV13Props = { onClose: () => void; onStockEvent: (productId: string) => void; onEngagement?: (action: 'seller-offer') => void };
 
 const STATE_LABEL: Record<string, string> = {
   en_stock: 'En stock', verifie: 'Vérifié', a_valider: 'À valider', bientot: 'Bientôt',
@@ -33,7 +33,7 @@ export function publicationMessage(code: string): string {
   return 'La publication a été refusée.';
 }
 
-export function ProductCatalogueV13({ onClose, onStockEvent }: ProductCatalogueV13Props) {
+export function ProductCatalogueV13({ onClose, onStockEvent, onEngagement }: ProductCatalogueV13Props) {
   const [products, setProducts] = useState<SellerCatalogueProduct[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
@@ -61,12 +61,14 @@ export function ProductCatalogueV13({ onClose, onStockEvent }: ProductCatalogueV
       const result = await transitionSellerProduct({ token, productId: product.id, to });
       if (result.ok) {
         setNotice(`${product.name} : ${to === 'published' ? 'publiée' : 'archivée'}.`);
+        // BRANCHES-NOTIF-1 — l'offre est en ligne : le vendeur attend désormais une demande.
+        if (to === 'published') onEngagement?.('seller-offer');
         void load();
       } else {
         setError(`${product.name} · ${publicationMessage(result.error?.code ?? '')}`);
       }
     } finally { setBusyId(null); }
-  }, [load]);
+  }, [load, onEngagement]);
 
   const pickVisual = useCallback((productId: string) => {
     pendingUploadId.current = productId;

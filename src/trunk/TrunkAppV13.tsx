@@ -42,6 +42,7 @@ import { RecoveryCartRow, RecoverySearchRow, RecoveryTxnsRow } from './RecoveryV
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
 import { detectInstallPlatform, installStateFor, installStepsFor, isStandalone, shouldOfferInstall, shouldShowInstallBanner, type InstallStep } from './pwa-install';
 import { createPushSubscription, pushSupportFor, type PushSupport } from './push-subscribe';
+import { shouldAutoPromptPush, type PushTriggerAction } from './push-prompt';
 import { useViewportInsets } from '../hooks/use-viewport-insets';
 import { TrunkMap } from './TrunkMap';
 import { AdminV13 } from './AdminV13';
@@ -344,6 +345,11 @@ export function TrunkAppV13() {
 
   useEffect(() => { void refreshPush(); }, [refreshPush]);
 
+  // BRANCHES-NOTIF-1 — demander la permission APRÈS l'action qui va l'utiliser, pas à froid.
+  // Une seule fois par appareil (mémoire locale), et seulement si la plateforme peut livrer.
+  const pushPromptedRef = useRef(false);
+  useEffect(() => { try { pushPromptedRef.current = localStorage.getItem('omni-push-prompted') === '1'; } catch { /* stockage indisponible */ } }, []);
+
   const enablePush = useCallback(async () => {
     if (!authToken) return;
     setPushBusy(true); setPushMsg(null);
@@ -380,6 +386,16 @@ export function TrunkAppV13() {
       setPushMsg('La désactivation a échoué. Réessayez plus tard.');
     } finally { setPushBusy(false); }
   }, [authToken, refreshPush]);
+
+  // BRANCHES-NOTIF-1 — le prompt se déclenche sur un moment d'engagement (acheteur qui
+  // attend une réponse, vendeur qui attend une demande). On ne le répète pas.
+  const maybePromptPush = useCallback((action: PushTriggerAction) => {
+    if (!authToken) return;
+    if (!shouldAutoPromptPush({ action, support: pushSupport, alreadyPrompted: pushPromptedRef.current, pushActive })) return;
+    pushPromptedRef.current = true;
+    try { localStorage.setItem('omni-push-prompted', '1'); } catch { /* stockage indisponible */ }
+    void enablePush();
+  }, [authToken, pushSupport, pushActive, enablePush]);
 
   const [resultsFollowId, setResultsFollowId] = useState<string | null>(null);
   const resultsScrollFrame = useRef<number | null>(null);
@@ -1237,6 +1253,13 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     try {
       if (target.kind === 'flow') {
         await resumeTransaction({ transactionId: target.transactionId });
+      } else if (target.kind === 'availability-response') {
+        // BRANCHES-NOTIF-1 : la réponse du vendeur rouvre le SUIVI de la demande
+        // (même lecture que le flux : getAvailabilityResponses via BuyerFlowV13).
+        const list = await getBuyerAvailabilityRequests({ token });
+        const request = list.ok ? list.data?.requests?.find((r) => r.id === target.requestId) : null;
+        if (!request) { setNotifsError('Cette demande n’est plus disponible pour ce compte.'); return; }
+        resumeAvailabilityRequest({ requestId: request.id, facilityId: request.facilityId, facilityName: request.facilityName, productId: request.productId, productName: request.productName });
       } else if (target.kind === 'claim-request') {
         const request = await getClaimRequest({ requestId: target.requestId, token });
         if (!request.ok || !request.data) { setNotifsError('Cette demande n’est plus disponible pour ce compte.'); return; }
@@ -1245,13 +1268,17 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         setSelectedFacility(detail.data); setSelectedId(detail.data.id); setSheet('facility');
       } else if (target.kind === 'seller') {
         setSheet('seller');
+      } else if (target.kind === 'seller-queue') {
+        // BRANCHES-NOTIF-1 : une nouvelle demande ouvre l'espace VENDEUR (sa file
+        // « Demandes en attente » y vit). Le rôle bascule pour que l'espace soit le bon.
+        setRole('seller'); setSheet('seller'); if (sessionUser) void loadSellerWorkspace();
       } else if (target.kind === 'review') {
         setSheet('admin');
       }
     } catch {
       setNotifsError('Cette notification ne peut pas être ouverte pour le moment.');
     }
-  }, [requireAuth, resumeTransaction]);
+  }, [requireAuth, resumeTransaction, resumeAvailabilityRequest, sessionUser, loadSellerWorkspace]);
 
   // FF-4 — annulation d'une demande de dispo (Phase A uniquement). Sans effet monétaire ;
   // refusée par le serveur si une intention est déjà engagée (le verrou est pris).
@@ -3063,7 +3090,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         </section>
       )}
       {sheet === 'seller' && (
-        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} onScan={() => setSheet('seller-qr')} onMap={() => { setSelectedId(null); setSheet('none'); }} onClaim={(facility) => { void startClaim(facility); }} onClaimExisting={(facilityId) => void openExistingForClaim(facilityId)} onOpenTransaction={(transaction) => void openRoom(transaction)} startInCreate={sellerCreateIntent} onConsumeCreateIntent={() => setSellerCreateIntent(false)} catalogue={sellerCatalogue} queue={sellerQueue} publicFacilities={facilities} ownedIds={ownedFacilityIds} onRefresh={loadSellerWorkspace} />
+        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} onScan={() => setSheet('seller-qr')} onMap={() => { setSelectedId(null); setSheet('none'); }} onClaim={(facility) => { void startClaim(facility); }} onClaimExisting={(facilityId) => void openExistingForClaim(facilityId)} onOpenTransaction={(transaction) => void openRoom(transaction)} startInCreate={sellerCreateIntent} onConsumeCreateIntent={() => setSellerCreateIntent(false)} catalogue={sellerCatalogue} queue={sellerQueue} publicFacilities={facilities} ownedIds={ownedFacilityIds} onEngagement={maybePromptPush} onRefresh={loadSellerWorkspace} />
       )}
       {sheet === 'seller-reply' && (
         <SellerReplyV13 onClose={() => setSheet('seller')} />
@@ -3078,10 +3105,10 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         <OperatorEntitySideV13 visitId={opSideVisitId} onBack={() => { setOpSideVisitId(null); setSheet('tour'); }} />
       )}
       {sheet === 'seller-qr' && (
-        <SellerQrScannerSheet onClose={() => setSheet('seller')} onVerified={() => undefined} />
+        <SellerQrScannerSheet onClose={() => setSheet('seller')} onVerified={(accepted: boolean) => { if (accepted) maybePromptPush('seller-qr'); }} />
       )}
       {sheet === 'products' && (
-        <ProductCatalogueV13 onClose={() => setSheet('seller')} onStockEvent={(id) => { setStockEventProductId(id); setSheet('stockevent'); }} />
+        <ProductCatalogueV13 onClose={() => setSheet('seller')} onStockEvent={(id) => { setStockEventProductId(id); setSheet('stockevent'); }} onEngagement={maybePromptPush} />
       )}
       {sheet === 'stockevent' && stockEventProductId && (
         <StockEventLedgerV13 productId={stockEventProductId} onClose={() => setSheet('products')} />
@@ -3093,7 +3120,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         <CompanyV13 onClose={() => setSheet('seller')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} catalogue={sellerCatalogue} />
       )}
       {sheet === 'flow' && flowFacility && flowProduct && (
-        <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => { setPendingResumeTxnId(null); setPendingResumeRequestId(null); setSheet('facility'); }} resumeTxnId={pendingResumeTxnId} resumeRequestId={pendingResumeRequestId} onGate={gateRequest} onRoute={(longitude: number, latitude: number, name: string) => { setRouteTarget({ longitude, latitude, name }); setSheet('none'); }} walletBalanceMinor={wallet?.balanceMinor ?? null} />
+        <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => { setPendingResumeTxnId(null); setPendingResumeRequestId(null); setSheet('facility'); }} resumeTxnId={pendingResumeTxnId} resumeRequestId={pendingResumeRequestId} onEngagement={maybePromptPush} onGate={gateRequest} onRoute={(longitude: number, latitude: number, name: string) => { setRouteTarget({ longitude, latitude, name }); setSheet('none'); }} walletBalanceMinor={wallet?.balanceMinor ?? null} />
       )}
       {sheet === 'admin' && adminTools && (
         <AdminV13 onClose={() => setSheet('menu')} onFocusFacility={(latitude: number, longitude: number, key: string) => { setFocusTarget({ latitude, longitude, key }); setSheet('none'); }} />

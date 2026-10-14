@@ -36,13 +36,16 @@ type SellerV13Props = {
   queue?: SellerAvailabilityRequest[];
   publicFacilities?: PublicFacility[];
   ownedIds?: string[];
+  /** BRANCHES-NOTIF-1 — signalé APRÈS une action vendeur qui va utiliser les
+   *  notifications (offre publiée → attend une demande acheteur). Jamais avant. */
+  onEngagement?: (action: 'seller-offer') => void;
 };
 
 // D-H/UM-6 : l'UI ne doit jamais recopier « 20 USD » en dur — elle derive de la source
 // canonique. Une seule verite, du catalogue jusqu'au libelle.
 const BONUS_LABEL = formatUsdSticker(SELLER_BONUS_USD_MINOR);
 
-export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, onRefresh, onScan, onMap, onClaim, onClaimExisting, onOpenTransaction, startInCreate = false, onConsumeCreateIntent, catalogue: propsCatalogue, queue: propsQueue = [], publicFacilities = [], ownedIds = [] }: SellerV13Props) {
+export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, onRefresh, onScan, onMap, onClaim, onClaimExisting, onOpenTransaction, startInCreate = false, onConsumeCreateIntent, catalogue: propsCatalogue, queue: propsQueue = [], publicFacilities = [], ownedIds = [], onEngagement }: SellerV13Props) {
   const [error, setError] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(startInCreate);
   const [busy, setBusy] = useState(false);
@@ -247,6 +250,9 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
       });
       if (result.ok && result.data) {
         setToast('Offre créée en brouillon. Publiez-la depuis le catalogue.');
+        // BRANCHES-NOTIF-1 — le vendeur est en mode vente : il veut être joignable
+        // pour la demande qui suivra sa publication.
+        onEngagement?.('seller-offer');
         setShowOfferForm(false);
         setOfferName('');
         setOfferPrice('');
@@ -256,7 +262,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
       }
     } catch { setOfferError('Offre non enregistrée.'); }
     finally { setOfferBusy(false); }
-  }, [ws.selFacilityId, offerName, offerUnit, offerPrice, offerDiscount, offerQty, offerPosition, offerUniqueness, offerHandover, offerPriceKind, offerCondition, onRefresh, load]);
+  }, [ws.selFacilityId, offerName, offerUnit, offerPrice, offerDiscount, offerQty, offerPosition, offerUniqueness, offerHandover, offerPriceKind, offerCondition, onRefresh, load, onEngagement]);
 
   const activeFacility = (propsCatalogue ?? catalogue)?.facilities?.find((f) => f.id === ws.selFacilityId) ?? null;
   // Retour visuel immédiat du ON/OFF : la pastille bascule AU TAP, le backend rattrape.

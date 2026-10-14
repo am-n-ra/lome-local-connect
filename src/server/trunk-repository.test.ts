@@ -22,6 +22,7 @@ const availabilityInput = {
   deliveryMode: 'livraison' as const,
   note: 'Livrer avant 17h',
   idempotencyKey: 'availability-key-1',
+  correlationId: 'corr-availability-1',
 };
 
 const resultRow = {

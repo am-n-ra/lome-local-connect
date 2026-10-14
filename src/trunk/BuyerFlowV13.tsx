@@ -20,6 +20,9 @@ type BuyerFlowV13Props = {
   onClose: () => void;
   onGate?: (action: PendingAction) => boolean;
   onRoute?: (longitude: number, latitude: number, name: string) => void;
+  /** BRANCHES-NOTIF-1 — signalé APRÈS l'action qui va utiliser les notifications
+   *  (demande de dispo envoyée, intention d'achat créée). Jamais avant. */
+  onEngagement?: (action: 'buyer-request' | 'buyer-intent') => void;
   walletBalanceMinor?: number | null;
   /** FF-2 — si fourni, on saute directement au suivi de la transaction (reprise). */
   resumeTxnId?: string | null;
@@ -46,7 +49,7 @@ const TXN_STAGES = [
 
 // Payload scannable par le vendeur: transactionId + jeton brut.
 
-export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, walletBalanceMinor, resumeTxnId, resumeRequestId }: BuyerFlowV13Props) {
+export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, onEngagement, walletBalanceMinor, resumeTxnId, resumeRequestId }: BuyerFlowV13Props) {
   const [stage, setStage] = useState<Stage>('avail');
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -190,6 +193,8 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
         setRequestId(result.data.requestId);
         setToast('');
         setError('');
+        // BRANCHES-NOTIF-1 — la demande part : l'acheteur attend une réponse hors écran.
+        onEngagement?.('buyer-request');
         setCreditSummary((current) => current ? { ...current, creditsUsed: current.creditsUsed + result.data!.creditCost, creditsRemaining: result.data!.creditsRemaining, monthlyQuota: result.data!.monthlyQuota, plan: result.data!.plan } : { accountId: '', plan: result.data!.plan, monthlyQuota: result.data!.monthlyQuota, creditsUsed: 0, extraCredits: 0, creditsRemaining: result.data!.creditsRemaining, periodMonth: '' });
         void refreshCredits();
         setStage('pending');
@@ -213,7 +218,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
         setToast('');
       }
     } finally { setBusy(false); }
-    }, [busy, needAuth, product.id, facility.id, quantityValue, budgetMode, budget, negotiable, proposedPrice]);
+    }, [busy, needAuth, product.id, facility.id, quantityValue, budgetMode, budget, negotiable, proposedPrice, onEngagement]);
 
   useEffect(() => () => { if (pollRef.current !== null) window.clearTimeout(pollRef.current); }, []);
 
@@ -228,6 +233,8 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
       const intent = await createPurchaseIntent({ responseId, token, idempotencyKey: 'intent-' + crypto.randomUUID() });
       if (intent.ok && intent.data) {
         setToast('');
+        // BRANCHES-NOTIF-1 — l'intention est prise : l'acheteur attend le scan du vendeur.
+        onEngagement?.('buyer-intent');
         await loadTxn(intent.data.transactionId);
         if (intent.data.qrToken) {
           setQrToken(intent.data.qrToken);
@@ -236,7 +243,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
         }
       } else { setError(intent.error?.message ?? 'Intention non créée.'); }
     } finally { setBusy(false); }
-  }, [needAuth, requestId, loadTxn]);
+  }, [needAuth, requestId, loadTxn, onEngagement]);
 
   const issueQr = useCallback(async () => {
     const token = await needAuth();

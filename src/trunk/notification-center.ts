@@ -14,12 +14,16 @@ export type NotificationTarget =
   | { kind: 'facility'; facilityId: string }
   | { kind: 'claim-request'; requestId: string }
   | { kind: 'seller' }
+  | { kind: 'seller-queue' }
   | { kind: 'review' }
+  | { kind: 'availability-response'; requestId: string }
   | { kind: 'none' };
 
 export function notificationLabel(notification: Pick<NotificationSummary, 'eventType' | 'reviewOutcome'>): string {
   switch (notification.eventType) {
     case 'transaction_turn': return 'Tour de transaction';
+    case 'availability_response_created': return 'Réponse à votre demande';
+    case 'availability_request_created': return 'Nouvelle demande de disponibilité';
     case 'claim_submitted': return 'Demande à examiner';
     case 'claim_reviewed':
       if (notification.reviewOutcome === 'certified') return 'Lieu vérifié';
@@ -37,6 +41,12 @@ export function notificationTarget(notification: Pick<NotificationSummary, 'even
   const { eventType, entityType, entityId } = notification;
   if (eventType === 'transaction_turn' && entityType === 'transaction' && entityId) {
     return { kind: 'flow', transactionId: entityId };
+  }
+  if (eventType === 'availability_response_created' && entityType === 'availability_request' && entityId) {
+    return { kind: 'availability-response', requestId: entityId };
+  }
+  if (eventType === 'availability_request_created' && entityType === 'availability_request') {
+    return { kind: 'seller-queue' };
   }
   if (eventType === 'claim_reviewed' && entityType === 'verification_request' && entityId) {
     return { kind: 'claim-request', requestId: entityId };

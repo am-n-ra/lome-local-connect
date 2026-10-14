@@ -2770,7 +2770,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const rawIdempotencyKey = req.headers['idempotency-key'] ?? input.idempotencyKey;
       const idempotencyKey = typeof rawIdempotencyKey === 'string' ? rawIdempotencyKey : '';
       const validated = validateAvailabilityRequestCreate(input, idempotencyKey, authUserId);
-      const result = await repository.createAvailabilityRequest(validated);
+      const result = await repository.createAvailabilityRequest({ ...validated, correlationId });
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
@@ -2820,7 +2820,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const rawIdempotencyKey = req.headers['idempotency-key'] ?? input.idempotencyKey;
       const idempotencyKey = typeof rawIdempotencyKey === 'string' ? rawIdempotencyKey : '';
       const validated = validateBulkAvailabilityRequestCreate(input, idempotencyKey, authUserId);
-      const result = await repository.createBulkAvailabilityRequest(validated);
+      const result = await repository.createBulkAvailabilityRequest({ ...validated, correlationId });
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
