@@ -45,6 +45,7 @@ function baseRequest(over: Partial<SellerAvailabilityRequest>): SellerAvailabili
   return {
     id: 'req-1', facilityId: 'fac-1', facilityName: 'Boutique A', facilityCategory: 'Marché',
     facilityTrust: 'confirmed', facilityPlan: 'free', productId: 'prod-1', productName: 'Riz au soja',
+    availableStock: 5, listedPriceMinor: 100000,
     requestedQuantity: 1, budgetMode: 'unlimited', budgetMinor: null, proposedPriceMinor: null,
     likelierPriceKind: 'fixe', deliveryMode: 'retrait', requestNote: null,
     requestStatus: 'submitted', createdAt: '2026-10-15T14:05:23Z', expiresAt: '2026-10-15T14:20:23Z',
@@ -76,5 +77,37 @@ describe('SellerReplyV13 — une demande répondue le DIT', () => {
     await renderWith([baseRequest({ id: 'no', responseStatus: 'unavailable', responseObservedAt: '2026-10-15T14:21:51Z' })]);
     expect(text()).toContain('Indisponible');
     expect(text()).not.toContain('Envoyer la réponse');
+  });
+});
+
+/**
+ * NOTIF-REPLY-2 — « le vendeur ne peut TOUJOURS pas répondre » (fondateur 2026-10-15).
+ *
+ * Défaut mesuré sur la canonique : demande de 3 « Riz au soja », stock réel **1**.
+ * Le formulaire partait avec quantité/prix VIDES → le serveur refusait (« requires a
+ * positive quantity and non-negative price »), et une quantité de 3 (la demande) était
+ * refusée au nom du stock sous le message trompeur « not authorized ».
+ */
+describe('SellerReplyV13 — la réponse part d’un état réellement envoyable', () => {
+  it('pré-remplit la quantité au plus offertable et le prix affiché (stock < demande)', async () => {
+    await renderWith([baseRequest({ id: 'partial', requestedQuantity: 3, availableStock: 1, listedPriceMinor: 100000 })]);
+    const qty = container.querySelector('input[placeholder="Qté dispo"]') as HTMLInputElement;
+    const price = container.querySelector('input[placeholder="Prix (FCFA)"]') as HTMLInputElement;
+    expect(qty.value).toBe('1'); // jamais 3 : le stock ne le permet pas
+    expect(price.value).toBe('1000'); // 100000 minor / 100
+    expect(text()).toContain('Stock offertable');
+  });
+
+  it('stock suffisant ⇒ quantité = demande, statut Disponible', async () => {
+    await renderWith([baseRequest({ id: 'full', requestedQuantity: 2, availableStock: 5, listedPriceMinor: 50000 })]);
+    const qty = container.querySelector('input[placeholder="Qté dispo"]') as HTMLInputElement;
+    expect(qty.value).toBe('2');
+  });
+
+  it('stock nul ⇒ seule « Indispo » est proposée (aucune quantité mensongère)', async () => {
+    await renderWith([baseRequest({ id: 'zero', requestedQuantity: 2, availableStock: 0, listedPriceMinor: 50000 })]);
+    // Le champ quantité n'est pas rendu en mode Indispo.
+    expect(container.querySelector('input[placeholder="Qté dispo"]')).toBeNull();
+    expect(text()).toContain('0');
   });
 });

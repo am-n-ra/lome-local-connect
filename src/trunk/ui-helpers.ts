@@ -313,3 +313,32 @@ export function buyerRequestStatusLabel(requestStatus: string): string {
   return 'En attente';
 }
 
+/**
+ * NOTIF-REPLY-2 — défaut de réponse vendeur pour une demande.
+ *
+ * Défaut mesuré (fondateur 2026-10-15 : « le vendeur ne peut toujours pas répondre ») :
+ * le formulaire laissait la quantité et le prix VIDES. Le serveur exige une quantité
+ * positive et un prix non négatif, et refuse toute quantité au-delà du stock alloué.
+ * Un vendeur qui tapait la quantité demandée (3) avec un stock réel de 1 recevait
+ * « The seller is not authorized… » — un refus qui s'accusait d'autorisation alors que
+ * le vrai motif était le stock. Le défaut est de ne pas montrer la limite.
+ *
+ * Règle : on pré-remplit au **maximum offertable** (jamais la quantité demandée si le
+ * stock ne la couvre pas), et le prix avec le **prix affiché** de l'offre. Le vendeur
+ * ajuste s'il veut ; il ne peut plus viser au-delà de ce qui existe.
+ */
+export function defaultSellerReply(request: {
+  requestedQuantity: number;
+  availableStock: number;
+  listedPriceMinor: number | null;
+}): { status: 'available' | 'partial'; quantity: string; price: string } {
+  const stock = Number.isFinite(request.availableStock) ? Math.max(0, Math.floor(request.availableStock)) : 0;
+  const wanted = Number.isFinite(request.requestedQuantity) ? Math.max(0, Math.floor(request.requestedQuantity)) : 0;
+  const quantity = Math.min(wanted, stock);
+  const status: 'available' | 'partial' = quantity > 0 && quantity >= wanted ? 'available' : 'partial';
+  const price = request.listedPriceMinor === null || request.listedPriceMinor === undefined
+    ? ''
+    : String(request.listedPriceMinor / 100);
+  return { status, quantity: quantity > 0 ? String(quantity) : '', price };
+}
+

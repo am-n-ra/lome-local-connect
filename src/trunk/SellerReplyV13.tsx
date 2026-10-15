@@ -5,10 +5,19 @@ import { getSellerAvailabilityQueue, requestSellerAvailabilityResponse } from '.
 import type { SellerAvailabilityRequest } from './types';
 import { formatMoney } from '../domain/currency';
 import { relativeAge } from './transaction-time';
+import { defaultSellerReply } from './ui-helpers';
 
 type SellerReplyV13Props = { onClose: () => void };
 
 type ReplyDraft = { status: 'available' | 'partial' | 'unavailable'; quantity: string; price: string; message: string };
+
+/** NOTIF-REPLY-2 — point de départ d'un brouillon : au plus ce qui est offertable, au prix affiché. */
+function seedFor(request: SellerAvailabilityRequest): ReplyDraft {
+  // Stock nul ⇒ la seule réponse valide est « Indispo » : on ne propose pas une quantité inexistante.
+  if (!(request.availableStock > 0)) return { status: 'unavailable', quantity: '', price: '', message: '' };
+  const seed = defaultSellerReply(request);
+  return { status: seed.status, quantity: seed.quantity, price: seed.price, message: '' };
+}
 
 /** NOTIF-REPLY — nomme le statut DÉJÀ donné (jamais « Indisponible » pour un statut inconnu). */
 function answeredLabel(status: string): string {
@@ -27,8 +36,10 @@ export function SellerReplyV13({ onClose }: SellerReplyV13Props) {
   const [reply, setReply] = useState<Record<string, ReplyDraft>>({});
 
   const patch = useCallback((id: string, p: Partial<ReplyDraft>) => {
-    setReply((current) => ({ ...current, [id]: { ...(current[id] ?? { status: 'available' as const, quantity: '', price: '', message: '' }), ...p } }));
-  }, []);
+    const request = queue.find((r) => r.id === id);
+    if (!request) return;
+    setReply((current) => ({ ...current, [id]: { ...(current[id] ?? seedFor(request)), ...p } }));
+  }, [queue]);
 
   const load = useCallback(async () => {
     setError('');
@@ -48,9 +59,13 @@ export function SellerReplyV13({ onClose }: SellerReplyV13Props) {
   const submit = useCallback(async (request: SellerAvailabilityRequest) => {
     const draft = reply[request.id];
     if (!draft || busy) return;
-    if (draft.status !== 'unavailable' && (!draft.quantity || Number(draft.quantity) < 0)) {
-      setError('Indiquez une quantité disponible.');
-      return;
+    // NOTIF-REPLY-2 — refuser ICI, avec le vrai motif, plutôt que laisser le serveur répondre
+    // « not authorized » pour un simple dépassement de stock.
+    if (draft.status !== 'unavailable') {
+      const qty = Number(draft.quantity);
+      if (!draft.quantity || !Number.isInteger(qty) || qty < 1) { setError('Indiquez une quantité disponible (entier ≥ 1).'); return; }
+      if (qty > request.availableStock) { setError(`Vous ne pouvez offrir que ${request.availableStock} (stock offertable). Réduisez la quantité ou répondez « Partiel ».`); return; }
+      if (draft.price.trim() === '' || !(Number(draft.price) >= 0)) { setError('Indiquez un prix unitaire (0 ou plus).'); return; }
     }
     const token = await getAuthToken();
     if (!token) { setError('Connectez-vous pour répondre.'); return; }
@@ -92,7 +107,7 @@ export function SellerReplyV13({ onClose }: SellerReplyV13Props) {
       {busy && <p className="sub">…</p>}
       {queue.length === 0 && !busy && <p className="sub">Aucune demande en attente. Les demandes arrivent ici quand un client demande la dispo d’un produit de votre facilité.</p>}
       {queue.map((request) => {
-        const draft = reply[request.id] ?? { status: 'available' as const, quantity: '', price: '', message: '' };
+        const draft = reply[request.id] ?? seedFor(request);
         // NOTIF-REPLY — une demande DÉJÀ répondue ne se re-propose pas : elle DIT ce qui a été
         // répondu. Sans ça, le vendeur envoyait sa réponse et sa carte ne changeait pas (« rien
         // ne se passe »). Il peut rouvrir le formulaire pour corriger.
@@ -113,6 +128,12 @@ export function SellerReplyV13({ onClose }: SellerReplyV13Props) {
               <p className="tiny muted" style={{ marginTop: 4 }}>L’acheteur propose un prix : c’est une ouverture, pas un engagement. Votre prix cité reste celui qui engage la transaction.</p>
             )}
             {request.requestNote && <p className="tiny muted" style={{ marginTop: 4 }}>« {request.requestNote} »</p>}
+            {!answered && request.availableStock <= 0 && (
+              <p className="tiny muted" style={{ marginTop: 4 }}>Stock offertable : <b>0</b>. Vous ne pouvez répondre que « Indispo » tant que vous n’avez rien alloué.</p>
+            )}
+            {!answered && request.availableStock > 0 && request.availableStock < request.requestedQuantity && (
+              <p className="tiny muted" style={{ marginTop: 4 }}>Stock offertable : <b>{request.availableStock}</b>, inférieur aux {request.requestedQuantity} demandés. Répondez « Partiel » avec au plus {request.availableStock}.</p>
+            )}
             {answered && !editing ? (
               <div style={{ marginTop: 8 }}>
                 <p className="sub" style={{ marginTop: 0 }}>

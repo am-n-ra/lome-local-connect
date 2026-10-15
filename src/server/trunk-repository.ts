@@ -3886,6 +3886,11 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       productId: string;
       productName: string;
       requestedQuantity: number;
+      /** NOTIF-REPLY-2 — stock réellement offertable (alloué − réservé), pour ne pas proposer
+       *  une quantité que le serveur refusera. Dérivé au read, jamais stocké. */
+      availableStock: number;
+      /** Prix affiché de l'offre, pour pré-remplir la réponse (le vendeur ne re-tape pas). */
+      listedPriceMinor: number | null;
       budgetMode: 'unlimited' | 'maximum';
       budgetMinor: number | null;
       proposedPriceMinor: number | null;
@@ -3928,6 +3933,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           end as facility_plan,
           p.id as product_id,
           p.name as product_name,
+          p.price_minor as product_price_minor,
+          greatest(p.quantity_allocated_omni - p.quantity_reserved_omni, 0) as available_stock,
           r.requested_quantity,
           r.budget_mode,
           r.budget_minor,
@@ -3969,6 +3976,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           facilityPlan: row.facility_plan as PublicFacility['plan'],
           productId: String(row.product_id),
           productName: String(row.product_name),
+          availableStock: Number(row.available_stock),
+          listedPriceMinor: row.product_price_minor === null || row.product_price_minor === undefined ? null : Number(row.product_price_minor),
           requestedQuantity: Number(row.requested_quantity),
           budgetMode: row.budget_mode as 'unlimited' | 'maximum',
           budgetMinor: row.budget_minor === null ? null : Number(row.budget_minor),
@@ -6329,7 +6338,47 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         limit 1
       `);
       const row = (rows as Record<string, unknown>[])[0];
-      if (!row) throw new AvailabilityResponsePolicyError('The seller is not authorized for this request, facility or product.');
+      if (!row) {
+        // NOTIF-REPLY-2 — distinguer le VRAI motif du refus. Avant, tout échec de `eligible`
+        // (mauvaise autorisation OU quantité au-dessus du stock) produisait le même message
+        // « not authorized ». Un vendeur légitime qui dépassait son stock s'entendait donc
+        // accuser d'autorisation. Diagnostic lu UNIQUEMENT sur le chemin d'échec.
+        const diagnosis = await retryDatabase(() => sql`
+          select
+            exists (
+              select 1
+              from v2_availability_requests r
+              join v2_facilities f on f.id = ${input.facilityId}::uuid and f.id = any(r.facility_scope)
+              join v2_products p on p.id = ${input.productId}::uuid and p.facility_id = f.id
+              join v2_accounts a on a.auth_user_id = ${input.authUserId}
+                and a.id = f.account_id
+                and a.onboarding_state in ('seller_ready', 'complete')
+                and a.suspended_at is null
+              where r.id = ${input.requestId}::uuid
+                and p.publication_state = 'published'
+                and r.product_id = p.id
+            ) as context_ok,
+            coalesce((
+              select greatest(p.quantity_allocated_omni - p.quantity_reserved_omni, 0)
+              from v2_availability_requests r
+              join v2_facilities f on f.id = ${input.facilityId}::uuid and f.id = any(r.facility_scope)
+              join v2_products p on p.id = ${input.productId}::uuid and p.facility_id = f.id
+              join v2_accounts a on a.auth_user_id = ${input.authUserId}
+                and a.id = f.account_id
+                and a.onboarding_state in ('seller_ready', 'complete')
+                and a.suspended_at is null
+              where r.id = ${input.requestId}::uuid
+                and p.publication_state = 'published'
+                and r.product_id = p.id
+              limit 1
+            ), -1) as available_stock
+        `);
+        const diag = (diagnosis as Record<string, unknown>[])[0];
+        if (diag && diag.context_ok === true && input.quantityAvailable !== null && Number(diag.available_stock) < input.quantityAvailable) {
+          throw new AvailabilityResponsePolicyError(`The offered quantity exceeds the available stock (${Number(diag.available_stock)}). Reduce the quantity or reply partial.`);
+        }
+        throw new AvailabilityResponsePolicyError('The seller is not authorized for this request, facility or product.');
+      }
       const responseShapeMatches = String(row.request_id) === input.requestId
         && String(row.facility_id) === input.facilityId
         && String(row.product_id) === input.productId

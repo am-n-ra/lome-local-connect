@@ -773,6 +773,42 @@ describe('seller availability response persistence Root seam', () => {
       correlationId: 'corr-response-3',
     })).rejects.toThrow('The seller is not authorized for this request, facility or product.');
   });
+
+  // NOTIF-REPLY-2 — le vendeur LÉGITIME qui dépasse son stock ne doit plus être accusé
+  // d'autorisation. Le diagnostic lit le stock réel et nomme le vrai motif.
+  it('names the real reason (stock) when an authorized seller offers more than the stock', async () => {
+    const call = stubSqlAlternating([[], [{ context_ok: true, available_stock: 1 }]]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.respondAvailability({
+      authUserId: 'auth-seller-1',
+      requestId: 'request-1',
+      facilityId: 'facility-1',
+      productId: 'product-1',
+      status: 'available',
+      quantityAvailable: 3,
+      priceMinor: 1500,
+      sellerMessage: null,
+      idempotencyKey: 'response-key-4',
+      correlationId: 'corr-response-4',
+    })).rejects.toThrow('The offered quantity exceeds the available stock (1). Reduce the quantity or reply partial.');
+  });
+
+  it('keeps the authorization message when the context itself is not owned', async () => {
+    const call = stubSqlAlternating([[], [{ context_ok: false, available_stock: -1 }]]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.respondAvailability({
+      authUserId: 'auth-seller-1',
+      requestId: 'request-1',
+      facilityId: 'facility-1',
+      productId: 'product-1',
+      status: 'available',
+      quantityAvailable: 3,
+      priceMinor: 1500,
+      sellerMessage: null,
+      idempotencyKey: 'response-key-5',
+      correlationId: 'corr-response-5',
+    })).rejects.toThrow('The seller is not authorized for this request, facility or product.');
+  });
 });
 
 describe('QR issuance persistence Root seam', () => {

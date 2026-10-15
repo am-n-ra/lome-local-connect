@@ -379,6 +379,10 @@ export interface SellerAvailabilityRequest {
   facilityPlan: PublicFacility['plan'];
   productId: string;
   productName: string;
+  /** NOTIF-REPLY-2 — stock réellement offertable (alloué − réservé). */
+  availableStock: number;
+  /** Prix affiché de l'offre, pour pré-remplir la réponse. */
+  listedPriceMinor: number | null;
   requestedQuantity: number;
   budgetMode: 'unlimited' | 'maximum';
   budgetMinor: number | null;

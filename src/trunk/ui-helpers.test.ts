@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buyerRequestStatusLabel, describePendingAction, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, pendingActionResume, sortProductsStockFirst, walletBucketTotals, type PendingAction } from './ui-helpers';
+import { buyerRequestStatusLabel, defaultSellerReply, describePendingAction, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, pendingActionResume, sortProductsStockFirst, walletBucketTotals, type PendingAction } from './ui-helpers';
 
 describe('PendingAction resume contract', () => {
   it('labels each protected action for the access-portal gate', () => {
@@ -149,6 +149,31 @@ describe('buyerRequestStatusLabel — NOTIF-REPLY (un état de demande n’est p
   it('les états terminaux restent exacts', () => {
     expect(buyerRequestStatusLabel('expired')).toBe('Expirée');
     expect(buyerRequestStatusLabel('cancelled')).toBe('Annulée');
+  });
+});
+
+describe('defaultSellerReply — NOTIF-REPLY-2 (la réponse part d’un état envoyable)', () => {
+  it('quantité = min(demande, stock) ; statut Partiel quand le stock manque', () => {
+    const reply = defaultSellerReply({ requestedQuantity: 3, availableStock: 1, listedPriceMinor: 100000 });
+    expect(reply.quantity).toBe('1');
+    expect(reply.status).toBe('partial');
+  });
+  it('stock suffisant ⇒ Disponible à la quantité demandée', () => {
+    expect(defaultSellerReply({ requestedQuantity: 2, availableStock: 5, listedPriceMinor: 50000 }))
+      .toEqual({ status: 'available', quantity: '2', price: '500' });
+  });
+  it('jamais au-delà du stock, même si la demande est plus grande', () => {
+    const reply = defaultSellerReply({ requestedQuantity: 99, availableStock: 4, listedPriceMinor: 10000 });
+    expect(Number(reply.quantity)).toBe(4);
+    expect(Number(reply.quantity)).toBeLessThanOrEqual(4);
+  });
+  it('stock nul ⇒ quantité vide (aucune quantité mensongère)', () => {
+    const reply = defaultSellerReply({ requestedQuantity: 2, availableStock: 0, listedPriceMinor: 10000 });
+    expect(reply.quantity).toBe('');
+    expect(reply.status).toBe('partial');
+  });
+  it('prix affiché null ⇒ prix vide (le vendeur saisit, on n’invente pas 0)', () => {
+    expect(defaultSellerReply({ requestedQuantity: 1, availableStock: 1, listedPriceMinor: null }).price).toBe('');
   });
 });
 

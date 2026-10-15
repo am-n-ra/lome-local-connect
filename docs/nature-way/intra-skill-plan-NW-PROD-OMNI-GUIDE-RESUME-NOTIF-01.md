@@ -47,6 +47,7 @@
 | NT-1 | G-01 | Canopy | documenter la manifestation | — | relais | `planned` | doc + inventaire | pas de son custom sans décision | — |
 | NR-1 | G-01 | Branch | visibilité réponse vendeur (3 défauts) | — | relais | `done` | 3 gardes falsifiés + preuve backend | pas de badge neuf (hors maquette) | fondateur veut un badge |
 | NR-2 | G-01 | Branch | drain Web Push après CHAQUE producteur de notif | — | relais | `done` | garde générique falsifié + preuve SQL 8/8 + prod `5f2366c` | pas de nouveau canal | un producteur non drainé réapparaît |
+| NR-3 | G-01 | Branch | le vendeur peut RÉPONDRE (stock nommé) | — | relais | `done` | preuve A/B Postgres 6/6 + 3 gardes falsifiés | pas de migration (dérivé au read) | le stock démo reste sous la demande |
 
 ## Reconciliation log
 
@@ -57,12 +58,13 @@
 | 2026-10-15 | aucun `sound`/`vibrate` dans SW/push | `NT-1` créé `planned` (doc) | replan | fondateur | décision son |
 | 2026-10-15 | backend réponse/notif sain (11/11 + inbox) ; 3 défauts de visibilité | `NR-1` créé `done` | replan | relais | fondateur veut un badge ? |
 | 2026-10-15 | 2ᵉ demande → event+livraisons écrits, `web_push` resté `queued` ; routes dispo/claim/activation sans drain | `NR-2` créé `done` | replan | relais | producteur non drainé ? |
+| 2026-10-15 | fondateur « seller is still unable to reply » : formulaire vide + refus de stock dit « not authorized » (demande `05853c57…`, stock 1) | `NR-3` créé `done` | replan | relais | stock démo ≥ demande ? |
 
 ## Handoff to Founder HQ
 
 > **Local status:** `partial` — 1 bug mesuré prêt, 2 trous de mémoire, 1 réponse factuelle
 > **Gate decision:** `pause` — attendre la **décision d'ordre** du fondateur avant de coder
-> **Closed:** `NR-1` (visibilité réponse vendeur : 3 défauts corrigés, gardes falsifiés)
+> **Closed:** `NR-1` (visibilité réponse vendeur) · `NR-2` (drain Web Push) · `NR-3` (le vendeur **peut** répondre : stock nommé, formulaire pré-rempli)
 > **Open:** `GR-1` (ready), `GR-2`/`GR-3`/`NT-1` (planned)
 > **Residual gap:** reprise « flow en cours » exige de définir *quelle* étape on mémorise (nouveau contrat léger) ; pas de badge de notif in-app (maquette silencieuse) → décision fondateur
 > **Next smallest action:** décision fondateur : **quelle tranche d'abord** (recommandation `GR-1`)
