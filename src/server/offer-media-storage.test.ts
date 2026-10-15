@@ -176,6 +176,21 @@ describe('public offer visual boundary (S-20 / E-03)', () => {
       }
     });
 
+    it('verifies against the SAME store as the upload (OIDC → storeId, never the private token)', async () => {
+      // Live failure: presigned mode uploaded to the public store, but `head` fell back to the
+      // PRIVATE base token → "Access denied". The verification credential must follow the mode.
+      vi.stubEnv('BLOB_PUBLIC_READ_WRITE_TOKEN', '');
+      vi.stubEnv('BLOB_READ_WRITE_TOKEN', 'private-base');
+      vi.stubEnv('OMNI_STORE_ID', 'store_oidc');
+      vi.stubEnv('OMNI_WEBHOOK_PUBLIC_KEY', 'pubkey');
+      headMock.mockReset();
+      headMock.mockResolvedValue({ url: `https://abc.public.blob.vercel-storage.com/offers/${productId}/v.png`, pathname: `offers/${productId}/v.png`, contentType: 'image/png', size: 1234 });
+      await verifyOfferMediaObjects(productId, [{ url: `https://abc.public.blob.vercel-storage.com/offers/${productId}/v.png`, kind: 'image' }]);
+      const opts = headMock.mock.calls.at(-1)?.[1];
+      expect(opts).toEqual({ storeId: 'store_oidc' });
+      expect(opts).not.toHaveProperty('token');
+    });
+
     it('records a public visual and returns the public URL', async () => {
       vi.stubEnv('BLOB_PUBLIC_READ_WRITE_TOKEN', 'public-store');
       headMock.mockResolvedValue({

@@ -8602,9 +8602,8 @@ async function verifyOfferMediaObjects(productId, raw) {
   if (media.length < 1 || media.length > OFFER_MEDIA_MAX_ITEMS) throw new OfferMediaPolicyError("Provide one to four offer visuals.");
   if (!hasOfferMediaStorage()) throw new OfferMediaStorageError("Offer visual storage is not configured.");
   const prefix = offerMediaPrefix(productId);
-  const token = offerMediaBlobToken();
-  const storeId = offerMediaStoreId();
-  const headOptions = token ? { token } : storeId ? { storeId } : void 0;
+  const mode = offerMediaUploadMode();
+  const headOptions = mode === "presigned" ? { storeId: offerMediaStoreId() } : { token: offerMediaBlobToken() };
   const verified = [];
   for (const item of media) {
     let metadata = null;

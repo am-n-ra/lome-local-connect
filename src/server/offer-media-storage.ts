@@ -256,11 +256,12 @@ export async function verifyOfferMediaObjects(productId: string, raw: unknown): 
   if (media.length < 1 || media.length > OFFER_MEDIA_MAX_ITEMS) throw new OfferMediaPolicyError('Provide one to four offer visuals.');
   if (!hasOfferMediaStorage()) throw new OfferMediaStorageError('Offer visual storage is not configured.');
   const prefix = offerMediaPrefix(productId);
-  // OIDC store: `head` authenticates through the store id + the platform OIDC token; a
-  // read-write token is used when present (and is required by `head` otherwise).
-  const token = offerMediaBlobToken();
-  const storeId = offerMediaStoreId();
-  const headOptions = token ? { token } : storeId ? { storeId } : undefined;
+  // `head` must authenticate against the SAME store the upload used. In token mode that is the
+  // public read-write token; in presigned mode it is the store id + platform OIDC token. Using
+  // the base token here in presigned mode would be the PRIVATE store's credential and the public
+  // object would be denied — exactly the failure observed live.
+  const mode = offerMediaUploadMode();
+  const headOptions = mode === 'presigned' ? { storeId: offerMediaStoreId() } : { token: offerMediaBlobToken() };
   const verified: ProductMediaItem[] = [];
   for (const item of media) {
     let metadata: HeadBlobResult | null = null;
