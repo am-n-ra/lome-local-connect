@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { placeSpotlightCard } from './spotlight-placement';
 
 /**
  * GUIDE-1b — spotlight de première fois sur la CARTE (surface B).
@@ -38,7 +39,9 @@ interface Rect { top: number; left: number; width: number; height: number }
 export function MapSpotlightV13({ stage, onDone }: { stage: HTMLElement | null; onDone: () => void }) {
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
+  const [cardHeight, setCardHeight] = useState(0);
   const raf = useRef<number | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
 
   const measure = useCallback(() => {
     if (!stage) return;
@@ -49,6 +52,12 @@ export function MapSpotlightV13({ stage, onDone }: { stage: HTMLElement | null; 
     const box = el.getBoundingClientRect();
     setRect({ top: box.top - stageBox.top, left: box.left - stageBox.left, width: box.width, height: box.height });
   }, [stage, index]);
+
+  // La bulle a une hauteur réelle variable (titre + texte + boutons). On la mesure pour
+  // pouvoir la garder DANS la fenêtre — sinon elle tombe sous le dock (bug 2026-10-15).
+  useLayoutEffect(() => {
+    if (cardRef.current) setCardHeight(cardRef.current.getBoundingClientRect().height);
+  }, [index, rect]);
 
   useLayoutEffect(() => {
     measure();
@@ -79,6 +88,17 @@ export function MapSpotlightV13({ stage, onDone }: { stage: HTMLElement | null; 
   const step = MAP_SPOTLIGHT_STEPS[index];
   const last = index === MAP_SPOTLIGHT_STEPS.length - 1;
 
+  // La bulle reste TOUJOURS dans la fenêtre : sous l'anneau si ça tient, sinon au-dessus,
+  // sinon ancrée en bas. Le dock est collé au bas → sans ce calcul la bulle disparaît
+  // (bug mesuré 2026-10-15 : 4 px visibles sur 128, boutons inaccessibles).
+  const placement = rect
+    ? placeSpotlightCard({
+        ring: rect,
+        cardHeight: cardHeight || 128,
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+      })
+    : null;
+
   return (
     <div className="spotlight" role="dialog" aria-modal="false" aria-label="Guide de la carte" data-spot-step={step.spot}>
       {rect && (
@@ -88,7 +108,12 @@ export function MapSpotlightV13({ stage, onDone }: { stage: HTMLElement | null; 
           style={{ top: rect.top - 6, left: rect.left - 6, width: rect.width + 12, height: rect.height + 12 }}
         />
       )}
-      <div className="spotlight-card" style={{ top: rect ? rect.top + rect.height + 10 : 120, left: rect ? Math.max(12, rect.left) : 12 }}>
+      <div
+        ref={cardRef}
+        className="spotlight-card"
+        data-placement={placement?.placement ?? 'below'}
+        style={{ top: placement ? placement.top : 120, left: placement ? placement.left : 12 }}
+      >
         <div className="eyebrow">Comment ça marche · {index + 1} / {MAP_SPOTLIGHT_STEPS.length}</div>
         <b>{step.title}</b>
         <p className="tiny muted" style={{ marginTop: 4 }}>{step.text}</p>
