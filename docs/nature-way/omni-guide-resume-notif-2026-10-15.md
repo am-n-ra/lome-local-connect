@@ -112,3 +112,61 @@ exact : « Réponse à votre demande » (maquette L1683).
    création). Le fondateur veut « une seule fois ».
 3. **Notification** : aucun réglage app tant que le fondateur n'a pas dit s'il veut un son ou
    une vibration **propres** (aujourd'hui : son du système OS).
+
+---
+
+## NOTIF-DRAIN — « la 2ᵉ demande à Soja zozo n'a rien produit » (2026-10-15, suite)
+
+**Signal fondateur :** après la 1ʳᵉ demande (notifiée), une **2ᵉ** demande au **même** vendeur
+(`antpeteou@gmail.com` → « Soja zozo ») n'a produit **aucune notification**.
+
+### Mesure en base canonique (avant tout code)
+
+La 2ᵉ demande `dd4e3d27…` (14:58:29) a bien écrit son **événement** et ses **deux livraisons** :
+
+| Événement vendeur | `web_push` | `in_app` |
+|---|---|---|
+| 1ʳᵉ demande `0ecce433…` (14:05) | **`delivered`** (14:07:56) | `queued` |
+| 2ᵉ demande `dd4e3d27…` (14:58) | **`queued`** | `queued` |
+
+L'abonnement push du vendeur est **unique, `granted`, non révoqué** (posé 13:38) — donc la
+**première** a été livrée par le **même** appareil. **Le backend n'est pas en cause** : la
+notification **existe** ; c'est la **livraison push** qui est restée **coincée en file**.
+
+### Cause racine — un producteur qui met en file mais **ne dépile pas**
+
+`drainWebPushBestEffort` est **le seul** endroit qui envoie réellement un push. Les routes de
+**TRANSACTION** l'appelaient (FF-7) ; les routes de **DISPONIBILITÉ** (demande simple, demande
+groupée, réponse) ne l'appelaient **jamais** → la livraison `web_push` restait `queued` jusqu'au
+**cron quotidien** (`0 3 * * *`), donc **jamais** en pratique. La 1ʳᵉ a été livrée **par
+opportunisme** : une route de transaction l'a dépilée. La file étant ordonnée par `created_at`,
+un ancien envoi bloqué **bouche** aussi les suivants.
+
+**Même défaut trouvé** sur les routes de **REVENDICATION** (`submitClaimEvidence`,
+`reviewFacilityClaim`) et d'**ACTIVATION/SUSPENSION** (`activateSellerAccount`,
+`setSellerAccountSuspension`) — elles aussi productrices, elles aussi sans drain.
+
+### Correctif
+
+Drain (mieux-effort, jamais bloquant pour l'acquittement) après **chaque** producteur, dans
+`src/server/http.ts` : `POST /api/v2/availability`, `/api/v2/bulk-availability`,
+`/api/v2/availability-responses`, `submitClaimEvidence`, `reviewFacilityClaim`,
+`activateSellerAccount` (×2 routes), `setSellerAccountSuspension` (×2 routes).
+
+### Garde **générique** (nouvelle route couverte sans rien ajouter)
+
+`src/server/notification-drain.test.ts` **découvre lui-même** les méthodes du dépôt qui écrivent
+dans `v2_notification_events`, puis exige que **chaque** appel depuis `http.ts` soit suivi d'un
+drain avant la réponse. **Falsifié** : retirer le drain d'`createAvailabilityRequest` →
+`routes productrices sans drain : createAvailabilityRequest @…` ; restauré → PASS. Le test
+échoue aussi si le parseur ne trouve **aucun** producteur (le garde ne peut pas passer à vide).
+
+### Preuve SQL réelle (branche jetable, code livré)
+
+`scripts/prove-branches-notif-drain.mjs` (`npm run proof:branches-notif-drain`) — **8/8 PASS** :
+la demande crée la livraison `web_push` vendeur qui **reste `queued`** sans drain (le défaut) ;
+le dépileur de **prod** (`deliverPendingPush`) la passe `delivered` ; idem pour la réponse
+acheteur ; un drain au repos **n'envoie rien**. Branche jetable supprimée.
+
+**Preuves :** **1235/1235** (+2), `tsc` 0, 6 gardes verts, build OK, 12 bundles serverless
+régénérés (drain présent dans `api/v2/availability.js`).

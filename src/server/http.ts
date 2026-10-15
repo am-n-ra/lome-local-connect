@@ -1454,6 +1454,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const result = await repository.submitClaimEvidence({ authUserId, requestId, version, evidence, correlationId });
+      await drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -1491,6 +1492,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const result = await repository.reviewFacilityClaim({ authUserId, requestId, outcome, reason, correlationId });
+      await drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -1510,6 +1512,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const result = await repository.setSellerAccountSuspension({ authUserId, accountId, suspended, reason, correlationId });
+      await drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -1526,6 +1529,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const result = await repository.activateSellerAccount({ authUserId, accountId, correlationId });
+      await drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -1555,6 +1559,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const result = await repository.setSellerAccountSuspension({ authUserId, accountId, suspended, reason, correlationId });
+      await drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -1571,6 +1576,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const result = await repository.activateSellerAccount({ authUserId, accountId, correlationId });
+      await drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -2683,6 +2689,9 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         idempotencyKey,
         correlationId,
       });
+      // BRANCHES-NOTIF-DRAIN — le producteur vient de mettre la notification acheteur en file.
+      // Même filet que les routes de transaction : on dépile tout de suite (mieux-effort).
+      await drainWebPushBestEffort(repository);
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
@@ -2777,6 +2786,11 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const idempotencyKey = typeof rawIdempotencyKey === 'string' ? rawIdempotencyKey : '';
       const validated = validateAvailabilityRequestCreate(input, idempotencyKey, authUserId);
       const result = await repository.createAvailabilityRequest({ ...validated, correlationId });
+      // BRANCHES-NOTIF-DRAIN — le producteur vient de mettre la notification vendeur en file
+      // (`web_push` 'queued'). Sans ce drain, elle restait `queued` jusqu'au cron quotidien :
+      // le vendeur ne recevait RIEN. La file est ordonnée par `created_at`, donc un ancien
+      // envoi bloqué bouchait aussi les suivants. Mieux-effort, jamais bloquant pour l'acquittement.
+      await drainWebPushBestEffort(repository);
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
@@ -2827,6 +2841,9 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const idempotencyKey = typeof rawIdempotencyKey === 'string' ? rawIdempotencyKey : '';
       const validated = validateBulkAvailabilityRequestCreate(input, idempotencyKey, authUserId);
       const result = await repository.createBulkAvailabilityRequest({ ...validated, correlationId });
+      // BRANCHES-NOTIF-DRAIN — la demande groupée notifie CHAQUE vendeur visé ; on dépile
+      // tout de suite (même filet que la demande simple et les routes de transaction).
+      await drainWebPushBestEffort(repository);
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }

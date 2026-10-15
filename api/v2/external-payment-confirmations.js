@@ -9933,6 +9933,7 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.submitClaimEvidence({ authUserId, requestId, version, evidence, correlationId });
+      await drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -9970,6 +9971,7 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.reviewFacilityClaim({ authUserId, requestId, outcome, reason, correlationId });
+      await drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -9989,6 +9991,7 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.setSellerAccountSuspension({ authUserId, accountId, suspended, reason, correlationId });
+      await drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -10005,6 +10008,7 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.activateSellerAccount({ authUserId, accountId, correlationId });
+      await drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -10034,6 +10038,7 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.setSellerAccountSuspension({ authUserId, accountId, suspended, reason, correlationId });
+      await drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -10050,6 +10055,7 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.activateSellerAccount({ authUserId, accountId, correlationId });
+      await drainWebPushBestEffort(repository);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -11129,6 +11135,7 @@ async function handleApi(req, res, pathname, url) {
         idempotencyKey,
         correlationId
       });
+      await drainWebPushBestEffort(repository);
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
@@ -11222,6 +11229,7 @@ async function handleApi(req, res, pathname, url) {
       const idempotencyKey = typeof rawIdempotencyKey === "string" ? rawIdempotencyKey : "";
       const validated = validateAvailabilityRequestCreate(input, idempotencyKey, authUserId);
       const result = await repository.createAvailabilityRequest({ ...validated, correlationId });
+      await drainWebPushBestEffort(repository);
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
@@ -11265,6 +11273,7 @@ async function handleApi(req, res, pathname, url) {
       const idempotencyKey = typeof rawIdempotencyKey === "string" ? rawIdempotencyKey : "";
       const validated = validateBulkAvailabilityRequestCreate(input, idempotencyKey, authUserId);
       const result = await repository.createBulkAvailabilityRequest({ ...validated, correlationId });
+      await drainWebPushBestEffort(repository);
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
