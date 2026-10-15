@@ -35,11 +35,11 @@
 | 2 | `GR-2` reprise PWA | fermer/rouvrir → **même surface** y compris guide ; recherche/flow en cours **retenue** | browser : reload sur guide → guide ; flow → étape | `planned` | `nav-state` déjà couvre le cas mesuré |
 | 3 | `GR-3` guide une fois / option ensuite | accueil montré **une seule fois** par compte, ré-ouvrable depuis le menu | flag persistant + browser 2 créations | `planned` | décision fondateur : « à chaque connexion » |
 | 4 | `NT-1` manifestation notification | **réponse documentée** (son OS, contenu, tap) ; aucun réglage app tant que non décidé | doc + inventaire mesuré | `planned` | fondateur veut un son/vibration propre |
-| 5 | `NR-7` « source : auto » retiré | l'acheteur ne lit plus « auto » pour une réponse **humaine** | garde falsifié + bundle servi sans la chaîne | `ready` | la réponse auto existe un jour (alors la marque devient vraie) |
-| 6 | `NR-4` intention → notifie le vendeur | `createPurchaseIntent` écrit un événement destiné au **vendeur** (scope membre) | preuve SQL réelle + garde producteur | `ready` | le fondateur veut un autre canal |
-| 7 | `NR-5` intention → chat ouvert | acheteur **et** vendeur atteignent la **même** Room au moment de l'intention | preuve navigateur 2 rôles + garde | `planned` | décision : Room vs chat du flux |
-| 8 | `NR-6` scan QR → ouvre la transaction | le scanner ouvre la Room de la transaction scannée | preuve navigateur + garde | `planned` | le QR doit rester un simple verrou |
-| 9 | `NR-8` logo Omni in-app | le centre de notifications porte le logo | garde de rendu | `planned` | — |
+| 5 | `NR-7` « source : auto » retiré | l'acheteur ne lit plus « auto » pour une réponse **humaine** | garde falsifié + bundle servi sans la chaîne | `done` | la réponse auto existe un jour (alors la marque devient vraie) |
+| 6 | `NR-4` intention → notifie le vendeur | `createPurchaseIntent` écrit un événement destiné au **vendeur** (scope membre) | preuve SQL réelle + garde producteur | `done` | le fondateur veut un autre canal |
+| 7 | `NR-5` intention → chat ouvert | acheteur **et** vendeur atteignent la **même** Room au moment de l'intention | preuve navigateur 2 rôles + garde | `done` | décision : Room vs chat du flux |
+| 8 | `NR-6` scan QR → ouvre la transaction | le scanner ouvre la Room de la transaction scannée | preuve navigateur + garde | `done` | le QR doit rester un simple verrou |
+| 9 | `NR-8` logo Omni in-app | le centre de notifications porte le logo | garde de rendu | `done` | — |
 | 10 | `NR-9` réponse auto (capacité **modélisée, jamais construite**) | conditions C1–C10 tenues et prouvées (Species §95/§113, Root §6.3) | contrat + migration (`actor_kind`) + preuve | `blocked` | **1 seule décision fondateur** : auto sur offre `price_kind='negociable'` (le modèle tranche le reste) |
 
 ## Dependency-aware task tree
@@ -54,11 +54,11 @@
 | NR-1 | G-01 | Branch | visibilité réponse vendeur (3 défauts) | — | relais | `done` | 3 gardes falsifiés + preuve backend | pas de badge neuf (hors maquette) | fondateur veut un badge |
 | NR-2 | G-01 | Branch | drain Web Push après CHAQUE producteur de notif | — | relais | `done` | garde générique falsifié + preuve SQL 8/8 + prod `5f2366c` | pas de nouveau canal | un producteur non drainé réapparaît |
 | NR-3 | G-01 | Branch | le vendeur peut RÉPONDRE (stock nommé) | — | relais | `done` | preuve A/B Postgres 6/6 + 3 gardes falsifiés | pas de migration (dérivé au read) | le stock démo reste sous la demande |
-| NR-7 | G-01 | Branch | retirer « (source : auto) » mensonger | — | relais | `ready` | garde falsifié + chaîne absente du bundle servi | copie seule | la réponse auto devient réelle |
-| NR-4 | G-01 | Branch | l'intention NOTIFIE le vendeur | — | relais | `ready` | preuve SQL réelle (événement + livraison) + garde producteur | scope membre, pas de nouveau canal | le fondateur veut un autre canal |
-| NR-5 | G-01 | Branch | l'intention OUVRE le chat (2 rôles) | NR-4 | relais | `planned` | preuve navigateur acheteur+vendeur, une seule surface | pas de 2ᵉ chat | décision Room vs flux |
-| NR-6 | G-01 | Branch | le scan QR ouvre la transaction | NR-5 | relais | `planned` | preuve navigateur : scan → Room de la bonne txn | le verrou reste (S-22) | le QR doit rester un verrou nu |
-| NR-8 | G-01 | Branch | logo Omni dans le centre in-app | — | relais | `planned` | garde de rendu | visuel seul | — |
+| NR-7 | G-01 | Branch | retirer « (source : auto) » mensonger | — | relais | `done` | garde falsifié + chaîne absente du bundle servi | copie seule | la réponse auto devient réelle |
+| NR-4 | G-01 | Branch | l'intention NOTIFIE le vendeur | — | relais | `done` | preuve SQL réelle (événement + livraison) + garde producteur | scope membre, pas de nouveau canal | le fondateur veut un autre canal |
+| NR-5 | G-01 | Branch | l'intention OUVRE le chat (2 rôles) | NR-4 | relais | `done` | preuve navigateur acheteur+vendeur, une seule surface | pas de 2ᵉ chat | décision Room vs flux |
+| NR-6 | G-01 | Branch | le scan QR ouvre la transaction | NR-5 | relais | `done` | preuve navigateur : scan → Room de la bonne txn | le verrou reste (S-22) | le QR doit rester un verrou nu |
+| NR-8 | G-01 | Branch | logo Omni dans le centre in-app | — | relais | `done` | garde de rendu | visuel seul | — |
 | NR-9 | G-01 | Branch | réponse auto (capacité neuve) | décisions §5 | relais | `blocked` | contrat C1–C10 + migration + preuve SQL | **fondation neuve** : interdite sans décision | les 3 décisions du §5 |
 
 ## Reconciliation log
@@ -82,3 +82,5 @@
 > **Residual gap:** la **réponse auto** n'existe pas comme producteur de réponse (le mot « auto » recouvre le **badge** TRUNK-X2 et une **réponse** jamais construite) → l'app affiche un mensonge ; l'accès du vendeur à la Room existe **sans avis** (l'intention ne notifie personne) et le scan QR **n'ouvre pas** la transaction.
 > **Next smallest action:** décision fondateur — **ordre** (`NR-7 → NR-4 → NR-5 → NR-6 → NR-8`) + les **3 questions du §5** (auto partielle ? offre négociable ? délai de courtoisie ?).
 > **Re-plan trigger:** le fondateur choisit l'ordre, tranche les conditions d'auto-réponse, ou veut un badge de notif / un son.
+| 2026-10-15 | `caf18e5` : NR-4/5/6/7/8 livrés (1259→1260 tests, 7 gardes verts) | `NR-4/5/6/7/8` → `done` | exécution | relais | après push + T-07d |
+| 2026-10-15 | `check:dock-search` échouait sur HEAD propre ; `--selftest` passait à tort | garde réparé (2 mutations périmées, règle poll renforcée) | correction de garde | relais | — |
