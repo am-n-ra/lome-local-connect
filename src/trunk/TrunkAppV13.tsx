@@ -20,7 +20,7 @@ import {
   getWebPushKey, getWebPushStatus, subscribeWebPush, revokeWebPush,
   deleteAccount,
 } from './api';
-import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, trapDrawerFocus, walletBucketTotals, sheetDismissTarget, type PendingAction } from './ui-helpers';
+import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, trapDrawerFocus, walletBucketTotals, sheetDismissTarget, buyerRequestStatusLabel, type PendingAction } from './ui-helpers';
 import { useSheetDrag } from './use-sheet-drag';
 import { NAV_STATE_STORAGE_KEY, parseNavState, serializeNavState, type NavSurfaceState } from './nav-state';
 import { backDestination, shouldInterceptBack, shouldSkipExternalRedirect } from './back-guard';
@@ -107,13 +107,9 @@ function bulkLabel(status: string): string {
 }
 
 function statusLabel(requestStatus: string): string {
-
-  if (requestStatus === 'available') return 'Disponible';
-  if (requestStatus === 'partial') return 'Partielle';
-  if (requestStatus === 'corrected') return 'Corrigée';
-  if (requestStatus === 'expired') return 'Expirée';
-  if (requestStatus === 'cancelled') return 'Annulée';
-  return 'Indisponible';
+  // NOTIF-REPLY — libellé unique (pur, testé) : un état de DEMANDE ne dit jamais
+  // « Indisponible » (mot de RÉPONSE vendeur).
+  return buyerRequestStatusLabel(requestStatus);
 }
 
 const LOME = [1.22, 6.13] as const;

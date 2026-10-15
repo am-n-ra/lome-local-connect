@@ -46,6 +46,16 @@ describe('seller workspace map-first (V-7a', () => {
     expect(state.pendingCount).toBe(0);
   });
 
+  it('REGRESSION NOTIF-REPLY : « Demandes » compte des demandes, jamais des produits en brouillon', () => {
+    // Un produit draft ne doit PAS gonfler la tuile « Demandes ». Avant ce garde, le
+    // compteur lisait `products.filter(draft|pending_validation)` → la tuile mentait.
+    const draftProducts: SellerCatalogueProduct[] = [{ ...products[0], id: 'product-draft', publicationState: 'draft' }];
+    const noRequests = buildSellerWorkspace({ facilities: catalogFacilities, products: draftProducts, ownedIds: ['facility-1'], publicFacilities, selFacilityId: null, pendingRequests: 0 });
+    expect(noRequests.pendingCount).toBe(0);
+    const twoRequests = buildSellerWorkspace({ facilities: catalogFacilities, products: draftProducts, ownedIds: ['facility-1'], publicFacilities, selFacilityId: null, pendingRequests: 2 });
+    expect(twoRequests.pendingCount).toBe(2);
+  });
+
   it('fallbacks the active facility to the first catalogue facility when none selected', () => {
     const state = buildSellerWorkspace({ facilities: catalogFacilities, products, ownedIds: ['facility-1'], publicFacilities, selFacilityId: null });
     expect(selectSellerFacility({ facilities: catalogFacilities, products, ownedIds: ['facility-1'], publicFacilities, selFacilityId: null })).toBe('facility-1');

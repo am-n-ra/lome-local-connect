@@ -222,6 +222,8 @@ export function SellerV13({ onClose, onProducts, onCompany, onReply, onRefresh, 
     ownedIds,
     publicFacilities,
     selFacilityId: null,
+    // NOTIF-REPLY — « Demandes » compte des demandes en attente, pas des produits.
+    pendingRequests: queue.filter((r) => r.responseStatus === null).length,
   });
 
   // S-01 — « tout est offre » : publier, c'est déclarer les caractéristiques de l'offre.

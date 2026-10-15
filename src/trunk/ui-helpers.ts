@@ -297,3 +297,19 @@ export function sheetDismissTarget(sheet: string): 'none' | 'menu' | 'facility' 
   }
 }
 
+/**
+ * NOTIF-REPLY — libellé d'un ÉTAT DE DEMANDE côté acheteur.
+ * Un état de demande ne se dit jamais « Indisponible » : c'est un mot de RÉPONSE vendeur.
+ * Le fallback précédent renvoyait « Indisponible » pour une demande simplement EN ATTENTE.
+ */
+export function buyerRequestStatusLabel(requestStatus: string): string {
+  if (requestStatus === 'submitted' || requestStatus === 'responding') return 'En attente';
+  if (requestStatus === 'responses') return 'Réponse reçue';
+  if (requestStatus === 'expired') return 'Expirée';
+  if (requestStatus === 'cancelled') return 'Annulée';
+  if (requestStatus === 'available') return 'Disponible';
+  if (requestStatus === 'partial') return 'Partielle';
+  if (requestStatus === 'corrected') return 'Corrigée';
+  return 'En attente';
+}
+

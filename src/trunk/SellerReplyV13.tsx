@@ -4,10 +4,20 @@ import { getAuthToken } from '../auth';
 import { getSellerAvailabilityQueue, requestSellerAvailabilityResponse } from './api';
 import type { SellerAvailabilityRequest } from './types';
 import { formatMoney } from '../domain/currency';
+import { relativeAge } from './transaction-time';
 
 type SellerReplyV13Props = { onClose: () => void };
 
 type ReplyDraft = { status: 'available' | 'partial' | 'unavailable'; quantity: string; price: string; message: string };
+
+/** NOTIF-REPLY — nomme le statut DÉJÀ donné (jamais « Indisponible » pour un statut inconnu). */
+function answeredLabel(status: string): string {
+  if (status === 'available') return 'Disponible';
+  if (status === 'partial') return 'Partiellement disponible';
+  if (status === 'unavailable') return 'Indisponible';
+  if (status === 'corrected') return 'Corrigée';
+  return 'Répondue';
+}
 
 export function SellerReplyV13({ onClose }: SellerReplyV13Props) {
   const [error, setError] = useState('');
@@ -83,11 +93,16 @@ export function SellerReplyV13({ onClose }: SellerReplyV13Props) {
       {queue.length === 0 && !busy && <p className="sub">Aucune demande en attente. Les demandes arrivent ici quand un client demande la dispo d’un produit de votre facilité.</p>}
       {queue.map((request) => {
         const draft = reply[request.id] ?? { status: 'available' as const, quantity: '', price: '', message: '' };
+        // NOTIF-REPLY — une demande DÉJÀ répondue ne se re-propose pas : elle DIT ce qui a été
+        // répondu. Sans ça, le vendeur envoyait sa réponse et sa carte ne changeait pas (« rien
+        // ne se passe »). Il peut rouvrir le formulaire pour corriger.
+        const answered = request.responseStatus !== null;
+        const editing = reply[request.id] !== undefined;
         return (
           <div key={request.id} className="cardbox" style={{ marginTop: 8 }}>
             <div className="row" style={{ justifyContent: 'space-between' }}>
               <div><b>{request.productName} ×{request.requestedQuantity}</b><br /><span className="tiny muted">{request.facilityName}</span></div>
-              <span className="status gray">{request.freshness}</span>
+              <span className={answered ? 'status ok' : 'status gray'}>{answered ? 'Répondu' : request.freshness}</span>
             </div>
             <div className="row" style={{ gap: 4, marginTop: 4 }}>
               <span className="chip" style={{ margin: 0 }}>{request.deliveryMode === 'livraison' ? 'Livraison' : 'Retrait'}</span>
@@ -98,21 +113,34 @@ export function SellerReplyV13({ onClose }: SellerReplyV13Props) {
               <p className="tiny muted" style={{ marginTop: 4 }}>L’acheteur propose un prix : c’est une ouverture, pas un engagement. Votre prix cité reste celui qui engage la transaction.</p>
             )}
             {request.requestNote && <p className="tiny muted" style={{ marginTop: 4 }}>« {request.requestNote} »</p>}
-            <div className="seg" style={{ display: 'flex', gap: 0, borderRadius: 999, border: '1px solid var(--line)', overflow: 'hidden', marginTop: 8 }}>
-              {(['available', 'partial', 'unavailable'] as const).map((s) => (
-<button key={s} type="button" className={(draft.status === s ? 'btn' : 'btn ghost') + ' sm'} style={{ flex: 1, borderRadius: 999, minHeight: 30 }} onClick={() => patch(request.id, { status: s })}>
-                  {s === 'available' ? 'Dispo' : s === 'partial' ? 'Partiel' : 'Indispo'}
-                </button>
-              ))}
-            </div>
-            {draft.status !== 'unavailable' && (
-              <div className="row" style={{ gap: 6, marginTop: 6 }}>
-<input className="field" type="number" min="0" placeholder="Qté dispo" value={draft.quantity} onChange={(e) => patch(request.id, { quantity: e.target.value })} />
-<input className="field" type="number" min="0" step="0.01" placeholder="Prix (FCFA)" value={draft.price} onChange={(e) => patch(request.id, { price: e.target.value })} />
+            {answered && !editing ? (
+              <div style={{ marginTop: 8 }}>
+                <p className="sub" style={{ marginTop: 0 }}>
+                  <b>{answeredLabel(request.responseStatus as string)}</b>
+                  {request.responseObservedAt ? ` · répondu ${relativeAge(request.responseObservedAt)}` : ''}
+                </p>
+                <p className="tiny muted" style={{ marginTop: 2 }}>L’acheteur a été prévenu dans ses notifications. Vous pouvez corriger votre réponse si besoin.</p>
+                <button className="btn ghost sm" type="button" disabled={busy} style={{ marginTop: 6, width: 'auto' }} onClick={() => patch(request.id, {})}>Corriger la réponse</button>
               </div>
+            ) : (
+              <>
+                <div className="seg" style={{ display: 'flex', gap: 0, borderRadius: 999, border: '1px solid var(--line)', overflow: 'hidden', marginTop: 8 }}>
+                  {(['available', 'partial', 'unavailable'] as const).map((s) => (
+                    <button key={s} type="button" className={(draft.status === s ? 'btn' : 'btn ghost') + ' sm'} style={{ flex: 1, borderRadius: 999, minHeight: 30 }} onClick={() => patch(request.id, { status: s })}>
+                      {s === 'available' ? 'Dispo' : s === 'partial' ? 'Partiel' : 'Indispo'}
+                    </button>
+                  ))}
+                </div>
+                {draft.status !== 'unavailable' && (
+                  <div className="row" style={{ gap: 6, marginTop: 6 }}>
+                    <input className="field" type="number" min="0" placeholder="Qté dispo" value={draft.quantity} onChange={(e) => patch(request.id, { quantity: e.target.value })} />
+                    <input className="field" type="number" min="0" step="0.01" placeholder="Prix (FCFA)" value={draft.price} onChange={(e) => patch(request.id, { price: e.target.value })} />
+                  </div>
+                )}
+                <textarea className="field lg" style={{ marginTop: 6, minHeight: 40, padding: '8px 12px', background: 'var(--white)', border: '1px solid var(--line)', borderRadius: 12, fontSize: 11, color: 'var(--ink)', resize: 'none' }} placeholder="Message au client (optionnel)…" value={draft.message} onChange={(e) => patch(request.id, { message: e.target.value })} />
+                <button className="btn ok" type="button" disabled={busy} style={{ marginTop: 8 }} onClick={() => void submit(request)}>Envoyer la réponse</button>
+              </>
             )}
-<textarea className="field lg" style={{ marginTop: 6, minHeight: 40, padding: '8px 12px', background: 'var(--white)', border: '1px solid var(--line)', borderRadius: 12, fontSize: 11, color: 'var(--ink)', resize: 'none' }} placeholder="Message au client (optionnel)…" value={draft.message} onChange={(e) => patch(request.id, { message: e.target.value })} />
-            <button className="btn ok" type="button" disabled={busy} style={{ marginTop: 8 }} onClick={() => void submit(request)}>Envoyer la réponse</button>
           </div>
         );
       })}

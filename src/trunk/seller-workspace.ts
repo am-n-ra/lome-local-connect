@@ -8,6 +8,8 @@ export interface SellerWorkspaceInput {
   ownedIds: string[];
   publicFacilities: PublicFacility[];
   selFacilityId?: string | null;
+  /** NOTIF-REPLY — nombre de demandes de disponibilité en attente (jamais des produits). */
+  pendingRequests?: number;
 }
 
 export interface SellerWorkspaceState {
@@ -55,7 +57,11 @@ const ROUTE_LABELS: Record<RouteKind, string> = {
     (facility) => facility.trust === 'unclaimed' && !ownedSet.has(facility.id),
   );
   const stockCount = input.products.filter((product) => product.publicationState === 'published' && (product.availabilityState === 'en_stock' || product.availabilityState === 'verifie')).length;
-  const pendingCount = input.products.filter((product) => product.publicationState === 'draft' || product.publicationState === 'pending_validation').length;
+  // NOTIF-REPLY — le compteur de la tuile « Demandes » doit compter des DEMANDES, jamais
+  // des produits en brouillon. L'appelant retombe sur `queue.length` quand ce nombre est 0
+  // (`ws.pendingCount || queue.length`), donc 0 est sûr : une tuile « Demandes » qui
+  // annonçait « 3 » alors qu'aucune demande n'existe était un mensonge.
+  const pendingCount = input.pendingRequests ?? 0;
   const stockTotal = input.products.reduce((sum, product) => sum + product.stockLoueOmni, 0);
   const activeRoutes: readonly string[] = ROUTE_ORDER.filter((route) => {
     if (route === 'requests') return true;

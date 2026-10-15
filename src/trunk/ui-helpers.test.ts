@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describePendingAction, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, pendingActionResume, sortProductsStockFirst, walletBucketTotals, type PendingAction } from './ui-helpers';
+import { buyerRequestStatusLabel, describePendingAction, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, pendingActionResume, sortProductsStockFirst, walletBucketTotals, type PendingAction } from './ui-helpers';
 
 describe('PendingAction resume contract', () => {
   it('labels each protected action for the access-portal gate', () => {
@@ -133,6 +133,22 @@ describe('S-32 offer trust label', () => {
     const trust = offerTrustLabel({});
     expect(trust.text).toBe('pas encore d’avis');
     expect(trust.muted).toBe(true);
+  });
+});
+
+
+describe('buyerRequestStatusLabel — NOTIF-REPLY (un état de demande n’est pas une réponse)', () => {
+  it('une demande EN ATTENTE ne se dit jamais « Indisponible » (régression)', () => {
+    expect(buyerRequestStatusLabel('submitted')).toBe('En attente');
+    expect(buyerRequestStatusLabel('responding')).toBe('En attente');
+    expect(buyerRequestStatusLabel('submitted')).not.toBe('Indisponible');
+  });
+  it('un vendeur qui a répondu se dit « Réponse reçue »', () => {
+    expect(buyerRequestStatusLabel('responses')).toBe('Réponse reçue');
+  });
+  it('les états terminaux restent exacts', () => {
+    expect(buyerRequestStatusLabel('expired')).toBe('Expirée');
+    expect(buyerRequestStatusLabel('cancelled')).toBe('Annulée');
   });
 });
 

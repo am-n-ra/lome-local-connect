@@ -45,6 +45,7 @@
 | GR-2 | G-01 | Trunk | reprise de surface élargie (guide + flow) | GR-1 | relais | `planned` | reload → même surface | pas de nouvelle donnée sensible | nav-state suffit |
 | GR-3 | G-01 | Branch | accueil une fois par compte | décision fondateur | relais | `planned` | 2 créations → 1 accueil | flag local, pas serveur | veut à chaque connexion |
 | NT-1 | G-01 | Canopy | documenter la manifestation | — | relais | `planned` | doc + inventaire | pas de son custom sans décision | — |
+| NR-1 | G-01 | Branch | visibilité réponse vendeur (3 défauts) | — | relais | `done` | 3 gardes falsifiés + preuve backend | pas de badge neuf (hors maquette) | fondateur veut un badge |
 
 ## Reconciliation log
 
@@ -53,13 +54,14 @@
 | 2026-10-15 | spotlight 3/3 à `top=840` sous dock (4/128 px visibles) | `GR-1` créé `ready` | replan | relais | après preuve GR-1 |
 | 2026-10-15 | `nav-state` sans `how-it-works` ; pas de reprise de flow | `GR-2` créé `planned` | replan | relais | après GR-1 |
 | 2026-10-15 | aucun `sound`/`vibrate` dans SW/push | `NT-1` créé `planned` (doc) | replan | fondateur | décision son |
+| 2026-10-15 | backend réponse/notif sain (11/11 + inbox) ; 3 défauts de visibilité | `NR-1` créé `done` | replan | relais | fondateur veut un badge ? |
 
 ## Handoff to Founder HQ
 
 > **Local status:** `partial` — 1 bug mesuré prêt, 2 trous de mémoire, 1 réponse factuelle
 > **Gate decision:** `pause` — attendre la **décision d'ordre** du fondateur avant de coder
-> **Closed:** —
+> **Closed:** `NR-1` (visibilité réponse vendeur : 3 défauts corrigés, gardes falsifiés)
 > **Open:** `GR-1` (ready), `GR-2`/`GR-3`/`NT-1` (planned)
-> **Residual gap:** reprise « flow en cours » exige de définir *quelle* étape on mémorise (nouveau contrat léger)
+> **Residual gap:** reprise « flow en cours » exige de définir *quelle* étape on mémorise (nouveau contrat léger) ; pas de badge de notif in-app (maquette silencieuse) → décision fondateur
 > **Next smallest action:** décision fondateur : **quelle tranche d'abord** (recommandation `GR-1`)
-> **Re-plan trigger:** le fondateur choisit l'ordre, ou veut un son/vibration propre
+> **Re-plan trigger:** le fondateur choisit l'ordre, veut un son/vibration propre, ou un badge de notif
