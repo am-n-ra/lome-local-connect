@@ -66,10 +66,20 @@ export class OfferMediaRequestError extends Error {
   }
 }
 
-/** The public store token, falling back to the base token for public-only deployments. */
+/**
+ * The public store token. The primary name is `BLOB_PUBLIC_READ_WRITE_TOKEN`; a store connected
+ * to the project through the Vercel dashboard with an environment-variable prefix (`OMNI_`) is
+ * honored too, so the founder's dashboard wiring works without a rename. The base private token
+ * is the last resort, for a public-only deployment.
+ */
+const PUBLIC_BLOB_TOKEN_ENV_VARS = ['BLOB_PUBLIC_READ_WRITE_TOKEN', 'OMNI_READ_WRITE_TOKEN', 'OMNI_WEB_READ_WRITE_TOKEN'] as const;
+
 export function offerMediaBlobToken(): string {
-  const dedicated = (process.env.BLOB_PUBLIC_READ_WRITE_TOKEN ?? '').trim();
-  return dedicated || (process.env.BLOB_READ_WRITE_TOKEN ?? '').trim();
+  for (const name of PUBLIC_BLOB_TOKEN_ENV_VARS) {
+    const value = (process.env[name] ?? '').trim();
+    if (value) return value;
+  }
+  return (process.env.BLOB_READ_WRITE_TOKEN ?? '').trim();
 }
 
 export function hasOfferMediaStorage(): boolean {

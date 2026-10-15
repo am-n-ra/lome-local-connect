@@ -8474,9 +8474,13 @@ var OfferMediaRequestError = class extends Error {
     this.name = "OfferMediaRequestError";
   }
 };
+var PUBLIC_BLOB_TOKEN_ENV_VARS = ["BLOB_PUBLIC_READ_WRITE_TOKEN", "OMNI_READ_WRITE_TOKEN", "OMNI_WEB_READ_WRITE_TOKEN"];
 function offerMediaBlobToken() {
-  const dedicated = (process.env.BLOB_PUBLIC_READ_WRITE_TOKEN ?? "").trim();
-  return dedicated || (process.env.BLOB_READ_WRITE_TOKEN ?? "").trim();
+  for (const name of PUBLIC_BLOB_TOKEN_ENV_VARS) {
+    const value = (process.env[name] ?? "").trim();
+    if (value) return value;
+  }
+  return (process.env.BLOB_READ_WRITE_TOKEN ?? "").trim();
 }
 function hasOfferMediaStorage() {
   return Boolean(offerMediaBlobToken());

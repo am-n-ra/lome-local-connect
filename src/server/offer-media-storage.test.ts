@@ -67,6 +67,9 @@ describe('public offer visual boundary (S-20 / E-03)', () => {
       vi.stubEnv('BLOB_PUBLIC_READ_WRITE_TOKEN', 'public-store');
       expect(offerMediaBlobToken()).toBe('public-store');
       vi.stubEnv('BLOB_PUBLIC_READ_WRITE_TOKEN', '');
+      vi.stubEnv('OMNI_READ_WRITE_TOKEN', 'omni-public-store');
+      expect(offerMediaBlobToken()).toBe('omni-public-store');
+      vi.stubEnv('OMNI_READ_WRITE_TOKEN', '');
       expect(offerMediaBlobToken()).toBe('base-private');
       vi.stubEnv('BLOB_READ_WRITE_TOKEN', '');
       expect(hasOfferMediaStorage()).toBe(false);
