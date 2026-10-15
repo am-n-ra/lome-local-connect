@@ -8551,7 +8551,7 @@ async function handleOfferMediaUpload(input) {
     const storeId = offerMediaStoreId();
     const webhookPublicKey = offerMediaWebhookKey();
     if (!storeId || !webhookPublicKey) throw new OfferMediaStorageError("The public store is incomplete; presigned uploads need a store id and a webhook key.");
-    return handleUploadPresigned({
+    return withHonestProviderError("presigned upload", () => handleUploadPresigned({
       body: input.body,
       request: webRequest,
       webhookPublicKey,
@@ -8569,10 +8569,10 @@ async function handleOfferMediaUpload(input) {
           }
         };
       }
-    });
+    }));
   }
   const token = requiredBlobToken2();
-  return handleUpload2({
+  return withHonestProviderError("upload token", () => handleUpload2({
     body: input.body,
     request: webRequest,
     token,
@@ -8586,7 +8586,16 @@ async function handleOfferMediaUpload(input) {
       };
     },
     onUploadCompleted
-  });
+  }));
+}
+async function withHonestProviderError(stage, run) {
+  try {
+    return await run();
+  } catch (error) {
+    if (error instanceof OfferMediaAuthError || error instanceof OfferMediaPolicyError || error instanceof OfferMediaRequestError || error instanceof OfferMediaStorageError) throw error;
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new OfferMediaStorageError(`The public store refused the ${stage} (${detail}).`);
+  }
 }
 async function verifyOfferMediaObjects(productId, raw) {
   const media = normalizeProductMedia(raw);

@@ -8,7 +8,7 @@ const headMock = vi.fn();
 const issueSignedTokenMock = vi.fn(async (_options?: unknown) => ({ delegationToken: 'd', clientSigningToken: 's', validUntil: Date.now() + 60000 }));
 const handleUploadPresignedMock = vi.fn(async (options: unknown) => {
   const getSignedToken = (options as { getSignedToken: (p: string, c: string | null, m: boolean) => Promise<unknown> }).getSignedToken;
-  await getSignedToken('offers/x/a.jpg', null, false);
+  await getSignedToken(`offers/${productId}/a.jpg`, null, false);
   return { type: 'blob.generate-presigned-url', presignedUrlPayload: { delegationToken: 'd', signature: 'sig', params: {} } };
 });
 vi.mock('@vercel/blob', () => ({ head: (url: unknown, opts?: unknown) => headMock(url, opts), issueSignedToken: (opts?: unknown) => issueSignedTokenMock(opts) }));
@@ -131,6 +131,27 @@ describe('public offer visual boundary (S-20 / E-03)', () => {
         body: { type: 'blob.generate-presigned-url', payload: { pathname: `offers/${productId}/a.jpg`, clientPayload: null, multipart: false } },
       })).rejects.toBeInstanceOf(OfferMediaAuthError);
       expect(issueSignedTokenMock).not.toHaveBeenCalled();
+    });
+
+    it('surfaces a provider refusal honestly (409 with the real reason), never an opaque 500', async () => {
+      vi.stubEnv('OMNI_STORE_ID', 'store_oidc');
+      vi.stubEnv('OMNI_WEBHOOK_PUBLIC_KEY', 'pubkey');
+      // Auth passes (a session is present) but the provider itself fails — the seller must see a
+      // capability refusal naming the cause, not "service temporarily unavailable".
+      const authSpy = vi.spyOn(await import('./auth-context'), 'getAuthUserId').mockResolvedValue('seller-1');
+      const repoSpy = vi.spyOn(await import('./trunk-repository'), 'createTrunkRepository').mockReturnValue({ canManageSellerProduct: async () => true } as never);
+      issueSignedTokenMock.mockRejectedValueOnce(new Error('oidc exchange failed'));
+      try {
+        await expect(handleOfferMediaUpload({
+          productId,
+          headers: { authorization: 'Bearer test' },
+          url: `https://omni.example/api/v2/seller/catalogue/${productId}/media-upload`,
+          body: { type: 'blob.generate-presigned-url', payload: { pathname: `offers/${productId}/a.jpg`, clientPayload: null, multipart: false } },
+        })).rejects.toThrow(/refused the presigned upload.*oidc exchange failed/);
+      } finally {
+        authSpy.mockRestore();
+        repoSpy.mockRestore();
+      }
     });
 
     it('records a public visual and returns the public URL', async () => {

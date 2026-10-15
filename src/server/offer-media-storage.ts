@@ -185,7 +185,7 @@ export async function handleOfferMediaUpload(input: { body: unknown; headers: In
     const storeId = offerMediaStoreId();
     const webhookPublicKey = offerMediaWebhookKey();
     if (!storeId || !webhookPublicKey) throw new OfferMediaStorageError('The public store is incomplete; presigned uploads need a store id and a webhook key.');
-    return handleUploadPresigned({
+    return withHonestProviderError('presigned upload', () => handleUploadPresigned({
       body: input.body as HandleUploadPresignedBody,
       request: webRequest,
       webhookPublicKey,
@@ -203,11 +203,11 @@ export async function handleOfferMediaUpload(input: { body: unknown; headers: In
           },
         };
       },
-    });
+    }));
   }
 
   const token = requiredBlobToken();
-  return handleUpload({
+  return withHonestProviderError('upload token', () => handleUpload({
     body: input.body as HandleUploadBody,
     request: webRequest,
     token,
@@ -221,7 +221,23 @@ export async function handleOfferMediaUpload(input: { body: unknown; headers: In
       };
     },
     onUploadCompleted,
-  });
+  }));
+}
+
+/**
+ * A failure from the Blob provider (network, credential, protocol) is a storage-capability
+ * problem, not an unknown server fault. Surfacing it as `OfferMediaStorageError` (409) keeps the
+ * provider's own message and stops a signed-in seller seeing a generic 500 they cannot act on.
+ * Our own typed refusals (auth/policy/request) pass through untouched.
+ */
+async function withHonestProviderError<T>(stage: string, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    if (error instanceof OfferMediaAuthError || error instanceof OfferMediaPolicyError || error instanceof OfferMediaRequestError || error instanceof OfferMediaStorageError) throw error;
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new OfferMediaStorageError(`The public store refused the ${stage} (${detail}).`);
+  }
 }
 
 /**
