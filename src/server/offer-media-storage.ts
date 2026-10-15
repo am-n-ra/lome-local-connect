@@ -264,9 +264,11 @@ export async function verifyOfferMediaObjects(productId: string, raw: unknown): 
   const verified: ProductMediaItem[] = [];
   for (const item of media) {
     let metadata: HeadBlobResult | null = null;
-    try { metadata = await head(item.url, headOptions); } catch { metadata = null; }
+    let headError: unknown = null;
+    try { metadata = await head(item.url, headOptions); } catch (error) { metadata = null; headError = error; }
     if (!metadata || !metadata.pathname.startsWith(prefix) || metadata.pathname.slice(prefix.length).length < 1) {
-      throw new OfferMediaPolicyError('One or more offer visuals do not belong to this offer.');
+      const detail = headError instanceof Error ? headError.message : headError ? String(headError) : 'no metadata returned';
+      throw new OfferMediaPolicyError(`One or more offer visuals do not belong to this offer (${detail}).`);
     }
     if (PRIVATE_BLOB_URL.test(metadata.url)) {
       throw new OfferMediaPolicyError('Offer visuals must be stored in the public store, not a private one.');
