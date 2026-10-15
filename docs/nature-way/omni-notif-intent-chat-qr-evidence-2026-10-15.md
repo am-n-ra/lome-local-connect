@@ -2,7 +2,7 @@
 
 > **Porte :** Branches OPEN (`HEARTWOOD_CLOSED_BRANCHES_OPEN`) · **Plan :** `NW-PROD-OMNI-GUIDE-RESUME-NOTIF-01`
 > **Audit source :** `omni-notif-logo-intent-chat-qr-audit-2026-10-15.md` (5 constats mesurés)
-> **Commit :** `caf18e5` · **Date :** 2026-10-15
+> **Commits :** `caf18e5` (code) + `68de053` (mémoire) · **Date :** 2026-10-15
 
 ## Ce qui a été livré
 
@@ -44,6 +44,17 @@ porte **deux** listes de réponses ; une seule était protégée). **Selftest 31
 - Chaînes vérifiées dans le **bundle servi** (leçon `on2`) : `omni-logo-compact`, `omni-mark`,
   « Ouvrir la transaction validée » présents ; le client **lit** `?notifs`/`?txn`/`?request` ;
   le serveur **construit** `?notifs=1&txn=<id>`.
+
+## Preuve prod (T-07d ✅)
+
+- Déploiement GitHub `deployments` : **`68de053` Production** (2026-10-15T20:55:18Z).
+- Prod sert **`assets/index-D6gULk6k.js`** === build local, **byte-identique**
+  (sha256 `73622682…` des deux côtés).
+- Chaînes présentes dans le bundle **servi** : `omni-logo-compact`, `omni-mark`,
+  « Ouvrir la transaction validée », `get(\`txn\`)`, `get(\`request\`)`.
+- Routes prod gardées : `GET /api/v2/transactions` → **401**, `POST /api/v2/purchase-intents` → **401**.
+- Producteur + drain présents dans l'artefact serverless **commité**
+  (`api/v2/purchase-intents.js` : `transaction_intent_created` ×3, drain ×15).
 
 ## Résidus honnêtes
 
