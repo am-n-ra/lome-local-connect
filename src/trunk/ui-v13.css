@@ -99,6 +99,8 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 .handle::before{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:64px;height:44px}
 .sheet.dragging{transition:none}
 .sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.notif-brand{display:flex;align-items:center;gap:9px;min-width:0}
+.omni-mark{flex:none;width:28px;height:28px;border-radius:9px;object-fit:contain;background:#fff;border:1px solid var(--line)}
 .sheet-close{flex:none;width:28px;height:28px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);display:grid;place-items:center;cursor:pointer;transition:.18s var(--ease);box-shadow:var(--sh-sm)}
 .sheet-close:hover{color:var(--ink);border-color:var(--ink)}
 .sheet-close:active{transform:scale(.92)}

@@ -73,4 +73,18 @@ describe('notification centre contract (MV1 X03)', () => {
     });
     expect(container.textContent).toContain('Aucune activité');
   });
+
+  // NR-8 — la demande fondateur : le centre in-app porte le LOGO Omni (comme la
+  // notification système). Sans ce garde, un refactor de l'en-tête retirerait le
+  // visuel sans que rien n'échoue.
+  it('porte la marque Omni dans l’en-tête', async () => {
+    await act(async () => {
+      root.render(<NotificationCenterV13 notifications={inbox} state="idle" error="" onOpen={() => undefined} onClose={() => undefined} />);
+    });
+    const mark = container.querySelector('img.omni-mark');
+    expect(mark).not.toBeNull();
+    expect(mark?.getAttribute('src')).toBe('/omni-logo-compact.png');
+    // Une marque décorative ne doit pas être annoncée deux fois (le titre porte le sens).
+    expect(mark?.getAttribute('alt')).toBe('');
+  });
 });

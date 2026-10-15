@@ -1258,13 +1258,41 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     }
   }, []);
 
-  // Tap d’une notification Web Push (?notifs=1) : ouvrir le centre de notifications,
-  // jamais recharger l’app sur la carte. La lecture de la query est sans état.
+  // Tap d’une notification Web Push (?notifs=1) : ouvrir la feuille de l'ÉVÉNEMENT
+  // (NR-8), jamais recharger l’app sur la carte ni atterrir sur une Inbox générique.
+  // `txn` → la Room de cette transaction ; `request` → le suivi de la demande.
+  // Sans ces paramètres, on retombe sur le centre de notifications.
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('notifs') !== '1') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('notifs') !== '1') return;
+    const txn = params.get('txn');
+    const requestId = params.get('request');
     window.history.replaceState(null, '', window.location.pathname);
-    if (sessionUser) void openNotifs();
-  }, [sessionUser, openNotifs]);
+    if (!sessionUser) return;
+    if (txn) {
+      // L'événement porteur d'une transaction est destiné au VENDEUR (intention) comme
+      // à l'acheteur (tour de transaction). On ouvre la Room avec le rôle actif : le
+      // vendeur y valide, l'acheteur y suit — la Room est symétrique (S-27).
+      void openRoom({ transactionId: txn, actorRole: role === 'seller' ? 'seller' : 'buyer' });
+      return;
+    }
+    if (requestId) {
+      void (async () => {
+        const token = await getAuthToken();
+        if (!token) { void openNotifs(); return; }
+        const list = await getBuyerAvailabilityRequests({ token });
+        const request = list.ok ? list.data?.requests?.find((r) => r.id === requestId) : null;
+        if (request) {
+          resumeAvailabilityRequest({ requestId: request.id, facilityId: request.facilityId, facilityName: request.facilityName, productId: request.productId, productName: request.productName });
+          return;
+        }
+        // Le compte n'est pas l'acheteur (c'est le vendeur) : sa file l'attend.
+        setRole('seller'); setSheet('seller'); void loadSellerWorkspace();
+      })();
+      return;
+    }
+    void openNotifs();
+  }, [sessionUser, openNotifs, openRoom, resumeAvailabilityRequest, role, loadSellerWorkspace]);
 
   const openNotification = useCallback(async (notification: NotificationSummary, target: NotificationTarget) => {
     const token = await requireAuth();
@@ -1276,6 +1304,13 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     try {
       if (target.kind === 'flow') {
         await resumeTransaction({ transactionId: target.transactionId });
+      } else if (target.kind === 'room') {
+        // NR-4 / S-27 — l'intention d'achat ouvre la Room de cette transaction.
+        // Le rôle est déduit du fait : l'événement ne va qu'au VENDEUR (le producteur
+        // cible `seller_account_id`), donc on ouvre la Room en tant que vendeur et on
+        // bascule l'espace vendeur — sinon la Room s'ouvrirait avec le mauvais rôle.
+        setRole('seller');
+        await openRoom({ transactionId: target.transactionId, actorRole: 'seller' });
       } else if (target.kind === 'availability-response') {
         // BRANCHES-NOTIF-1 : la réponse du vendeur rouvre le SUIVI de la demande
         // (même lecture que le flux : getAvailabilityResponses via BuyerFlowV13).
@@ -1301,7 +1336,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     } catch {
       setNotifsError('Cette notification ne peut pas être ouverte pour le moment.');
     }
-  }, [requireAuth, resumeTransaction, resumeAvailabilityRequest, sessionUser, loadSellerWorkspace]);
+  }, [requireAuth, resumeTransaction, resumeAvailabilityRequest, sessionUser, loadSellerWorkspace, openRoom]);
 
   // FF-4 — annulation d'une demande de dispo (Phase A uniquement). Sans effet monétaire ;
   // refusée par le serveur si une intention est déjà engagée (le verrou est pris).
@@ -3133,7 +3168,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         <OperatorEntitySideV13 visitId={opSideVisitId} onBack={() => { setOpSideVisitId(null); setSheet('tour'); }} />
       )}
       {sheet === 'seller-qr' && (
-        <SellerQrScannerSheet onClose={() => setSheet('seller')} onVerified={(accepted: boolean) => { if (accepted) maybePromptPush('seller-qr'); }} />
+        <SellerQrScannerSheet onClose={() => setSheet('seller')} onVerified={(accepted: boolean) => { if (accepted) maybePromptPush('seller-qr'); }} onScanned={(transactionId: string) => { void openRoom({ transactionId, actorRole: 'seller' }); }} />
       )}
       {sheet === 'products' && (
         <ProductCatalogueV13 onClose={() => setSheet('seller')} onStockEvent={(id) => { setStockEventProductId(id); setSheet('stockevent'); }} onEngagement={maybePromptPush} />
@@ -3145,7 +3180,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         <CompanyV13 onClose={() => setSheet('seller')} onProducts={() => setSheet('products')} catalogue={sellerCatalogue} />
       )}
       {sheet === 'flow' && flowFacility && flowProduct && (
-        <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => { setPendingResumeTxnId(null); setPendingResumeRequestId(null); setSheet('facility'); }} resumeTxnId={pendingResumeTxnId} resumeRequestId={pendingResumeRequestId} onEngagement={maybePromptPush} onGate={gateRequest} onRoute={(longitude: number, latitude: number, name: string) => { setRouteTarget({ longitude, latitude, name }); setSheet('none'); }} walletBalanceMinor={wallet?.balanceMinor ?? null} />
+        <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => { setPendingResumeTxnId(null); setPendingResumeRequestId(null); setSheet('facility'); }} resumeTxnId={pendingResumeTxnId} resumeRequestId={pendingResumeRequestId} onEngagement={maybePromptPush} onGate={gateRequest} onRoom={(transactionId: string) => { void openRoom({ transactionId, actorRole: 'buyer' }); }} onRoute={(longitude: number, latitude: number, name: string) => { setRouteTarget({ longitude, latitude, name }); setSheet('none'); }} walletBalanceMinor={wallet?.balanceMinor ?? null} />
       )}
       {sheet === 'admin' && adminTools && (
         <AdminV13 onClose={() => setSheet('menu')} onFocusFacility={(latitude: number, longitude: number, key: string) => { setFocusTarget({ latitude, longitude, key }); setSheet('none'); }} />

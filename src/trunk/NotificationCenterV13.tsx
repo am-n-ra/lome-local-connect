@@ -19,7 +19,10 @@ export function NotificationCenterV13({ notifications, state, error, onOpen, onC
     <section className="sheet h-mid" data-sheet="notifs" role="region" aria-label="Notifications">
       <div className="handle" />
       <div className="sheet-head">
-        <div><div className="eyebrow">Activité</div><h1>Notifications</h1></div>
+        <div className="notif-brand">
+          <img className="omni-mark" src="/omni-logo-compact.png" alt="" width={28} height={28} />
+          <div><div className="eyebrow">Activité · Omni</div><h1>Notifications</h1></div>
+        </div>
         <button type="button" className="sheet-close" onClick={onClose} aria-label="Fermer"><X size={15} /></button>
       </div>
       {state === 'loading' && <Skeleton variant="pitem" count={3} />}

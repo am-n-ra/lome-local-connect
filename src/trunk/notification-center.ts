@@ -11,6 +11,7 @@ import type { NotificationSummary } from './types';
 
 export type NotificationTarget =
   | { kind: 'flow'; transactionId: string }
+  | { kind: 'room'; transactionId: string }
   | { kind: 'facility'; facilityId: string }
   | { kind: 'claim-request'; requestId: string }
   | { kind: 'seller' }
@@ -22,6 +23,7 @@ export type NotificationTarget =
 export function notificationLabel(notification: Pick<NotificationSummary, 'eventType' | 'reviewOutcome'>): string {
   switch (notification.eventType) {
     case 'transaction_turn': return 'Tour de transaction';
+    case 'transaction_intent_created': return 'Une intention d’achat vous attend';
     case 'availability_response_created': return 'Réponse à votre demande';
     case 'availability_request_created': return 'Nouvelle demande de disponibilité';
     case 'claim_submitted': return 'Demande à examiner';
@@ -41,6 +43,11 @@ export function notificationTarget(notification: Pick<NotificationSummary, 'even
   const { eventType, entityType, entityId } = notification;
   if (eventType === 'transaction_turn' && entityType === 'transaction' && entityId) {
     return { kind: 'flow', transactionId: entityId };
+  }
+  // NR-4 / S-27 — une intention d'achat ouvre la ROOM de cette transaction (fil complet),
+  // pas le suivi court du flux : c'est là que le vendeur valide et converse.
+  if (eventType === 'transaction_intent_created' && entityType === 'transaction' && entityId) {
+    return { kind: 'room', transactionId: entityId };
   }
   if (eventType === 'availability_response_created' && entityType === 'availability_request' && entityId) {
     return { kind: 'availability-response', requestId: entityId };

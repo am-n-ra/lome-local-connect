@@ -91,9 +91,29 @@ function classifyPushOutcome(statusCode) {
 function nextAttemptDelayMs(attemptCount) {
   return Math.min(30 * 6e4, 2 ** Math.max(0, attemptCount) * 3e4);
 }
-function pushMessageFor(payload) {
+function pushMessageFor(payload, entity = {}) {
   const state = typeof payload.state === "string" ? payload.state : "";
+  const kind = typeof payload.kind === "string" ? payload.kind : "";
   const from = typeof payload.from === "string" ? payload.from : "";
+  const targetUrl = entity.entityType === "transaction" && entity.entityId ? `/?notifs=1&txn=${encodeURIComponent(entity.entityId)}` : entity.entityType === "availability_request" && entity.entityId ? `/?notifs=1&request=${encodeURIComponent(entity.entityId)}` : "/?notifs=1";
+  const kindMessages = {
+    transaction_intent_created: {
+      title: "Omni \xB7 intention d\u2019achat",
+      body: "Un acheteur veut cet article. Ouvrez la transaction pour valider.",
+      url: targetUrl
+    },
+    availability_request_created: {
+      title: "Omni \xB7 nouvelle demande",
+      body: "Une demande de disponibilit\xE9 vous attend.",
+      url: targetUrl
+    },
+    availability_response_created: {
+      title: "Omni \xB7 r\xE9ponse re\xE7ue",
+      body: "Le vendeur a r\xE9pondu \xE0 votre demande de disponibilit\xE9.",
+      url: targetUrl
+    }
+  };
+  if (kindMessages[kind]) return kindMessages[kind];
   const titles = {
     qr_verified: "Omni \xB7 transaction",
     payment_declared: "Omni \xB7 paiement",
@@ -115,9 +135,10 @@ function pushMessageFor(payload) {
   return {
     title: titles[state] || "Omni",
     body: bodies[state] || (state ? `Nouvelle \xE9tape : ${state}.` : "Vous avez une nouvelle \xE9tape de transaction."),
-    // Cible du tap : l'Inbox, jamais un rechargement nu. Le service worker rouvre ou
-    // met au premier plan l'app, puis cette query ouvre le centre de notifications.
-    url: "/?notifs=1"
+    // Cible du tap : la Room de cette transaction quand on la connaît (NR-8), sinon
+    // l'Inbox. Le service worker rouvre ou met au premier plan l'app, puis cette
+    // query ouvre la bonne surface — jamais un rechargement nu.
+    url: targetUrl
   };
 }
 async function deliverPendingPush(deps, options = {}) {
@@ -127,7 +148,7 @@ async function deliverPendingPush(deps, options = {}) {
   const summary = { delivered: 0, retried: 0, revoked: 0, exhausted: 0, scanned: pending.length };
   const deadEndpoints = [];
   for (const delivery of pending) {
-    const message = pushMessageFor(delivery.payload);
+    const message = pushMessageFor(delivery.payload, { entityType: delivery.entityType, entityId: delivery.entityId });
     const body = JSON.stringify(message);
     let anyDelivered = false;
     let sawRetry = false;
@@ -2964,7 +2985,7 @@ function createTrunkRepository(sql = database()) {
     async listPendingPushDeliveries(input) {
       const rows = await retryDatabase(() => sql`
         with pending as (
-          select d.id as delivery_id, d.attempt_count, e.recipient_account_id, e.payload
+          select d.id as delivery_id, d.attempt_count, e.recipient_account_id, e.payload, e.entity_type, e.entity_id
           from v2_notification_deliveries d
           join v2_notification_events e on e.id = d.event_id
           where d.channel = 'web_push'
@@ -2973,7 +2994,7 @@ function createTrunkRepository(sql = database()) {
           order by d.created_at
           limit ${input.limit}
         )
-        select p.delivery_id, p.attempt_count, p.payload,
+        select p.delivery_id, p.attempt_count, p.payload, p.entity_type, p.entity_id,
           coalesce(
             json_agg(json_build_object('endpoint', s.endpoint, 'p256dh', s.p256dh, 'auth', s.auth))
               filter (where s.id is not null), '[]'::json
@@ -2983,12 +3004,14 @@ function createTrunkRepository(sql = database()) {
           on s.account_id = p.recipient_account_id
          and s.permission_state = 'granted'
          and s.revoked_at is null
-        group by p.delivery_id, p.attempt_count, p.payload
+        group by p.delivery_id, p.attempt_count, p.payload, p.entity_type, p.entity_id
       `);
       return rows.map((row) => ({
         deliveryId: String(row.delivery_id),
         attemptCount: Number(row.attempt_count ?? 0),
         payload: row.payload ?? {},
+        entityType: row.entity_type === null || row.entity_type === void 0 ? null : String(row.entity_type),
+        entityId: row.entity_id === null || row.entity_id === void 0 ? null : String(row.entity_id),
         targets: Array.isArray(row.targets) ? row.targets : []
       }));
     },
@@ -4237,6 +4260,15 @@ function createTrunkRepository(sql = database()) {
           coalesce(ar.offer_snapshot ->> 'currency', 'XOF') as currency,
           ar.seller_message,
           ar.observed_at,
+          -- Root §6.3 : l'origine de la réponse est un FAIT (« seller/automation actor »).
+          -- On la lit ici au lieu de la laisser inventer par la surface. Une réponse sans
+          -- compte répondant EST l'acteur automatique (Species §95, jamais construit) ;
+          -- aujourd'hui respondAvailability est le seul producteur, donc « seller ».
+          case
+            when ar.id is null then null
+            when ar.responder_account_id is null then 'automation'
+            else 'seller'
+          end as responder_kind,
           case
             when ar.id is null then null
             when ar.observed_at >= br.expires_at then 'expired'
@@ -4268,7 +4300,8 @@ function createTrunkRepository(sql = database()) {
         currency: String(row.currency ?? "XOF"),
         sellerMessage: row.seller_message === null ? null : String(row.seller_message),
         observedAt: new Date(String(row.observed_at)).toISOString(),
-        freshness: String(row.freshness)
+        freshness: String(row.freshness),
+        responderKind: row.responder_kind === "automation" ? "automation" : "seller"
       }));
       const requestStatus = String(first.request_status) === "cancelled" ? "cancelled" : responses.length > 0 ? "responses" : new Date(expiresAt).getTime() <= now ? "expired" : String(first.request_status) === "responding" ? "responding" : "submitted";
       return {
@@ -6268,7 +6301,7 @@ function createTrunkRepository(sql = database()) {
           insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
           select rq.buyer_account_id, 'availability_response_created', 'availability_request', i.request_id::text,
                  i.id::text || ':response_created',
-                 jsonb_build_object('status', i.status, 'productId', rq.product_id::text, 'responseId', i.id::text),
+                 jsonb_build_object('kind', 'availability_response_created', 'status', i.status, 'productId', rq.product_id::text, 'responseId', i.id::text),
                  ${input.correlationId}
           from inserted i
           join v2_availability_requests rq on rq.id = i.request_id
@@ -6663,6 +6696,44 @@ function createTrunkRepository(sql = database()) {
           join qr_eligible e on e.transaction_id = i.transaction_id
           on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
           returning entity_id
+        ),
+        -- NR-4 / S-27 — l'intention d'achat NOTIFIE le VENDEUR. Sans ce producteur,
+        -- la dispo « devenue une intention » restait invisible : le vendeur ne savait
+        -- rien avant le scan, alors que S-27 lui demande d'ouvrir le chat de cette
+        -- demande depuis son dashboard. On notifie le compte vendeur porté par la
+        -- réponse (eligible.seller_account_id), et SEULEMENT sur une intention
+        -- réellement créée : fresh_intent exclut le rejeu idempotent (sinon un
+        -- double envoi re-notifierait). La cible est la transaction, pas la demande.
+        seller_targets as (
+          select fi.transaction_id, e.seller_account_id, e.product_id, e.facility_id
+          from fresh_intent fi
+          join eligible e on e.response_id = fi.response_id
+          where e.seller_account_id is not null
+        ),
+        intent_notified as (
+          insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
+          select st.seller_account_id, 'transaction_intent_created', 'transaction', st.transaction_id::text,
+                 st.transaction_id::text || ':intent_created',
+                 jsonb_build_object('kind', 'transaction_intent_created', 'productId', st.product_id::text, 'facilityId', st.facility_id::text, 'transactionId', st.transaction_id::text),
+                 ${input.correlationId}
+          from seller_targets st
+          on conflict (recipient_account_id, dedupe_key) do nothing
+          returning id, recipient_account_id
+        ),
+        intent_deliveries as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select id, 'in_app', 'queued' from intent_notified
+          on conflict (event_id, channel) do nothing
+          returning id
+        ),
+        intent_push_deliveries as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select n.id, 'web_push', 'queued'
+          from intent_notified n
+          join v2_web_push_subscriptions s on s.account_id = n.recipient_account_id
+          where s.permission_state = 'granted' and s.revoked_at is null
+          on conflict (event_id, channel) do nothing
+          returning id
         )
         select i.id, i.response_id, i.transaction_id, i.buyer_account_id, i.state, q.expires_at,
                (select count(*)::int from eligible) as eligible_count,
@@ -8060,7 +8131,7 @@ function createTrunkRepository(sql = database()) {
           insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
           select st.seller_account_id, 'availability_request_created', 'availability_request', st.request_id::text,
                  st.request_id::text || ':request_created',
-                 jsonb_build_object('productId', st.product_id::text, 'requestId', st.request_id::text),
+                 jsonb_build_object('kind', 'availability_request_created', 'productId', st.product_id::text, 'requestId', st.request_id::text),
                  ${input.correlationId}
           from seller_targets st
           on conflict (recipient_account_id, dedupe_key) do nothing
@@ -8191,7 +8262,7 @@ function createTrunkRepository(sql = database()) {
           insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
           select st.seller_account_id, 'availability_request_created', 'availability_request', st.request_id::text,
                  st.request_id::text || ':request_created',
-                 jsonb_build_object('productId', st.product_id::text, 'requestId', st.request_id::text),
+                 jsonb_build_object('kind', 'availability_request_created', 'productId', st.product_id::text, 'requestId', st.request_id::text),
                  ${input.correlationId}
           from seller_targets st
           on conflict (recipient_account_id, dedupe_key) do nothing
@@ -11255,6 +11326,7 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.createPurchaseIntent({ authUserId, responseId, idempotencyKey, correlationId });
+      await drainWebPushBestEffort(repository);
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }

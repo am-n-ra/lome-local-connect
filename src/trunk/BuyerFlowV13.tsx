@@ -4,6 +4,7 @@ import { getAuthToken } from '../auth';
 import { confirmExternalPayment, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getBuyerCreditSummary, getTransaction, getTransactionMessages, issueBuyerQrToken, qrPayload, requestAvailability, revokeQrToken, sendTransactionMessage, submitTransactionRating, transitionTransaction, verifyQrToken } from './api';
 import type { BuyerCreditSummary, ExternalPaymentMethod, TransactionSnapshotResult, TransactionState } from './types';
 import { canProposePrice, isNegotiable } from './offer-price';
+import { availabilitySourceLabel } from './availability-source';
 import { useFreshnessTimer } from './useFreshnessTimer';
 import { deadlineLabel, deadlineState, transactionStateLabel, transactionStateResponsible } from './transaction-time';
 import type { PendingAction } from './ui-helpers';
@@ -29,6 +30,10 @@ type BuyerFlowV13Props = {
   /** BRANCHES — si fourni, on rouvre le suivi d'une demande de disponibilité
    *  (étape « en attente de réponse » ou résultat) au lieu de repartir du formulaire. */
   resumeRequestId?: string | null;
+  /** NR-5 / S-27 — à la confirmation de l'intention, on ouvre la ROOM de cette
+   *  transaction (chat complet + QR + suivi), au lieu de rester dans le suivi court
+   *  du flux. Le flux garde son étape `txn` comme repli si la Room n'est pas branchée. */
+  onRoom?: (transactionId: string) => void;
 };
 
 const STEPS: Array<{ id: Stage; label: string }> = [
@@ -49,7 +54,7 @@ const TXN_STAGES = [
 
 // Payload scannable par le vendeur: transactionId + jeton brut.
 
-export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, onEngagement, walletBalanceMinor, resumeTxnId, resumeRequestId }: BuyerFlowV13Props) {
+export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, onEngagement, walletBalanceMinor, resumeTxnId, resumeRequestId, onRoom }: BuyerFlowV13Props) {
   const [stage, setStage] = useState<Stage>('avail');
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -65,7 +70,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, onEn
   const [deliveryMode, setDeliveryMode] = useState<'retrait' | 'livraison'>('retrait');
   const [availNote, setAvailNote] = useState('');
   const [requestId, setRequestId] = useState<string | null>(null);
-  const [liveResponse, setLiveResponse] = useState<{ priceMinor: number; quantityAvailable: number; status: string; observedAt: string | null } | null>(null);
+  const [liveResponse, setLiveResponse] = useState<{ priceMinor: number; quantityAvailable: number; status: string; observedAt: string | null; responderKind?: 'seller' | 'automation' } | null>(null);
   const [txn, setTxn] = useState<TransactionSnapshotResult | null>(null);
   const [txnId, setTxnId] = useState<string | null>(null);
   const [qrToken, setQrToken] = useState<string | null>(null);
@@ -141,7 +146,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, onEn
       const list = responses.ok ? (responses.data?.responses ?? []) : [];
       if (list.length > 0) {
         const r = list[0];
-        setLiveResponse({ priceMinor: r.priceMinor ?? 0, quantityAvailable: r.quantityAvailable ?? 0, status: r.status, observedAt: r.observedAt ?? null });
+        setLiveResponse({ priceMinor: r.priceMinor ?? 0, quantityAvailable: r.quantityAvailable ?? 0, status: r.status, observedAt: r.observedAt ?? null, responderKind: r.responderKind });
         setStage('result');
       } else {
         pollRef.current = window.setTimeout(poll, 4000);
@@ -206,7 +211,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, onEn
           const list = responses.ok ? (responses.data?.responses ?? []) : [];
           if (list.length > 0) {
             const r = list[0];
-            setLiveResponse({ priceMinor: r.priceMinor ?? 0, quantityAvailable: r.quantityAvailable ?? 0, status: r.status, observedAt: r.observedAt ?? null });
+            setLiveResponse({ priceMinor: r.priceMinor ?? 0, quantityAvailable: r.quantityAvailable ?? 0, status: r.status, observedAt: r.observedAt ?? null, responderKind: r.responderKind });
             setStage('result');
           } else {
             pollRef.current = window.setTimeout(poll, 4000);
@@ -236,6 +241,10 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, onEn
         // BRANCHES-NOTIF-1 — l'intention est prise : l'acheteur attend le scan du vendeur.
         onEngagement?.('buyer-intent');
         await loadTxn(intent.data.transactionId);
+        // NR-5 / S-27 — l'intention ouvre la ROOM : l'acheteur voit le chat de sa
+        // transaction et son QR au même endroit (la Room porte déjà les deux). Le
+        // suivi court du flux reste le repli si la Room n'est pas branchée.
+        if (onRoom) { onRoom(intent.data.transactionId); return; }
         if (intent.data.qrToken) {
           setQrToken(intent.data.qrToken);
           setQrExpires(intent.data.qrExpiresAt ?? '');
@@ -243,7 +252,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, onEn
         }
       } else { setError(intent.error?.message ?? 'Intention non créée.'); }
     } finally { setBusy(false); }
-  }, [needAuth, requestId, loadTxn, onEngagement]);
+  }, [needAuth, requestId, loadTxn, onEngagement, onRoom]);
 
   const issueQr = useCallback(async () => {
     const token = await needAuth();
@@ -407,7 +416,8 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, onEn
       {stage === 'result' && liveResponse && (
         <div>
           <div className="cardbox">
-            <div className="kv"><span>{product.name} ×{quantityValue} (source : auto)</span><b className="status ok">{liveResponse.quantityAvailable} dispo</b></div>
+            <div className="kv"><span>{product.name} ×{quantityValue}</span><b className="status ok">{liveResponse.quantityAvailable} dispo</b></div>
+            <div className="kv"><span>Réponse</span><b>{availabilitySourceLabel(liveResponse.responderKind)}</b></div>
           </div>
           <div className={`freshbar${freshness.level === 'stale' ? ' stale' : freshness.level === 'expired' ? ' expired' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, padding: '6px 10px', borderRadius: 999, background: 'var(--accent-soft)', fontSize: 9 }}>
             <span className="fdot" />
@@ -423,7 +433,8 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, onEn
             {stage === 'intent' && liveResponse && (
         <div>
           <div className="cardbox">
-            <div className="kv"><span>{product.name} ×{quantityValue} (source : auto)</span><b className="status ok">{liveResponse.quantityAvailable} dispo</b></div>
+            <div className="kv"><span>{product.name} ×{quantityValue}</span><b className="status ok">{liveResponse.quantityAvailable} dispo</b></div>
+            <div className="kv"><span>Réponse</span><b>{availabilitySourceLabel(liveResponse.responderKind)}</b></div>
             <div className="kv"><span>Prix unitaire</span><b>{formatMoney(liveResponse.priceMinor, 'XOF')}</b></div>
             <div className="kv"><span>Total</span><b>{formatMoney(liveResponse.priceMinor * quantityValue, 'XOF')}</b></div>
           </div>

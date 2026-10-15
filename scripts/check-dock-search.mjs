@@ -31,8 +31,14 @@ const RULES = [
   // suivent l'ordre », pas « toujours orderedResults ».
   ['search-01-ordered', 'the map/rail use orderedResults, not raw results', (s) =>
     /visibleFacilities = useMemo\(\s*\(\) => filterFacilities\(results\.length > 0 \? orderedResults : facilities/.test(s[APP]) && /orderedResults\.map\(/.test(s[APP])],
+  // BRANCHES-PRICE-DISPLAY (2026-10-13) a déplacé le rendu prix vers `priceDisplay`
+  // (une règle partagée, qui lit la devise de l'OFFRE via `currencyFor`). Le garde
+  // exigeait l'ancien appel direct : il échouait sur du code correct — un garde
+  // périmé fabrique la dérive qu'il prétend surveiller. L'intention est intacte :
+  // la carte doit porter la devise de l'offre, jamais celle du visiteur.
   ['search-01-price', 'result cards show the entry price with the offer currency', (s) =>
-    /facility\.minPriceMinor/.test(s[APP]) && /currencyFor\(facility\.priceCurrency\)/.test(s[APP])],
+    /facility\.minPriceMinor/.test(s[APP]) &&
+    (/currencyFor\(facility\.priceCurrency\)/.test(s[APP]) || /currency: facility\.priceCurrency/.test(s[APP]))],
   ['search-01-near-honest', 'Plus proche never invents a distance without a position', (s) =>
     /if \(key === 'near'\) \{\s*if \(!userPosition\) return \[\.\.\.results\]/.test(s[SORT])],
   ['dock-02-operator', 'the operator gets its own terrain dock (Tournée)', (s) =>
@@ -133,7 +139,11 @@ const RULES = [
   // BRANCHES — the availability poll guards the responses LIST: an unexpected payload
   // must never throw inside the poll (founder clicked "Envoyer la demande").
   ['avail-01-poll-hardened', 'the availability poll reads the response list defensively (never .length off undefined)', (s) =>
-    /const list = responses\.ok \? \(responses\.data\?\.responses \?\? \[\]\) : \[\]/.test(s[BUYER_FLOW])],
+    /const list = responses\.ok \? \(responses\.data\?\.responses \?\? \[\]\) : \[\]/.test(s[BUYER_FLOW]) &&
+    // Le danger réel est de LIER une liste depuis l'accès non gardé. Le fichier a deux
+    // occurrences de la liste : un test de simple présence laissait la seconde non
+    // protégée (mutation non falsifiée). L'accès gardé `responses.data && …[0]` reste permis.
+    !/=\s*responses\.data\.responses\b/.test(s[BUYER_FLOW])],
 ];
 
 function run(sources) {
@@ -153,7 +163,7 @@ if (process.argv.includes('--selftest')) {
   const mutations = [
     [APP, 'RESULTS_SORTS.map(', 'RESULTS_SORTS.filter('],
     [APP, 'results.length > 0 ? orderedResults : facilities', 'results.length > 0 ? facilities : orderedResults'],
-    [APP, 'currencyFor(facility.priceCurrency)', 'currencyFor(undefined)'],
+    [APP, 'currency: facility.priceCurrency', 'currency: undefined'],
     [SORT, "if (key === 'near') {\n    if (!userPosition) return [...results];", "if (key === 'near') {\n    // mutated"],
     [APP, 'if (isOperator) return [', 'if (false) return ['],
     [APP, 'Demandes entrantes', 'Demandes recues'],

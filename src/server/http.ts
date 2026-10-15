@@ -2772,6 +2772,8 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const result = await repository.createPurchaseIntent({ authUserId, responseId, idempotencyKey, correlationId });
+      // NR-4 — l'intention notifie le vendeur : on dépile la file Web Push avant de répondre.
+      await drainWebPushBestEffort(repository);
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }

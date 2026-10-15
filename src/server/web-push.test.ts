@@ -17,6 +17,8 @@ function makeDelivery(overrides: Partial<PendingPushDelivery> = {}): PendingPush
     targets: [target('https://push.example/1')],
     payload: { state: 'qr_verified', from: 'intent_created' },
     attemptCount: 0,
+    entityType: null,
+    entityId: null,
     ...overrides,
   };
 }

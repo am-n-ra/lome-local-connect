@@ -2749,10 +2749,10 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
     },
     // Web Push — la file que personne ne dépilait. Un événement vise un compte ; on
     // ramasse TOUS ses appareils vivants pour livrer une fois par compte.
-    async listPendingPushDeliveries(input: { limit: number }): Promise<Array<{ deliveryId: string; attemptCount: number; payload: Record<string, unknown>; targets: Array<{ endpoint: string; p256dh: string; auth: string }> }>> {
+    async listPendingPushDeliveries(input: { limit: number }): Promise<Array<{ deliveryId: string; attemptCount: number; payload: Record<string, unknown>; entityType: string | null; entityId: string | null; targets: Array<{ endpoint: string; p256dh: string; auth: string }> }>> {
       const rows = await retryDatabase(() => sql`
         with pending as (
-          select d.id as delivery_id, d.attempt_count, e.recipient_account_id, e.payload
+          select d.id as delivery_id, d.attempt_count, e.recipient_account_id, e.payload, e.entity_type, e.entity_id
           from v2_notification_deliveries d
           join v2_notification_events e on e.id = d.event_id
           where d.channel = 'web_push'
@@ -2761,7 +2761,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           order by d.created_at
           limit ${input.limit}
         )
-        select p.delivery_id, p.attempt_count, p.payload,
+        select p.delivery_id, p.attempt_count, p.payload, p.entity_type, p.entity_id,
           coalesce(
             json_agg(json_build_object('endpoint', s.endpoint, 'p256dh', s.p256dh, 'auth', s.auth))
               filter (where s.id is not null), '[]'::json
@@ -2771,12 +2771,14 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           on s.account_id = p.recipient_account_id
          and s.permission_state = 'granted'
          and s.revoked_at is null
-        group by p.delivery_id, p.attempt_count, p.payload
+        group by p.delivery_id, p.attempt_count, p.payload, p.entity_type, p.entity_id
       `);
       return (rows as Record<string, unknown>[]).map((row) => ({
         deliveryId: String(row.delivery_id),
         attemptCount: Number(row.attempt_count ?? 0),
         payload: (row.payload ?? {}) as Record<string, unknown>,
+        entityType: row.entity_type === null || row.entity_type === undefined ? null : String(row.entity_type),
+        entityId: row.entity_id === null || row.entity_id === undefined ? null : String(row.entity_id),
         targets: Array.isArray(row.targets) ? (row.targets as Array<{ endpoint: string; p256dh: string; auth: string }>) : [],
       }));
     },
@@ -4142,6 +4144,15 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           coalesce(ar.offer_snapshot ->> 'currency', 'XOF') as currency,
           ar.seller_message,
           ar.observed_at,
+          -- Root §6.3 : l'origine de la réponse est un FAIT (« seller/automation actor »).
+          -- On la lit ici au lieu de la laisser inventer par la surface. Une réponse sans
+          -- compte répondant EST l'acteur automatique (Species §95, jamais construit) ;
+          -- aujourd'hui respondAvailability est le seul producteur, donc « seller ».
+          case
+            when ar.id is null then null
+            when ar.responder_account_id is null then 'automation'
+            else 'seller'
+          end as responder_kind,
           case
             when ar.id is null then null
             when ar.observed_at >= br.expires_at then 'expired'
@@ -4176,6 +4187,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           sellerMessage: row.seller_message === null ? null : String(row.seller_message),
           observedAt: new Date(String(row.observed_at)).toISOString(),
           freshness: String(row.freshness) as AvailabilityResponsesResult['responses'][number]['freshness'],
+          responderKind: (row.responder_kind === 'automation' ? 'automation' : 'seller') as 'seller' | 'automation',
         }));
       const requestStatus: AvailabilityResponsesResult['requestStatus'] = String(first.request_status) === 'cancelled'
         ? 'cancelled'
@@ -6311,7 +6323,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
           select rq.buyer_account_id, 'availability_response_created', 'availability_request', i.request_id::text,
                  i.id::text || ':response_created',
-                 jsonb_build_object('status', i.status, 'productId', rq.product_id::text, 'responseId', i.id::text),
+                 jsonb_build_object('kind', 'availability_response_created', 'status', i.status, 'productId', rq.product_id::text, 'responseId', i.id::text),
                  ${input.correlationId}
           from inserted i
           join v2_availability_requests rq on rq.id = i.request_id
@@ -6740,6 +6752,44 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           join qr_eligible e on e.transaction_id = i.transaction_id
           on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
           returning entity_id
+        ),
+        -- NR-4 / S-27 — l'intention d'achat NOTIFIE le VENDEUR. Sans ce producteur,
+        -- la dispo « devenue une intention » restait invisible : le vendeur ne savait
+        -- rien avant le scan, alors que S-27 lui demande d'ouvrir le chat de cette
+        -- demande depuis son dashboard. On notifie le compte vendeur porté par la
+        -- réponse (eligible.seller_account_id), et SEULEMENT sur une intention
+        -- réellement créée : fresh_intent exclut le rejeu idempotent (sinon un
+        -- double envoi re-notifierait). La cible est la transaction, pas la demande.
+        seller_targets as (
+          select fi.transaction_id, e.seller_account_id, e.product_id, e.facility_id
+          from fresh_intent fi
+          join eligible e on e.response_id = fi.response_id
+          where e.seller_account_id is not null
+        ),
+        intent_notified as (
+          insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
+          select st.seller_account_id, 'transaction_intent_created', 'transaction', st.transaction_id::text,
+                 st.transaction_id::text || ':intent_created',
+                 jsonb_build_object('kind', 'transaction_intent_created', 'productId', st.product_id::text, 'facilityId', st.facility_id::text, 'transactionId', st.transaction_id::text),
+                 ${input.correlationId}
+          from seller_targets st
+          on conflict (recipient_account_id, dedupe_key) do nothing
+          returning id, recipient_account_id
+        ),
+        intent_deliveries as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select id, 'in_app', 'queued' from intent_notified
+          on conflict (event_id, channel) do nothing
+          returning id
+        ),
+        intent_push_deliveries as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select n.id, 'web_push', 'queued'
+          from intent_notified n
+          join v2_web_push_subscriptions s on s.account_id = n.recipient_account_id
+          where s.permission_state = 'granted' and s.revoked_at is null
+          on conflict (event_id, channel) do nothing
+          returning id
         )
         select i.id, i.response_id, i.transaction_id, i.buyer_account_id, i.state, q.expires_at,
                (select count(*)::int from eligible) as eligible_count,
@@ -8234,7 +8284,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
           select st.seller_account_id, 'availability_request_created', 'availability_request', st.request_id::text,
                  st.request_id::text || ':request_created',
-                 jsonb_build_object('productId', st.product_id::text, 'requestId', st.request_id::text),
+                 jsonb_build_object('kind', 'availability_request_created', 'productId', st.product_id::text, 'requestId', st.request_id::text),
                  ${input.correlationId}
           from seller_targets st
           on conflict (recipient_account_id, dedupe_key) do nothing
@@ -8390,7 +8440,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
           select st.seller_account_id, 'availability_request_created', 'availability_request', st.request_id::text,
                  st.request_id::text || ':request_created',
-                 jsonb_build_object('productId', st.product_id::text, 'requestId', st.request_id::text),
+                 jsonb_build_object('kind', 'availability_request_created', 'productId', st.product_id::text, 'requestId', st.request_id::text),
                  ${input.correlationId}
           from seller_targets st
           on conflict (recipient_account_id, dedupe_key) do nothing

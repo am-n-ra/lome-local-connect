@@ -192,6 +192,11 @@ export interface BuyerAvailabilityResponse {
   sellerMessage: string | null;
   observedAt: string;
   freshness: AvailabilityFreshness;
+  /** Root §6.3 — `availability_responses` porte « seller/automation actor ». La surface
+   *  LIT cette origine ; elle ne l'invente pas. Aujourd'hui seul le vendeur écrit
+   *  (`respondAvailability`), donc `seller` partout — mais le jour où l'auto-réponse
+   *  (Species §95) est construite, l'acheteur verra la différence sans migration. */
+  responderKind: 'seller' | 'automation';
 }
 
 export interface AvailabilityResponsesResult {

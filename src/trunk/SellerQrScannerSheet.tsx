@@ -8,6 +8,10 @@ import { cameraStatusLabel } from '../lib/camera-scanner';
 interface Props {
   onClose: () => void;
   onVerified: (accepted: boolean, detail: string) => void;
+  /** NR-6 / S-27 — après un scan ACCEPTÉ, le vendeur doit pouvoir entrer dans la
+   *  transaction qu'il vient de valider (Room : suivi + chat + actions). Sans ce
+   *  rappel, il restait sur l'écran caméra, la transaction validée mais inaccessible. */
+  onScanned?: (transactionId: string) => void;
 }
 
 const SCANNER_ID = 'omni-seller-qr-reader';
@@ -47,12 +51,13 @@ export function teardownScanner(scanner: Html5Qrcode | null): void {
   }
 }
 
-export function SellerQrScannerSheet({ onClose, onVerified }: Props) {
+export function SellerQrScannerSheet({ onClose, onVerified, onScanned }: Props) {
   const [state, setState] = useState<'starting' | 'scanning' | 'error'>('starting');
   const [error, setError] = useState('');
   const [manual, setManual] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ accepted: boolean; detail: string } | null>(null);
+  const [scannedTxnId, setScannedTxnId] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const doneRef = useRef(false);
   const onVerifiedRef = useRef(onVerified);
@@ -70,6 +75,8 @@ export function SellerQrScannerSheet({ onClose, onVerified }: Props) {
       if (res.ok && res.data?.accepted) {
         doneRef.current = true;
         setResult({ accepted: true, detail: 'QR vérifié : bon pour encaissement.' });
+        // NR-6 — on retient la transaction validée pour proposer d'y entrer.
+        setScannedTxnId(parsed.transactionId);
         onVerifiedRef.current(true, 'QR vérifié : bon pour encaissement.');
       } else {
         setResult({ accepted: false, detail: res.data?.reason ?? res.error?.message ?? 'QR non vérifié.' });
@@ -142,6 +149,11 @@ export function SellerQrScannerSheet({ onClose, onVerified }: Props) {
         <p className="sub" role="status" style={{ color: result.accepted ? 'var(--ok)' : 'var(--warn)' }}>
           {result.detail}
         </p>
+      )}
+      {result?.accepted && scannedTxnId && onScanned && (
+        <button className="btn ok" style={{ marginTop: 8 }} type="button" onClick={() => onScanned(scannedTxnId)}>
+          Ouvrir la transaction validée
+        </button>
       )}
       <div className="cardbox" style={{ display: 'grid', placeItems: 'center', padding: 12 }}>
         {state === 'starting' ? (

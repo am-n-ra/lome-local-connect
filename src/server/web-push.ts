@@ -20,6 +20,10 @@ export interface PendingPushDelivery {
   targets: PushSubscriptionTarget[];
   payload: Record<string, unknown>;
   attemptCount: number;
+  /** NR-8 — l'entité visée par l'événement, pour que le TAP ouvre la bonne feuille.
+   *  Sans elle, le clic ne pouvait ouvrir que l'Inbox générique. */
+  entityType: string | null;
+  entityId: string | null;
 }
 
 export interface PushSendResult {
@@ -53,10 +57,40 @@ export function nextAttemptDelayMs(attemptCount: number): number {
   return Math.min(30 * 60_000, 2 ** Math.max(0, attemptCount) * 30_000);
 }
 
-/** Message affiché par le système. Construit depuis l'événement, jamais inventé. */
-export function pushMessageFor(payload: Record<string, unknown>): { title: string; body: string; url: string } {
+/** Message affiché par le système. Construit depuis l'événement, jamais inventé.
+ *  `entity` porte la cible du tap : sans elle, le clic ne pouvait ouvrir que l'Inbox. */
+export function pushMessageFor(
+  payload: Record<string, unknown>,
+  entity: { entityType?: string | null; entityId?: string | null } = {},
+): { title: string; body: string; url: string } {
   const state = typeof payload.state === 'string' ? payload.state : '';
+  const kind = typeof payload.kind === 'string' ? payload.kind : '';
   const from = typeof payload.from === 'string' ? payload.from : '';
+  // NR-8 — la cible du tap : la feuille de l'événement, pas l'Inbox générique.
+  // Une transaction ouvre sa Room ; une réponse ouvre le suivi de la demande.
+  const targetUrl = entity.entityType === 'transaction' && entity.entityId
+    ? `/?notifs=1&txn=${encodeURIComponent(entity.entityId)}`
+    : entity.entityType === 'availability_request' && entity.entityId
+      ? `/?notifs=1&request=${encodeURIComponent(entity.entityId)}`
+      : '/?notifs=1';
+  const kindMessages: Record<string, { title: string; body: string; url: string }> = {
+    transaction_intent_created: {
+      title: 'Omni · intention d’achat',
+      body: 'Un acheteur veut cet article. Ouvrez la transaction pour valider.',
+      url: targetUrl,
+    },
+    availability_request_created: {
+      title: 'Omni · nouvelle demande',
+      body: 'Une demande de disponibilité vous attend.',
+      url: targetUrl,
+    },
+    availability_response_created: {
+      title: 'Omni · réponse reçue',
+      body: 'Le vendeur a répondu à votre demande de disponibilité.',
+      url: targetUrl,
+    },
+  };
+  if (kindMessages[kind]) return kindMessages[kind];
   const titles: Record<string, string> = {
     qr_verified: 'Omni · transaction',
     payment_declared: 'Omni · paiement',
@@ -78,9 +112,10 @@ export function pushMessageFor(payload: Record<string, unknown>): { title: strin
   return {
     title: titles[state] || 'Omni',
     body: bodies[state] || (state ? `Nouvelle étape : ${state}.` : 'Vous avez une nouvelle étape de transaction.'),
-    // Cible du tap : l'Inbox, jamais un rechargement nu. Le service worker rouvre ou
-    // met au premier plan l'app, puis cette query ouvre le centre de notifications.
-    url: '/?notifs=1',
+    // Cible du tap : la Room de cette transaction quand on la connaît (NR-8), sinon
+    // l'Inbox. Le service worker rouvre ou met au premier plan l'app, puis cette
+    // query ouvre la bonne surface — jamais un rechargement nu.
+    url: targetUrl,
   };
 }
 
@@ -117,7 +152,7 @@ export async function deliverPendingPush(
   const deadEndpoints: string[] = [];
 
   for (const delivery of pending) {
-    const message = pushMessageFor(delivery.payload);
+    const message = pushMessageFor(delivery.payload, { entityType: delivery.entityType, entityId: delivery.entityId });
     const body = JSON.stringify(message);
     // On envoie à TOUS les appareils du compte ; un endpoint mort est révoqué sans
     // empêcher les autres de recevoir. Un seul appareil vivant suffit à « livrer ».
