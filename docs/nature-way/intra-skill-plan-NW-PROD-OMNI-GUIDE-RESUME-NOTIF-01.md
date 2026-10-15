@@ -35,6 +35,12 @@
 | 2 | `GR-2` reprise PWA | fermer/rouvrir → **même surface** y compris guide ; recherche/flow en cours **retenue** | browser : reload sur guide → guide ; flow → étape | `planned` | `nav-state` déjà couvre le cas mesuré |
 | 3 | `GR-3` guide une fois / option ensuite | accueil montré **une seule fois** par compte, ré-ouvrable depuis le menu | flag persistant + browser 2 créations | `planned` | décision fondateur : « à chaque connexion » |
 | 4 | `NT-1` manifestation notification | **réponse documentée** (son OS, contenu, tap) ; aucun réglage app tant que non décidé | doc + inventaire mesuré | `planned` | fondateur veut un son/vibration propre |
+| 5 | `NR-7` « source : auto » retiré | l'acheteur ne lit plus « auto » pour une réponse **humaine** | garde falsifié + bundle servi sans la chaîne | `ready` | la réponse auto existe un jour (alors la marque devient vraie) |
+| 6 | `NR-4` intention → notifie le vendeur | `createPurchaseIntent` écrit un événement destiné au **vendeur** (scope membre) | preuve SQL réelle + garde producteur | `ready` | le fondateur veut un autre canal |
+| 7 | `NR-5` intention → chat ouvert | acheteur **et** vendeur atteignent la **même** Room au moment de l'intention | preuve navigateur 2 rôles + garde | `planned` | décision : Room vs chat du flux |
+| 8 | `NR-6` scan QR → ouvre la transaction | le scanner ouvre la Room de la transaction scannée | preuve navigateur + garde | `planned` | le QR doit rester un simple verrou |
+| 9 | `NR-8` logo Omni in-app | le centre de notifications porte le logo | garde de rendu | `planned` | — |
+| 10 | `NR-9` réponse auto (capacité **neuve**) | conditions C1–C10 tenues et prouvées | contrat + migration + preuve | `blocked` | **décisions fondateur §5** (partielle ? négociable ? délai ?) |
 
 ## Dependency-aware task tree
 
@@ -48,6 +54,12 @@
 | NR-1 | G-01 | Branch | visibilité réponse vendeur (3 défauts) | — | relais | `done` | 3 gardes falsifiés + preuve backend | pas de badge neuf (hors maquette) | fondateur veut un badge |
 | NR-2 | G-01 | Branch | drain Web Push après CHAQUE producteur de notif | — | relais | `done` | garde générique falsifié + preuve SQL 8/8 + prod `5f2366c` | pas de nouveau canal | un producteur non drainé réapparaît |
 | NR-3 | G-01 | Branch | le vendeur peut RÉPONDRE (stock nommé) | — | relais | `done` | preuve A/B Postgres 6/6 + 3 gardes falsifiés | pas de migration (dérivé au read) | le stock démo reste sous la demande |
+| NR-7 | G-01 | Branch | retirer « (source : auto) » mensonger | — | relais | `ready` | garde falsifié + chaîne absente du bundle servi | copie seule | la réponse auto devient réelle |
+| NR-4 | G-01 | Branch | l'intention NOTIFIE le vendeur | — | relais | `ready` | preuve SQL réelle (événement + livraison) + garde producteur | scope membre, pas de nouveau canal | le fondateur veut un autre canal |
+| NR-5 | G-01 | Branch | l'intention OUVRE le chat (2 rôles) | NR-4 | relais | `planned` | preuve navigateur acheteur+vendeur, une seule surface | pas de 2ᵉ chat | décision Room vs flux |
+| NR-6 | G-01 | Branch | le scan QR ouvre la transaction | NR-5 | relais | `planned` | preuve navigateur : scan → Room de la bonne txn | le verrou reste (S-22) | le QR doit rester un verrou nu |
+| NR-8 | G-01 | Branch | logo Omni dans le centre in-app | — | relais | `planned` | garde de rendu | visuel seul | — |
+| NR-9 | G-01 | Branch | réponse auto (capacité neuve) | décisions §5 | relais | `blocked` | contrat C1–C10 + migration + preuve SQL | **fondation neuve** : interdite sans décision | les 3 décisions du §5 |
 
 ## Reconciliation log
 
@@ -59,13 +71,14 @@
 | 2026-10-15 | backend réponse/notif sain (11/11 + inbox) ; 3 défauts de visibilité | `NR-1` créé `done` | replan | relais | fondateur veut un badge ? |
 | 2026-10-15 | 2ᵉ demande → event+livraisons écrits, `web_push` resté `queued` ; routes dispo/claim/activation sans drain | `NR-2` créé `done` | replan | relais | producteur non drainé ? |
 | 2026-10-15 | fondateur « seller is still unable to reply » : formulaire vide + refus de stock dit « not authorized » (demande `05853c57…`, stock 1) | `NR-3` créé `done` | replan | relais | stock démo ≥ demande ? |
+| 2026-10-15 | fondateur (5 sujets) : logo notif · tap→sheet · intention→chat · QR de retrouvaille · conditions réponse auto. **Mesuré** : `createPurchaseIntent` **0 notification** (l.6584–6980) ; scanner QR **jette** les données (`TrunkAppV13:3136`) ; acheteur lit **« (source : auto) »** pour une réponse **humaine** (`BuyerFlowV13:410,426`) ; Room inatteignable depuis le flux (chat du flux tronqué `.slice(-4)`) ; centre in-app sans logo. **Routage des notifications déjà correct** (vérifié, ne pas « corriger »). | `NR-4`/`NR-7` créés `ready` ; `NR-5`/`NR-6`/`NR-8` `planned` ; `NR-9` **créé `blocked`** (capacité neuve, 3 décisions fondateur) | replan | relais | décisions fondateur §5 + ordre |
 
 ## Handoff to Founder HQ
 
 > **Local status:** `partial` — 1 bug mesuré prêt, 2 trous de mémoire, 1 réponse factuelle
 > **Gate decision:** `pause` — attendre la **décision d'ordre** du fondateur avant de coder
 > **Closed:** `NR-1` (visibilité réponse vendeur) · `NR-2` (drain Web Push) · `NR-3` (le vendeur **peut** répondre : stock nommé, formulaire pré-rempli)
-> **Open:** `GR-1` (ready), `GR-2`/`GR-3`/`NT-1` (planned)
-> **Residual gap:** reprise « flow en cours » exige de définir *quelle* étape on mémorise (nouveau contrat léger) ; pas de badge de notif in-app (maquette silencieuse) → décision fondateur
-> **Next smallest action:** décision fondateur : **quelle tranche d'abord** (recommandation `GR-1`)
-> **Re-plan trigger:** le fondateur choisit l'ordre, veut un son/vibration propre, ou un badge de notif
+> **Open:** `NR-7` (ready, mensonge « source : auto »), `NR-4` (ready, intention → notif vendeur), `GR-1` (ready), `NR-5`/`NR-6`/`NR-8`/`GR-2`/`GR-3`/`NT-1` (planned), **`NR-9` (blocked — 3 décisions fondateur)**
+> **Residual gap:** la **réponse auto** n'existe pas comme producteur de réponse (le mot « auto » recouvre le **badge** TRUNK-X2 et une **réponse** jamais construite) → l'app affiche un mensonge ; l'accès du vendeur à la Room existe **sans avis** (l'intention ne notifie personne) et le scan QR **n'ouvre pas** la transaction.
+> **Next smallest action:** décision fondateur — **ordre** (`NR-7 → NR-4 → NR-5 → NR-6 → NR-8`) + les **3 questions du §5** (auto partielle ? offre négociable ? délai de courtoisie ?).
+> **Re-plan trigger:** le fondateur choisit l'ordre, tranche les conditions d'auto-réponse, ou veut un badge de notif / un son.
