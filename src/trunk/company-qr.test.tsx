@@ -39,7 +39,7 @@ afterEach(() => {
 describe('Heartwood S1b — QR public dans l’espace vendeur', () => {
   it('rend un <svg> de QR quand l’entité est connue', () => {
     const entity = 'c5975d63-9c7c-4974-ba50-beb92e6b4924';
-    act(() => root.render(<CompanyV13 onClose={() => {}} onProducts={() => {}} onOffers={() => {}} catalogue={catalogue(product(entity))} />));
+    act(() => root.render(<CompanyV13 onClose={() => {}} onProducts={() => {}} catalogue={catalogue(product(entity))} />));
     // Scoper au QR (le composant porte aussi des icônes lucide en <svg>).
     expect(container.querySelector('.omni-qr svg')).toBeTruthy();
     expect(container.textContent).toContain('QR public');
@@ -47,7 +47,7 @@ describe('Heartwood S1b — QR public dans l’espace vendeur', () => {
   });
 
   it('n’invente pas de QR quand l’entité est absente (uuid inconnu)', () => {
-    act(() => root.render(<CompanyV13 onClose={() => {}} onProducts={() => {}} onOffers={() => {}} catalogue={catalogue(product(null))} />));
+    act(() => root.render(<CompanyV13 onClose={() => {}} onProducts={() => {}} catalogue={catalogue(product(null))} />));
     // Le regroupement retombe sur la clé 'sans-lieu' → pas d'uuid → pas de QR.
     expect(container.querySelector('.omni-qr')).toBeNull();
   });

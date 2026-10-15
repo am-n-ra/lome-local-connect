@@ -56,7 +56,6 @@ import { SellerVerificationV13 } from './SellerVerificationV13';
 import { OperatorEntitySideV13 } from './OperatorEntitySideV13';
 import { ProductCatalogueV13 } from './ProductCatalogueV13';
 import { StockEventLedgerV13 } from './StockEventLedgerV13';
-import { OffersV13 } from './OffersV13';
 import { CompanyV13 } from './CompanyV13';
 import { LegalSheetV13, type LegalSectionId } from './LegalSheetV13';
 import { AuthSheetV13 } from './AuthSheetV13';
@@ -80,7 +79,7 @@ import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
 import { normalizeTogoPhone, phoneDeclarationLabel, whatsappDeclareLink } from '../domain/phone';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal' | 'tour' | 'freshness' |   'op-side' | 'verification' | 'room' | 'install' | 'legal' | 'welcome' | 'how-it-works';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'company' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal' | 'tour' | 'freshness' |   'op-side' | 'verification' | 'room' | 'install' | 'legal' | 'welcome' | 'how-it-works';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -2267,7 +2266,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       if (sheet === 'notifs') { setSheet('menu'); return; }
       if (sheet === 'recovery') { setSheet('home'); return; }
       if (sheet === 'account' || sheet === 'wallet' || sheet === 'plans' || sheet === 'saved' || sheet === 'auth' || sheet === 'install' || sheet === 'legal') { setSheet('menu'); return; }
-      if (sheet === 'products' || sheet === 'stockevent' || sheet === 'offers' || sheet === 'company' || sheet === 'seller-reply' || sheet === 'freshness' || sheet === 'verification') { setSheet('seller'); return; }
+      if (sheet === 'products' || sheet === 'stockevent' || sheet === 'company' || sheet === 'seller-reply' || sheet === 'freshness' || sheet === 'verification') { setSheet('seller'); return; }
       if (sheet === 'op-side') { setOpSideVisitId(null); setSheet('tour'); return; }
       setSheet('none');
       return;
@@ -3123,7 +3122,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         </section>
       )}
       {sheet === 'seller' && (
-        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} onScan={() => setSheet('seller-qr')} onMap={() => { setSelectedId(null); setSheet('none'); }} onClaim={(facility) => { void startClaim(facility); }} onClaimExisting={(facilityId) => void openExistingForClaim(facilityId)} onOpenTransaction={(transaction) => void openRoom(transaction)} startInCreate={sellerCreateIntent} onConsumeCreateIntent={() => setSellerCreateIntent(false)} catalogue={sellerCatalogue} queue={sellerQueue} publicFacilities={facilities} ownedIds={ownedFacilityIds} onEngagement={maybePromptPush} onRefresh={loadSellerWorkspace} />
+        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} onScan={() => setSheet('seller-qr')} onMap={() => { setSelectedId(null); setSheet('none'); }} onClaim={(facility) => { void startClaim(facility); }} onClaimExisting={(facilityId) => void openExistingForClaim(facilityId)} onOpenTransaction={(transaction) => void openRoom(transaction)} startInCreate={sellerCreateIntent} onConsumeCreateIntent={() => setSellerCreateIntent(false)} catalogue={sellerCatalogue} queue={sellerQueue} publicFacilities={facilities} ownedIds={ownedFacilityIds} onEngagement={maybePromptPush} onRefresh={loadSellerWorkspace} />
       )}
       {sheet === 'seller-reply' && (
         <SellerReplyV13 onClose={() => setSheet('seller')} />
@@ -3146,11 +3145,8 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       {sheet === 'stockevent' && stockEventProductId && (
         <StockEventLedgerV13 productId={stockEventProductId} onClose={() => setSheet('products')} />
       )}
-      {sheet === 'offers' && (
-        <OffersV13 onClose={() => setSheet('seller')} />
-      )}
       {sheet === 'company' && (
-        <CompanyV13 onClose={() => setSheet('seller')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} catalogue={sellerCatalogue} />
+        <CompanyV13 onClose={() => setSheet('seller')} onProducts={() => setSheet('products')} catalogue={sellerCatalogue} />
       )}
       {sheet === 'flow' && flowFacility && flowProduct && (
         <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => { setPendingResumeTxnId(null); setPendingResumeRequestId(null); setSheet('facility'); }} resumeTxnId={pendingResumeTxnId} resumeRequestId={pendingResumeRequestId} onEngagement={maybePromptPush} onGate={gateRequest} onRoute={(longitude: number, latitude: number, name: string) => { setRouteTarget({ longitude, latitude, name }); setSheet('none'); }} walletBalanceMinor={wallet?.balanceMinor ?? null} />
@@ -3202,15 +3198,12 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                   <>
                     <button className="menuitem" type="button" onClick={() => { setSheet('seller'); if (sessionUser) void loadSellerWorkspace(); }}><span className="mi"><Home size={15} /></span><span><b>Mon espace</b><small>demandes & transactions</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openNotifs()}><span className="mi"><Bell size={15} /></span><span><b>Notifications</b><small>réponses, vérifications, tours</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => setSheet('products')}><span className="mi"><PackageSearch size={15} /></span><span><b>Produits & stock</b><small>catalogue vendeur</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => setSheet('products')}><span className="mi"><PackageSearch size={15} /></span><span><b>Mes offres</b><small>catalogue & prix</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('seller-reply')}><span className="mi"><Inbox size={15} /></span><span><b>Demandes entrantes</b><small>à répondre</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('freshness')}><span className="mi"><Clock3 size={15} /></span><span><b>Fraîcheur de la dispo</b><small>4 h frais · 24 h expiré</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('verification')}><span className="mi"><ShieldCheck size={15} /></span><span><b>Vérification</b><small>où en est mon badge</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => setSheet('seller')}><span className="mi"><Inbox size={15} /></span><span><b>Transactions</b><small>conversation, paiement, remise</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => setSheet('offers')}><span className="mi"><PackageSearch size={15} /></span><span><b>Offres</b><small>prix & remise Omni</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => setSheet('company')}><span className="mi"><Building2 size={15} /></span><span><b>Compagnies</b><small>mes facilités</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Portefeuille</b><small>solde, Pro & recharges</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => setSheet('plans')}><span className="mi"><Building2 size={15} /></span><span><b>Plans</b><small>Gratuit vs Pro</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => setSheet('company')}><span className="mi"><Building2 size={15} /></span><span><b>Fiche de l’entité</b><small>nom, adresse, QR public</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Portefeuille & Plans</b><small>solde, Pro & recharges</small></span></button>
                   </>
                 )}
                 {role === 'admin' && (

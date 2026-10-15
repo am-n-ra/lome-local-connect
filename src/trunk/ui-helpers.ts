@@ -269,7 +269,6 @@ export function sheetDismissTarget(sheet: string): 'none' | 'menu' | 'facility' 
     case 'seller-qr':
     case 'products':
     case 'stockevent':
-    case 'offers':
     case 'company':
     case 'freshness':
     case 'verification':

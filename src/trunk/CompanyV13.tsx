@@ -1,17 +1,17 @@
-import { ArrowLeft, Package, Boxes } from 'lucide-react';
+import { ArrowLeft, Package } from 'lucide-react';
 import { Skeleton } from './Skeleton';
 import { OmniQr } from './OmniQr';
 import { entityQrPayload } from './entity-qr';
 import type { SellerCatalogueProduct, SellerCatalogueResult } from './types';
 
-type CompanyV13Props = { onClose: () => void; onProducts: () => void; onOffers: () => void; catalogue: SellerCatalogueResult | null };
+type CompanyV13Props = { onClose: () => void; onProducts: () => void; catalogue: SellerCatalogueResult | null };
 
-export function CompanyV13({ onClose, onProducts, onOffers, catalogue }: CompanyV13Props) {
+export function CompanyV13({ onClose, onProducts, catalogue }: CompanyV13Props) {
   if (!catalogue || !catalogue.authorized) return (
-    <section className="sheet h-mid" data-sheet="company" role="region" aria-label="Compagnies">
+    <section className="sheet h-mid" data-sheet="company" role="region" aria-label="Fiche de l’entité">
       <div className="handle" />
       <div className="sheet-head">
-        <div><div className="eyebrow">Compagnies</div><h1>Mes compagnies</h1></div>
+        <div><div className="eyebrow">Fiche de l’entité</div><h1>Mon entité</h1></div>
         <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={onClose} aria-label="Fermer"><ArrowLeft size={15} /></button>
       </div>
       <Skeleton variant="pitem" count={3} />
@@ -37,15 +37,15 @@ export function CompanyV13({ onClose, onProducts, onOffers, catalogue }: Company
     products.reduce((sum, product) => sum + product.stockLoueOmni, 0);
 
   return (
-    <section className="sheet h-mid" data-sheet="company" role="region" aria-label="Compagnies">
+    <section className="sheet h-mid" data-sheet="company" role="region" aria-label="Fiche de l’entité">
       <div className="handle" />
       <div className="sheet-head">
-        <div><div className="eyebrow">Compagnies</div><h1>Mes compagnies</h1></div>
+        <div><div className="eyebrow">Fiche de l’entité</div><h1>Mon entité</h1></div>
         <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight:  28 }} onClick={onClose} aria-label="Fermer"><ArrowLeft size={15} /></button>
       </div>
       <div className="cardbox">
         <div className="row" style={{ justifyContent: 'space-between' }}>
-          <div><b>Compagnie Omni</b><br /><span className="tiny muted">{catalogue.facilities.length} facilité{catalogue.facilities.length > 1 ? 's' : ''} · mis à jour à l'ouverture</span></div>
+          <div><b>Entité Omni</b><br /><span className="tiny muted">{catalogue.facilities.length} facilité{catalogue.facilities.length > 1 ? 's' : ''} · mis à jour à l'ouverture</span></div>
           <span className={`status ${catalogue.catalogReady ? 'ok' : 'dash'}`}>{catalogue.catalogReady ? 'Catalogue prêt' : 'Catalogue incomplet'}</span>
         </div>
       </div>
@@ -73,13 +73,12 @@ export function CompanyV13({ onClose, onProducts, onOffers, catalogue }: Company
               </div>
             )}
             <div className="btnrow" style={{ marginTop: 8 }}>
-              <button className="btn ghost sm" type="button" onClick={onProducts}><Package size={13} /> Offres & produits</button>
-              <button className="btn ghost sm" type="button" onClick={onOffers}><Boxes size={13} /> Dispo auto</button>
+              <button className="btn ghost sm" type="button" onClick={onProducts}><Package size={13} /> Mes offres</button>
             </div>
           </div>
         );
       })}
-      {byFacility.size === 0 && <p className="sub">Aucune compagnie enregistrée.</p>}
+      {byFacility.size === 0 && <p className="sub">Aucune entité enregistrée.</p>}
     </section>
   );
 }

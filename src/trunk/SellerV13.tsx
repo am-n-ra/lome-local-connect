@@ -16,7 +16,6 @@ const availabilityLabel = (state: string): string => SELLER_AVAILABILITY_LABELS[
 type SellerV13Props = {
   onClose: () => void;
   onProducts?: () => void;
-  onOffers?: () => void;
   onCompany?: () => void;
   onReply?: () => void;
   onRefresh?: () => void;
@@ -45,7 +44,7 @@ type SellerV13Props = {
 // canonique. Une seule verite, du catalogue jusqu'au libelle.
 const BONUS_LABEL = formatUsdSticker(SELLER_BONUS_USD_MINOR);
 
-export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, onRefresh, onScan, onMap, onClaim, onClaimExisting, onOpenTransaction, startInCreate = false, onConsumeCreateIntent, catalogue: propsCatalogue, queue: propsQueue = [], publicFacilities = [], ownedIds = [], onEngagement }: SellerV13Props) {
+export function SellerV13({ onClose, onProducts, onCompany, onReply, onRefresh, onScan, onMap, onClaim, onClaimExisting, onOpenTransaction, startInCreate = false, onConsumeCreateIntent, catalogue: propsCatalogue, queue: propsQueue = [], publicFacilities = [], ownedIds = [], onEngagement }: SellerV13Props) {
   const [error, setError] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(startInCreate);
   const [busy, setBusy] = useState(false);
@@ -1054,7 +1053,6 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
           </div>
           <div className="btnrow" style={{ marginTop: 5 }}>
             <button className="btn" type="button" onClick={onProducts}>{lang.catalogue}</button>
-            <button className="btn ghost" type="button" onClick={onOffers}>Offres</button>
           </div>
           {((propsCatalogue ?? catalogue)?.products?.length ?? 0) > 0 && (
             <p className="tiny" style={{ marginTop: 3, color: (propsCatalogue ?? catalogue)?.catalogReady ? 'var(--accent)' : 'var(--warn)' }}>

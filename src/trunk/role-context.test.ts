@@ -50,8 +50,8 @@ describe('surfaces contextuelles au rôle', () => {
     expect(APP).toMatch(/isOwnFacility && \(\s*<div className="cardbox"/);
   });
 
-  it('« Produits & stock » ouvre le CATALOGUE, pas le dashboard', () => {
-    const line = APP.split('\n').find((l) => l.includes('>Produits & stock</b>'));
+  it('« Mes offres » ouvre le CATALOGUE, pas le dashboard', () => {
+    const line = APP.split('\n').find((l) => l.includes('>Mes offres</b>'));
     expect(line).toBeTruthy();
     expect(line).toContain("setSheet('products')");
   });
