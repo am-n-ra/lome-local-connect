@@ -121,3 +121,38 @@ résolus (`BLOB_PUBLIC_*`, `OMNI_*`). **Falsifié** : réintroduire `BLOB_STORE_
 public n'expose pas `OMNI_STORE_ID` + `OMNI_WEBHOOK_PUBLIC_KEY` **au runtime de la fonction** — à
 confirmer par un nouvel appel `media-upload` (le `storeId` du `clientToken` doit cesser d'être
 `z631cN4vVZcC11cz`).
+
+### 6.3 Le flux présigné est **prouvé de bout en bout en prod** — et trois défauts réels l'ont bloqué
+
+Le résidu 6.2 est **fermé** : `GET …/media-upload` répond `{"mode":"presigned"}` en prod et le
+`delegationToken` porte bien `storeId = store_d6jnL2j6BCiPbbNt` (le store **public**), plus jamais
+le store privé. Le chemin complet a été exercé **en prod**, avec le vrai compte `demo@seller.omni` :
+upload présigné → objet écrit dans `d6jnl2j6bcipbbnt.public.blob.vercel-storage.com` → `POST
+…/media` **200** → objet **publiquement lisible** (`GET` 200 `image/png`). Un chemin **étranger** est
+toujours refusé (**400**, « do not belong to this offer ») : la borne de propriété tient.
+
+Trois défauts réels ont été trouvés **par la preuve**, aucun par relecture — chacun a son
+test de non-régression :
+
+1. **Un 500 opaque cachait la cause.** Une panne du fournisseur Blob (réseau, credentials,
+   protocole) remontait en `INTERNAL_RECOVERABLE` — le vendeur connecté voyait « service
+   temporairement indisponible » au lieu de la cause. `withHonestProviderError` mappe désormais ces
+   pannes sur `OfferMediaStorageError` (**409**, `EVIDENCE_STORAGE_UNAVAILABLE`) en **conservant le
+   message du fournisseur** ; les refus typés (auth/policy/request) passent inchangés.
+2. **`issueSignedToken` refuse les caractères glob.** Le chemin signé était `offers/{id}/*` →
+   *« pathname cannot contain glob characters »*. On signe désormais le **chemin concret** demandé
+   par le client (`offers/{id}/a.jpg`), déjà borné à l'offre par `authorize`. Test : le pathname
+   signé **ne contient pas `*`**.
+3. **`head` s'authentifiait contre le mauvais store.** En mode présigné, la re-vérification
+   retombait sur le token **privé** de base → *« Access denied »* sur l'objet public. La
+   vérification suit maintenant le **mode** : `storeId` (OIDC) en présigné, token public sinon.
+   Test : `head` reçoit `{ storeId }` et **jamais** `{ token }` en présigné.
+
+**Leçon** : le mode `presigned` était « livré » mais **inutilisable** ; il a fallu **piloter le vrai
+flux en prod** pour voir les trois murs. Un chemin d'écriture déclaré mais jamais exercé n'est pas
+une capacité — c'est une intention. Le diagnostic honnête (409 nommé) est ce qui a rendu le défaut
+**visible** : sans lui, le 500 opaque aurait été lu comme « panne passagère ».
+
+**Preuve finale** : **1212/1212** tests, `tsc` 0, 5 gardes vertes ; commits `8dfc9da` → `55a48a4`
+(déployés : `d670ced8` → `55a48a4`), prod vérifiée à chaque étape. La sonde a laissé
+`Café filtre local.media` à `[]` (état d'origine, vérifié) — aucune écriture laissée.
