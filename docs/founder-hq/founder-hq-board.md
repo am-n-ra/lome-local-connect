@@ -278,9 +278,9 @@ Le fondateur : *« tout le fond et la logique qui doit faire de omni omni n'est 
 
 ---
 
-## Trunk CLOSE 2026-10-07 — porte close par décision fondateur (porte courante = Heartwood, voir ci-dessous)
+## Trunk CLOSE 2026-10-07 — porte close par décision fondateur (porte courante = Branches, voir §Heartwood CLOSE · Branches OPEN)
 
-> Marker de contrôle : **Trunk CLOSE** (était **Trunk OPEN** 2026-10-02) · source de vérité : `docs/founder-hq/current-state.md` (Gate `TRUNK_CLOSED_HEARTWOOD_OPEN`, §Verdict Trunk).
+> Marker de contrôle : **Trunk CLOSE** (était **Trunk OPEN** 2026-10-02) · source de vérité : `docs/founder-hq/current-state.md` (§Verdict Trunk).
 
 | Area | Current truth | Authority / record | Gate or status | Owner | Next action | Capacity / risk |
 |---|---|---|---|---|---|---|
@@ -314,7 +314,7 @@ Le fondateur : *« tout le fond et la logique qui doit faire de omni omni n'est 
 
 | Area | Current truth | Authority / record | Gate or status | Owner | Next action | Capacity / risk |
 |---|---|---|---|---|---|---|
-| **Active gate (COURANT)** | **Trunk OPEN 2026-10-02** (était : **Root CLOSE `founder-confirmed` 2026-09-29**) — **Species V2 CLOSE `founder-confirmed` 2026-09-25** (fondateur : « **Validé** »), validation portant sur **`SP-1…SP-10`**. Mesure à la clôture : `check:species-t12` **26 rendues / 32, `NON MESURÉ = 0`, 0 non conforme** ; `check:maquette` 74 écrans ; **600/600 tests**. Volet contraintes (D-CON-1…5 + D-LOC-1…5) livré et falsifié. | `current-state.md` §Gate ; `omni-species-v2-decision-registry-2026-09-23.md` ; `omni-search-constraints-decisions-D-CON-2026-09-25.md` ; `omni-currency-localization-contract-2026-09-25.md` | **Species CLOSE · Root CLOSE `founder-confirmed` 2026-09-29** | Fondateur (validation donnée) · Nature Way (exécution) | **⏭️ ACTION COURANTE = décision fondateur sur la 1re caractéristique vivante** (§ci-dessous) | ⚠️ **RE-MESURÉ 2026-09-27** — les 4 blocages annoncés ci-dessous sont **PÉRIMÉS** (voir mesure) |
+| **Active gate (COURANT)** | **Branches OPEN 2026-10-07** (était : Trunk OPEN 2026-10-02, puis Heartwood OPEN, puis Heartwood CLOSE 2026-10-07) — **Trunk CLOSE `founder-confirmed` 2026-10-07** ; **Species V2 CLOSE `founder-confirmed` 2026-09-25** (fondateur : « **Validé** »), validation portant sur **`SP-1…SP-10`**. | `current-state.md` §Gate + §Branches OPEN ; `omni-species-v2-decision-registry-2026-09-23.md` | **Species CLOSE · Root CLOSE `founder-confirmed` 2026-09-29 · Trunk CLOSE 2026-10-07 · Heartwood CLOSE 2026-10-07 · Branches OPEN 2026-10-07** | Fondateur (sélection d'ordre) · Nature Way (exécution) | **⏭️ ACTION COURANTE = fondateur choisit la 1ʳᵉ branche** (§Heartwood CLOSE · Branches OPEN) | Terrain toujours EN DERNIER |
 | **Seed V2** | `omni-intent-brief-v2-2026-09-23.md` — 32 décisions **S-01…S-32**, `founder-confirmed`. Mot du fondateur : **« c'est ça »**. Supersede l'Intent Brief du 2026-09-02. | `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` | **CLOS** | Fondateur | Sert de référence unique à T-11/T-12 | Toute décision S-xx non couverte par une surface = travail Species |
 | **Species V2** | Maquette `docs/maquette/omni-species-v2-interactive.html` — **74 écrans**. `SP-1…SP-10` **livrés ET ACCEPTÉS**. **2026-09-25 : volet CONTRAINTES** — D-CON-1…5 + D-LOC-1…5 (devise par localisation) ; seuils réglables, fiche lisant la contrainte active, distance non dupliquée, 3 groupes explicites ; gardes falsifiés. | maquette V2 + registre + `omni-search-constraints-decisions-D-CON-2026-09-25.md` + `omni-currency-localization-contract-2026-09-25.md` | **CLOSE `founder-confirmed` 2026-09-25** | **Fondateur (donné)** | — (clos) | `T-12` **refait et clos** — audit par **rendu navigateur**. ⚠️ **Dénominateur corrigé 2026-09-25 (`COH-V2-18`)** : l'audit imprimait « 16/16 » avec un dénominateur **choisi par lui-même** (15 décisions sur 34). Désormais il **lit le Seed** et **classe chaque décision** → **27/27 conforme, 26 rendues, `NON MESURÉ = 0`**, exit ≠ 0 si un non-conforme survit. **1 écart réel corrigé** (`S-04`). Les 5 dernières `règle écrite` (`S-09`, `S-13`, `S-16`, `S-17`, `S-28`) sont **désormais mesurées au rendu** — 2 prédicats faux corrigés (`S-17` sur 3 surfaces ; `S-28` casse `innerText`). |
 | **Décisions V2** | `D-1a` fusion maquette+app (**appliqué**) ; `D-2a` **l'offre appartient à l'ENTITÉ** (**appliqué**). | Intent Brief V2 + registre de cohérence | `done` | Fondateur | — | — |
@@ -552,8 +552,9 @@ Only omni-v2-rebuild is touched. Never merge to main. "Merge" = "push prod branc
 
 **Ce qui est confirmé (à ne pas refaire) :** la séquence Seed → Species → Root **a bien été suivie**,
 et Seed V2 + Species V2 sont **clos `founder-confirmed`**. Continuer à invoquer « tout est à refaire
-depuis Species » détruirait les deux étapes les plus coûteuses, déjà payées. **La porte courante est
-Root, et elle est ouverte.**
+depuis Species » détruirait les deux étapes les plus coûteuses, déjà payées. **À cette date
+(2026-09-26), la porte courante était Root, et elle était ouverte** — voir §Heartwood CLOSE ·
+Branches OPEN pour la porte courante d'aujourd'hui (**Branches OPEN 2026-10-07**).
 
 **Mesure au HEAD — la liste des blocages Root était PÉRIMÉE dans les deux sens :**
 

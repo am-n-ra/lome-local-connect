@@ -15,22 +15,19 @@ Omni: a map-first, constraint-based search engine for local supply (Lomé field 
 - **Coherence/debt register (CURRENT):** `docs/nature-way/omni-v2-coherence-and-debt-2026-09-23.md`.
 - Method skills live in `.agents/skills/` (nature-way ecosystem). Always start via Nature Way Founder HQ; route product work to `/nature-way`.
 
-## ⚠️ CURRENT GATE — read this first (as of 2026-09-23, TURNED 2026-09-25, 2026-09-29 then 2026-10-07 — read current-state.md, never this header alone)
-**Seed reconciliation + Species reconciliation — RÉOUVERTE 2026-09-23** (par le fondateur).
-**Root CLOSE `founder-confirmed` 2026-09-29** — verdict fondateur (preuves : 664/664, 7 gardes, MCP-1 ALL PASS, MCP-2 32/32, MCP-3 T-07d, PRE-1 76/76). **Trunk CLOSE `founder-confirmed` 2026-10-07** — os du tronc complets (DS-1…DS-14, X1–X6, GLOBE-REG `43a3785`). **Heartwood CLOSE `founder-confirmed` 2026-10-07** — durcissement/fermeture livré : `S1`/`S1b` QR réel (scannable), `S3-a` téléphone déclaré, `S4` ambulants découvrables, `MAP-1/2`, `DOCK-DUP`, `HP-1…HP-5` (`S2` re-classé — FedaPay déjà prouvé). **Branches OPEN 2026-10-07** — phase 5 Nature Way, une fonctionnalité à la fois ; sélection des branches = décision fondateur ; **pas de nouvelles fondations** hors branche choisie. Ne rouvrir Root/Trunk/Heartwood que sur fait nouveau.
+## ⚠️ CURRENT GATE — read this first (TURNED 2026-09-25, 2026-09-29, 2026-10-07 — read current-state.md, never this header alone)
+**PORTE COURANTE = Branches OPEN** (2026-10-07, gate `HEARTWOOD_CLOSED_BRANCHES_OPEN`).
+Closures (never erased): **Species V2 CLOSE `founder-confirmed` 2026-09-25** · **Root CLOSE `founder-confirmed` 2026-09-29** · **Trunk CLOSE `founder-confirmed` 2026-10-07** · **Heartwood CLOSE `founder-confirmed` 2026-10-07**.
 > Source de vérité : `docs/founder-hq/current-state.md`.
 Founder: « on a assez tourne en rond… je pense qu'on a rate tout le process depuis Species » and
 « j'ai moi-même assez oublié tout ce que je veux qu'Omni fasse » → asked to **restart from Seed**.
 
 - **Seed V2: CLOS `founder-confirmed` 2026-09-23** — `docs/nature-way/omni-intent-brief-v2-2026-09-23.md`,
-  **34 décisions `S-01…S-34`**, founder: « c'est ça ». Supersedes the 2026-09-02 Intent Brief.
-- **Species V2: RÉOUVERTE** — maquette `docs/maquette/omni-species-v2-interactive.html` (72 écrans).
-  The 2026-09-23 screen audit was measured against the **OLD MV1 registry**, not the V2 Seed
-  (`COH-V2-18`) → it does **not** prove V2 conformance. Missing surfaces: **S-06** (échelle 0→4),
-  **S-11** (double niveau entité/offre), **S-13** (filtres carte), **S-32** (intégrité/réputation d'offre).
-- **Next:** `T-11` re-baseline plan on `S-01…S-34` → `T-12` Species V2 conformance audit → maquette to founder.
+  **32 décisions `S-01…S-32`**, founder: « c'est ça ». Supersedes the 2026-09-02 Intent Brief.
+- **Species V2: CLOSE `founder-confirmed` 2026-09-25** — maquette `docs/maquette/omni-species-v2-interactive.html` (**74 écrans**). `SP-1…SP-10` livrés ET acceptés ; audit de conformité au **rendu** (`check:species-t12`, 32 décisions, `NON MESURÉ = 0`).
+- **Branches OPEN (porte courante)** — Phase 5, **une fonctionnalité à la fois** (mini-seed → mini-species → contrat → UI+backend → validation → preuve → plan). Sélection = décision fondateur ; une branche sans rattachement `S-xx` ne démarre pas (H1).
 - **Décisions fondateur appliquées:** `D-1a` fusion maquette+app ; `D-2a` l'offre appartient à l'ENTITÉ.
-- **Do NOT** restart Root/Trunk/Branches/Canopy, and **do NOT push to prod**, while this gate is open.
+- **Push** vers `omni-v2-rebuild` **autorisé** après chaque tranche significative ; **push ≠ deploy** → vérifier hash prod === build local **et** l'entrée GitHub `deployments` (T-07d).
 - Historical V1 gates (G-02a–d, Gate 6「 Go with limits 」) are **superseded, not current**.
 
 ### Historical gate detail (V1, 2026-09-02 — superseded)

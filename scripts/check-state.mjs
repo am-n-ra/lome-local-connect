@@ -112,6 +112,17 @@ const heartwoodClosedStale = [
   ['docs/founder-hq/founder-hq-board.md', 'PORTE COURANTE = HEARTWOOD (ouverte', 'must not call Heartwood the current open gate after closure 2026-10-07'],
   ['docs/founder-hq/founder-hq-master-plan.md', 'PORTE COURANTE : HEARTWOOD (ouverte', 'must not call Heartwood the current open gate after closure 2026-10-07'],
   ['AGENTS.md', 'Heartwood OPEN 2026-10-07', 'must not present Heartwood as open — it closed 2026-10-07 (Branches open)'],
+  // 2026-10-07: the board carried a SECOND, contradictory "porte courante" inside the Species
+  // section, and a Trunk header that still pointed at Heartwood. Neither matched the phrasings
+  // above, so the guard passed while the founder read two current gates. Narrow, exact.
+  ['docs/founder-hq/founder-hq-board.md', '**Active gate (COURANT)** | **Trunk OPEN 2026-10-02**', 'must not re-declare Trunk OPEN inside the Species section — Branches is current'],
+  ['docs/founder-hq/founder-hq-board.md', 'porte courante = Heartwood, voir ci-dessous', 'Trunk header must point at Branches, not Heartwood'],
+  ['docs/founder-hq/founder-hq-board.md', 'Root, et elle est ouverte.', 'must not assert Root as the current open gate after Branches opened 2026-10-07'],
+  // 2026-10-07: the AGENTS.md header still said Species RÉOUVERTE, S-01…S-34 and "do NOT push
+  // to prod" — three stale claims a reader hits first. Each is an exact, falsifiable phrase.
+  ['AGENTS.md', 'Seed reconciliation + Species reconciliation — RÉOUVERTE', 'must not re-assert the closed Seed/Species reopen marker'],
+  ['AGENTS.md', 'Species V2: RÉOUVERTE', 'must not present Species as reopened — closed founder-confirmed 2026-09-25'],
+  ['AGENTS.md', 'do NOT push to prod', 'must not forbid push — Branches authorizes push after each tranche (T-07d)'],
 ];
 
 // A recommendation must not present a DELIVERED slice as still-to-do. This is the staleness
