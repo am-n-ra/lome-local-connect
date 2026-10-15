@@ -54,7 +54,7 @@ export function readNeonWebhookHeaders(headers: IncomingHttpHeaders): NeonWebhoo
 }
 
 const TIMESTAMP_TOLERANCE_MS = 5 * 60 * 1000;
-const DEFAULT_NEON_AUTH_JWKS_URL = 'https://ep-purple-fog-amwsyc3j.neonauth.c-5.us-east-1.aws.neon.tech/neondb/auth/.well-known/jwks.json';
+const DEFAULT_NEON_AUTH_JWKS_URL = 'https://ep-plain-butterfly-amn21o8h.neonauth.c-5.us-east-1.aws.neon.tech/neondb/auth/.well-known/jwks.json';
 
 /**
  * Vérifie la signature EXACTEMENT comme le helper officiel Neon

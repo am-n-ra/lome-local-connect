@@ -15,12 +15,20 @@ import type { ProductMediaItem } from '../trunk/types';
  * side: only the owning seller gets a token, the token is scoped to `offers/{productId}/`, and
  * every recorded URL is re-verified against the store before it is written to the row. Without
  * that re-verification a client could POST any URL to `/media` and have it rendered.
+ *
+ * A Vercel Blob store is ENTIRELY public or private, and the mode cannot change after creation.
+ * The private claim/visit evidence and the public offer visual therefore cannot share one store,
+ * so the visual reads its OWN token (`BLOB_PUBLIC_READ_WRITE_TOKEN`) and only falls back to the
+ * base token when no separate public store exists (a public-only deployment). Sharing the base
+ * token made every offer upload fail with "Cannot use public access on a private store".
  */
 
 const PRODUCT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const OFFER_MEDIA_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 const OFFER_MEDIA_MAX_BYTES = 5 * 1024 * 1024;
 const OFFER_MEDIA_MAX_ITEMS = 4;
+/** Vercel serves private-store blobs from a `*.private.blob.vercel-storage.com` host. */
+const PRIVATE_BLOB_URL = /^https?:\/\/[^/]*\.private\.blob\.vercel-storage\.com\//i;
 
 export class OfferMediaPolicyError extends Error {
   constructor(message: string) {
@@ -58,12 +66,18 @@ export class OfferMediaRequestError extends Error {
   }
 }
 
+/** The public store token, falling back to the base token for public-only deployments. */
+export function offerMediaBlobToken(): string {
+  const dedicated = (process.env.BLOB_PUBLIC_READ_WRITE_TOKEN ?? '').trim();
+  return dedicated || (process.env.BLOB_READ_WRITE_TOKEN ?? '').trim();
+}
+
 export function hasOfferMediaStorage(): boolean {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
+  return Boolean(offerMediaBlobToken());
 }
 
 function requiredBlobToken(): string {
-  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  const token = offerMediaBlobToken();
   if (!token) throw new OfferMediaStorageError('Offer visual storage is not configured; no upload token was issued.');
   return token;
 }
@@ -127,6 +141,10 @@ export async function handleOfferMediaUpload(input: { body: unknown; headers: In
  * Re-verifies every URL the client wants recorded, so `/media` can never store a foreign link.
  * `head` is the same primitive the private-evidence path uses; a missing object or a pathname
  * outside `offers/{productId}/` is refused rather than silently kept.
+ *
+ * A PRIVATE object is also refused: it exists and `head` succeeds, but its URL is not readable
+ * by a buyer (403), so recording it would let the integrity check "visuel" pass on an image the
+ * public fiche can never load. The visual must live in the public store.
  */
 export async function verifyOfferMediaObjects(productId: string, raw: unknown): Promise<ProductMediaItem[]> {
   const media = normalizeProductMedia(raw);
@@ -140,6 +158,9 @@ export async function verifyOfferMediaObjects(productId: string, raw: unknown): 
     try { metadata = await head(item.url, { token }); } catch { metadata = null; }
     if (!metadata || !metadata.pathname.startsWith(prefix) || metadata.pathname.slice(prefix.length).length < 1) {
       throw new OfferMediaPolicyError('One or more offer visuals do not belong to this offer.');
+    }
+    if (PRIVATE_BLOB_URL.test(metadata.url)) {
+      throw new OfferMediaPolicyError('Offer visuals must be stored in the public store, not a private one.');
     }
     if (!OFFER_MEDIA_CONTENT_TYPES.includes(metadata.contentType as (typeof OFFER_MEDIA_CONTENT_TYPES)[number])) {
       throw new OfferMediaPolicyError('Offer visuals must be a JPEG, PNG or WebP image.');

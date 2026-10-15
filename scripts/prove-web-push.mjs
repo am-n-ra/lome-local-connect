@@ -20,7 +20,7 @@ const EMAIL = process.env.PROBE_EMAIL || 'demo@buyer.omni';
 const PASSWORD = process.env.PROBE_PASSWORD || 'Omni@2026';
 // Public Neon Auth URL (same default as src/auth.ts). Only used to exchange the session
 // cookie for a JWT `Authorization: Bearer` token, exactly like the app does.
-const AUTH_URL = process.env.NEON_AUTH_URL || 'https://ep-purple-fog-amwsyc3j.neonauth.c-5.us-east-1.aws.neon.tech/neondb/auth';
+const AUTH_URL = process.env.NEON_AUTH_URL || 'https://ep-plain-butterfly-amn21o8h.neonauth.c-5.us-east-1.aws.neon.tech/neondb/auth';
 
 let failures = 0;
 const fail = (m) => { failures += 1; console.log(`FAIL ${m}`); };

@@ -1,8 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
-import { OfferMediaPolicyError, OfferMediaStorageError, OfferMediaAuthError, OfferMediaRequestError, hasOfferMediaStorage, handleOfferMediaUpload, offerMediaPrefix } from './offer-media-storage';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { OfferMediaPolicyError, OfferMediaStorageError, OfferMediaAuthError, OfferMediaRequestError, hasOfferMediaStorage, handleOfferMediaUpload, offerMediaPrefix, offerMediaBlobToken, verifyOfferMediaObjects } from './offer-media-storage';
 import { toApiErrorResponse } from './http';
 
 const productId = '33333333-3333-4333-8333-333333333333';
+
+const headMock = vi.fn();
+vi.mock('@vercel/blob', () => ({ head: (...args: unknown[]) => headMock(...args) }));
 
 describe('public offer visual boundary (S-20 / E-03)', () => {
   it('binds the upload prefix to the offer', () => {
@@ -50,5 +53,61 @@ describe('public offer visual boundary (S-20 / E-03)', () => {
     expect(auth.body.error?.code).toBe('AUTH_REQUIRED');
     expect(request.status).toBe(400);
     expect(storage.status).toBe(409);
+  });
+
+  describe('storage contract — the public visual never shares the private store (S-20 / D-2 B1)', () => {
+    beforeEach(() => {
+      headMock.mockReset();
+      vi.unstubAllEnvs();
+    });
+
+    it('prefers the dedicated public store token, falling back to the base token', () => {
+      // A private store refuses `access:'public'`, so the visual needs its OWN public token.
+      vi.stubEnv('BLOB_READ_WRITE_TOKEN', 'base-private');
+      vi.stubEnv('BLOB_PUBLIC_READ_WRITE_TOKEN', 'public-store');
+      expect(offerMediaBlobToken()).toBe('public-store');
+      vi.stubEnv('BLOB_PUBLIC_READ_WRITE_TOKEN', '');
+      expect(offerMediaBlobToken()).toBe('base-private');
+      vi.stubEnv('BLOB_READ_WRITE_TOKEN', '');
+      expect(hasOfferMediaStorage()).toBe(false);
+    });
+
+    it('records a public visual and returns the public URL', async () => {
+      vi.stubEnv('BLOB_PUBLIC_READ_WRITE_TOKEN', 'public-store');
+      headMock.mockResolvedValue({
+        url: `https://abc.public.blob.vercel-storage.com/offers/${productId}/v.png`,
+        pathname: `offers/${productId}/v.png`,
+        contentType: 'image/png',
+        size: 1234,
+      });
+      const media = await verifyOfferMediaObjects(productId, [{ url: `https://abc.public.blob.vercel-storage.com/offers/${productId}/v.png`, kind: 'image' }]);
+      expect(media).toEqual([{ url: `https://abc.public.blob.vercel-storage.com/offers/${productId}/v.png`, kind: 'image' }]);
+    });
+
+    it('refuses a PRIVATE object — it would pass "visuel" but never load for a buyer', async () => {
+      // The exact hole found live: a private object was accepted, so integrity passed on an
+      // image the public fiche can only 403 on.
+      vi.stubEnv('BLOB_PUBLIC_READ_WRITE_TOKEN', 'public-store');
+      headMock.mockResolvedValue({
+        url: `https://abc.private.blob.vercel-storage.com/offers/${productId}/v.png`,
+        pathname: `offers/${productId}/v.png`,
+        contentType: 'image/png',
+        size: 1234,
+      });
+      await expect(verifyOfferMediaObjects(productId, [{ url: `https://abc.private.blob.vercel-storage.com/offers/${productId}/v.png`, kind: 'image' }]))
+        .rejects.toBeInstanceOf(OfferMediaPolicyError);
+    });
+
+    it('still refuses a foreign path and a non-image', async () => {
+      vi.stubEnv('BLOB_PUBLIC_READ_WRITE_TOKEN', 'public-store');
+      headMock.mockResolvedValue({
+        url: 'https://abc.public.blob.vercel-storage.com/offers/other/x.png',
+        pathname: 'offers/other/x.png',
+        contentType: 'image/png',
+        size: 10,
+      });
+      await expect(verifyOfferMediaObjects(productId, [{ url: 'https://abc.public.blob.vercel-storage.com/offers/other/x.png', kind: 'image' }]))
+        .rejects.toBeInstanceOf(OfferMediaPolicyError);
+    });
   });
 });

@@ -1,7 +1,7 @@
 // src/server/auth-context.ts
 import { createRemoteJWKSet, jwtVerify } from "jose";
 var keySet = null;
-var DEFAULT_NEON_AUTH_JWKS_URL = "https://ep-purple-fog-amwsyc3j.neonauth.c-5.us-east-1.aws.neon.tech/neondb/auth/.well-known/jwks.json";
+var DEFAULT_NEON_AUTH_JWKS_URL = "https://ep-plain-butterfly-amn21o8h.neonauth.c-5.us-east-1.aws.neon.tech/neondb/auth/.well-known/jwks.json";
 function remoteKeys() {
   const url = (process.env.NEON_AUTH_JWKS_URL ?? DEFAULT_NEON_AUTH_JWKS_URL).trim();
   keySet ??= createRemoteJWKSet(new URL(url));
@@ -8352,7 +8352,7 @@ function readNeonWebhookHeaders(headers) {
   };
 }
 var TIMESTAMP_TOLERANCE_MS = 5 * 60 * 1e3;
-var DEFAULT_NEON_AUTH_JWKS_URL2 = "https://ep-purple-fog-amwsyc3j.neonauth.c-5.us-east-1.aws.neon.tech/neondb/auth/.well-known/jwks.json";
+var DEFAULT_NEON_AUTH_JWKS_URL2 = "https://ep-plain-butterfly-amn21o8h.neonauth.c-5.us-east-1.aws.neon.tech/neondb/auth/.well-known/jwks.json";
 async function verifyNeonWebhookSignature(input) {
   const { rawBody, headers } = input;
   if (!headers.signature || !headers.kid || !headers.timestamp) {
@@ -8449,6 +8449,7 @@ var PRODUCT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a
 var OFFER_MEDIA_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp"];
 var OFFER_MEDIA_MAX_BYTES = 5 * 1024 * 1024;
 var OFFER_MEDIA_MAX_ITEMS = 4;
+var PRIVATE_BLOB_URL = /^https?:\/\/[^/]*\.private\.blob\.vercel-storage\.com\//i;
 var OfferMediaPolicyError = class extends Error {
   constructor(message) {
     super(message);
@@ -8473,11 +8474,15 @@ var OfferMediaRequestError = class extends Error {
     this.name = "OfferMediaRequestError";
   }
 };
+function offerMediaBlobToken() {
+  const dedicated = (process.env.BLOB_PUBLIC_READ_WRITE_TOKEN ?? "").trim();
+  return dedicated || (process.env.BLOB_READ_WRITE_TOKEN ?? "").trim();
+}
 function hasOfferMediaStorage() {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
+  return Boolean(offerMediaBlobToken());
 }
 function requiredBlobToken2() {
-  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  const token = offerMediaBlobToken();
   if (!token) throw new OfferMediaStorageError("Offer visual storage is not configured; no upload token was issued.");
   return token;
 }
@@ -8550,6 +8555,9 @@ async function verifyOfferMediaObjects(productId, raw) {
     }
     if (!metadata || !metadata.pathname.startsWith(prefix) || metadata.pathname.slice(prefix.length).length < 1) {
       throw new OfferMediaPolicyError("One or more offer visuals do not belong to this offer.");
+    }
+    if (PRIVATE_BLOB_URL.test(metadata.url)) {
+      throw new OfferMediaPolicyError("Offer visuals must be stored in the public store, not a private one.");
     }
     if (!OFFER_MEDIA_CONTENT_TYPES.includes(metadata.contentType)) {
       throw new OfferMediaPolicyError("Offer visuals must be a JPEG, PNG or WebP image.");

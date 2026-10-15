@@ -1,4 +1,4 @@
-import { upload as uploadPrivateBlob } from '@vercel/blob/client';
+import { upload as uploadBlobClient } from '@vercel/blob/client';
 import { raceWithTimeout } from './request-timeout';
 import type { AccountCapabilitiesResult, AdCampaignCreateResult, AdCampaignListResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, ClaimByOsmRefInput, ClaimByOsmRefResult, CreateSellerFacilityResult, CreateTeamResult, FacilityOperationalState, FacilityType, MyTeamInvite, RoleManagementAccount, RoleManagementResult, TeamInviteResult, TeamListResult, TeamMemberResult, TeamInviteAcceptResult, FacilityZoneAssignment, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, CancelAvailabilityRequestResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, PublicEntity, PublicEntityDetail, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PublicStats, RoutingResult, PurchaseIntentResult, QrTokenIssueResult, QrRevocationResult, QrVerificationResult, DemandSignalsResult, OfferReportMotif, OfferReportCreateResult, OfferReportListResult, OfferReportOutcome, OfferReportDecisionResult, AcquisitionObjectiveListResult, AcquisitionObjectiveCreateResult, AcquisitionObjectiveState, FieldVisitSubjectType, FieldVisitCreateResult, FieldVisitListResult, FieldVisitClaimResult, FieldVisitState, VisitReportSubmitResult, OperatorEntitySideResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, SellerVerification, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind, SellerSlotStandingResult, FacilitySlotPurchaseResult } from './types';
 
@@ -574,7 +574,7 @@ export async function setSellerProductMedia(input: { token: string; productId: s
 /** S-20 / E-03 — uploads one public offer visual, then records the verified reference. */
 export async function uploadSellerProductMedia(input: { token: string; productId: string; file: File; onProgress?: (percentage: number) => void }): Promise<ApiResult<{ productId: string; media: import('./types').ProductMediaItem[] }>> {
   const safeName = input.file.name.normalize('NFKC').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120) || 'visual';
-  const blob = await uploadPrivateBlob(`offers/${input.productId}/${safeName}`, input.file, {
+  const blob = await uploadBlobClient(`offers/${input.productId}/${safeName}`, input.file, {
     access: 'public',
     contentType: input.file.type,
     clientPayload: JSON.stringify({ productId: input.productId }),
@@ -871,7 +871,7 @@ export async function getClaimRequest(input: { requestId: string; token: string 
 export async function uploadFacilityEvidence(input: { requestId: string; evidenceKind: EvidenceKind; file: File; token: string; onProgress?: (percentage: number) => void }): Promise<ClaimEvidenceItem> {
   const safeName = input.file.name.normalize('NFKC').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120) || 'evidence';
   const pathname = `claims/${input.requestId}/${input.evidenceKind}/${safeName}`;
-  const blob = await uploadPrivateBlob(pathname, input.file, {
+  const blob = await uploadBlobClient(pathname, input.file, {
     access: 'private',
     contentType: input.file.type,
     multipart: input.file.size > 4 * 1024 * 1024,
@@ -1024,7 +1024,7 @@ export async function reprogramVisit(input: { visitId: string; reason: string; t
 export async function uploadVisitEvidence(input: { visitId: string; file: File; token: string; onProgress?: (percentage: number) => void }): Promise<{ objectKey: string }> {
   const safeName = input.file.name.normalize('NFKC').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120) || 'evidence';
   const pathname = `visits/${input.visitId}/photo/${safeName}`;
-  const blob = await uploadPrivateBlob(pathname, input.file, {
+  const blob = await uploadBlobClient(pathname, input.file, {
     access: 'private',
     contentType: input.file.type,
     multipart: input.file.size > 4 * 1024 * 1024,
