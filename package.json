@@ -47,7 +47,8 @@
     "proof:web-push": "node scripts/prove-web-push.mjs",
     "proof:map-transform-heal": "node scripts/prove-map-transform-heal.mjs",
     "proof:error-boundary": "node scripts/prove-error-boundary.mjs",
-    "proof:branches-offer-visual": "node scripts/prove-branches-offer-visual.mjs"
+    "proof:branches-offer-visual": "node scripts/prove-branches-offer-visual.mjs",
+    "proof:branches-seller-menu": "node scripts/prove-branches-seller-menu.mjs"
   },
   "dependencies": {
     "@neondatabase/auth": "^0.5.0-beta",
