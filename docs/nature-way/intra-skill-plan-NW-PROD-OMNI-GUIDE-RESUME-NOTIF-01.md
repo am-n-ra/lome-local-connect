@@ -40,7 +40,7 @@
 | 7 | `NR-5` intention → chat ouvert | acheteur **et** vendeur atteignent la **même** Room au moment de l'intention | preuve navigateur 2 rôles + garde | `planned` | décision : Room vs chat du flux |
 | 8 | `NR-6` scan QR → ouvre la transaction | le scanner ouvre la Room de la transaction scannée | preuve navigateur + garde | `planned` | le QR doit rester un simple verrou |
 | 9 | `NR-8` logo Omni in-app | le centre de notifications porte le logo | garde de rendu | `planned` | — |
-| 10 | `NR-9` réponse auto (capacité **neuve**) | conditions C1–C10 tenues et prouvées | contrat + migration + preuve | `blocked` | **décisions fondateur §5** (partielle ? négociable ? délai ?) |
+| 10 | `NR-9` réponse auto (capacité **modélisée, jamais construite**) | conditions C1–C10 tenues et prouvées (Species §95/§113, Root §6.3) | contrat + migration (`actor_kind`) + preuve | `blocked` | **1 seule décision fondateur** : auto sur offre `price_kind='negociable'` (le modèle tranche le reste) |
 
 ## Dependency-aware task tree
 

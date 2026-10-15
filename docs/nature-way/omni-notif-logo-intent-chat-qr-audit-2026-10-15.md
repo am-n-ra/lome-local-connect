@@ -61,7 +61,7 @@ La maquette porte **exactement** ce que le fondateur décrit, et l'app ne l'a pa
 | `NR-7` | « **(source : auto)** » en dur pour une réponse **humaine** | **mensonge affiché** | `BuyerFlowV13:410,426` | Contredit la règle centrale : on ne prétend pas une dispo auto |
 | `NR-8` | Le centre de notifications **in-app n'a pas de logo** | visuel | `NotificationCenterV13` : aucune image | Demande fondateur 1, moitié in-app |
 
-## 4. Le piège à ne pas manquer — « réponse auto » ≠ ce que le code fait
+## 4. Le piège — « réponse auto » ≠ ce que le code fait
 
 **Mesure :** `v2_reconcile_auto_availability()` (migration `068`) écrit **`availability_state`** de
 l'**offre** (`en_stock`/`a_valider`) depuis `greatest(allocated − reserved, 0)`. Elle **n'écrit jamais
@@ -69,41 +69,99 @@ l'**offre** (`en_stock`/`a_valider`) depuis `greatest(allocated − reserved, 0)
 `respondAvailability`, chemin **vendeur**). La colonne `auto_availability` est **`false` pour les 16
 offres** du canonique (preuve X2).
 
-**Conséquence :** le mot « auto » recouvre **deux choses différentes** :
+**Conséquence :** le mot « auto » recouvre **deux choses différentes**, et **le modèle les distinguait déjà** :
+
 1. **Disponibilité auto du badge** (TRUNK-X2, existe) — *l'offre dit si elle a du stock*, sans vendeur.
-2. **Réponse auto à une demande** (n'existe pas) — *le système répond à la place du vendeur*.
+2. **Réponse auto à une demande** (n'existe pas) — *le système répond à la place du vendeur*, au nom de
+   l'entité, **avec un acteur `automation` traçable** (Root §6.3).
 
-L'app **affiche le n°1 comme s'il s'agissait du n°2**. C'est exactement la dette que `S-02` nomme, et
-elle est **déguisée en vocabulaire** — pas supprimée.
+L'app **affiche le n°1 comme s'il s'agissait du n°2**. Ce n'est pas un mot vague : **c'est un acteur
+modélisé dans Root, jamais construit, et remplacé à l'écran par une chaîne en dur.**
 
-## 5. Réponse à la question fondateur — conditions d'accès du vendeur à la « réponse auto »
+## 5. ⚠️ CORRECTION — le modèle AVAIT spécifié la réponse automatique
 
-Le modèle Seed dit « réponse vendeur, **ou** auto depuis le stock alloué, dans une fenêtre de
-fraîcheur ». **Il ne définit pas les conditions d'éligibilité.** Voici les **conditions minimales,
-dérivées de décisions déjà verrouillées** (aucune invention) :
+> **Le fondateur a raison, et mon §5 initial était faux.** J'avais présenté des « conditions minimales
+> dérivées » et posé **3 décisions**, comme si le modèle était muet. **Il ne l'était pas.** Species
+> (2026-08-27) puis Root (`v2-roots.md`) avaient modélisé la **réponse automatique comme un ACTEUR**.
+> J'ai lu le *résumé* du Seed (« réponse vendeur, ou auto depuis le stock alloué ») au lieu de lire les
+> **artefacts d'autorité**. C'est la faute de méthode que le fondateur vient de nommer.
 
-| # | Condition | Source (déjà décidée) | Pourquoi elle est nécessaire |
-|---|---|---|---|
-| C1 | **Entitlement `facility_pro` vivant** (`state='active'` **et** `ends_at > now()`, lieu **ou** entité) | `D-04` + `R-4b` + contrat X2 §6 | L'auto est une capacité **Pro** ; juger sur la colonne `commercial_plan` est un bug déjà corrigé (`R-4b`) |
-| C2 | **Offre `published`** | `RH-02` + X2 §1 | Une offre non publiée n'a pas de demande à servir |
-| C3 | **`auto_availability = true`** sur l'offre (opt-in explicite du vendeur) | `068` colonne + contrat X2 | Le vendeur **choisit** de déléguer ; l'auto ne s'active pas toute seule |
-| C4 | **Stock disponible ≥ quantité demandée** : `greatest(allocated − reserved, 0) ≥ requested` | `FF-8` (même vérité que `respondAvailability`) | Sinon l'auto **mentirait** sur une quantité qu'elle ne peut pas servir — exactement le refus de stock de `NR-3` |
-| C5 | **Dans la fenêtre de fraîcheur** (`availability_expires_at > now()`, 4 h frais / 24 h expiré) | `D-03` + X2 §5 | Le Seed lie l'auto à la fenêtre ; hors fenêtre la dispo n'est plus une vérité |
-| C6 | **`availability_state` ∈ (`en_stock`, `verifie`)** — jamais `bientot` (manuel), jamais `verifie` **écrit** par l'auto | X2 §2/§3 | `bientot` est un état **humain** qui ne se déduit pas du stock ; `verifie` est un palier de **confiance** (S-06) |
-| C7 | **Aucune réponse déjà écrite** pour cette demande/ce lieu (idempotence) | `NR-3` (`on conflict`) | Un rejeu ne doit pas créer une 2ᵉ réponse ni re-notifier |
-| C8 | **Le prix auto est le prix affiché**, jamais un prix négocié | `R-H` (`offer-price.ts`) | L'auto ne **négocie** pas : négocier est un acte **humain** ; sur `price_kind='negociable'`, l'auto répond au prix affiché **sans** absorber une proposition |
-| C9 | **Traçabilité** : la réponse auto est marquée `source='auto'` (jamais confondue avec un vendeur) | `S-06` (honnêteté) + `R-F` (intégrité nomme ses faits) | L'acheteur doit pouvoir **distinguer** une réponse auto d'une réponse humaine |
-| C10 | **Notification au vendeur** qu'une réponse auto a été émise en son nom | `S-16`/`S-21` (notification) + `S-27` | Un vendeur doit **savoir** ce que le système a répondu pour lui — sinon c'est un mandat silencieux |
+### 5.1 Ce que le modèle dit — textes exacts
 
-**Ce que cela implique (et que je ne tranche pas seul) :**
-- **C4 est le point dur** : une auto-réponse **partielle** (stock < demande) serait-elle permise ? Le
-  modèle `respondAvailability` accepte `partial` — mais une auto qui dit « partiel » **à la place** du
-  vendeur engage sa parole. **Décision fondateur requise.**
-- **C8 sur offre négociable** : l'auto répond-elle **au prix affiché** (refus de négocier) ou
-  **s'abstient-elle** (laisse le vendeur négocier) ? **Décision fondateur requise.**
-- **Le délai** : l'auto répond-elle **immédiatement** à la création de la demande, ou après un
-  **délai de courtoisie** (ex. 15 min) laissant au vendeur la main ? `S-02` ne le dit pas.
-  **Décision fondateur requise.**
+| Source | Texte | Ce que ça tranche |
+|---|---|---|
+| **Species blueprint** §95 | « Le Seller Pro dispose d'un réglage explicite **« Répondre automatiquement depuis le stock Omni »**, avec quantité allouée, quantité disponible, dernière mise à jour, fraîcheur et bouton désactiver » | L'auto-réponse est un **réglage vendeur**, pas une déduction silencieuse |
+| **Species blueprint** §113 | « La réponse automatique Pro ne doit pas afficher seulement « disponible ». Elle affiche la **quantité Omni, le prix, la réduction, l'âge de la dernière observation et un niveau de confiance**. Une donnée fraîche peut répondre **immédiatement** ; une donnée ancienne affiche « **vérification requise** » et déclenche le Seller ; une **quantité insuffisante est exclue** des résultats compatibles avec la recherche. La transaction **revalide toujours la quantité**, même après une réponse automatique » | Répond à mes questions 1 et 3 |
+| **Species buyer flow** « Disponibilité hybride » | « Une donnée fraîche peut produire une réponse automatique et doit afficher l'âge exact de l'observation. Une donnée ancienne affiche un état de confiance inférieur et sollicite une vérification manuelle Seller. **Une réponse automatique ne transforme jamais une donnée périmée en vérité** » | L'auto est **liée à la fraîcheur** |
+| **Species prompt pack** | « Une réponse automatique **n'est visible que lorsque le stock Omni est frais** » | Idem |
+| **Root** §4 (faits autoritatifs) | « Current availability = **Seller action or explicitly bounded approved automation**, with timestamp » | L'automation est un **acteur autorisé**, borné |
+| **Root** §6.3 | `availability_responses` : « request, **seller/automation actor**, status, quantity, price/offer snapshot, freshness, correction metadata and audit linkage » | L'acteur auto est **modélisé dans la table** |
+| **Root** §7 (opérations) | `respondAvailability(requestId)` → « Required authority: **Authorized seller or approved automation** » | L'auto passe par **la même opération** |
+| **v1 mockup** SCREEN 34 | « La spécification prévoit déjà cette **déduction sur transaction complétée lorsqu'une auto-réponse a été utilisée** » | L'auto consomme le **stock alloué** |
+| **Maquette V2** `seller-automation` | « La disponibilité automatique **répond au nom de l'entité**, jamais l'acheteur à sa place » | Le mot « répond » est **littéral** : c'est une réponse |
+| **Maquette V2** `fraicheur` | « Le badge vieillit : mis à jour par le vendeur (**ou automatiquement, entité Pro**) » | Les deux voies coexistent |
+
+### 5.2 Les 3 questions que j'avais posées — le modèle y répond
+
+| Ma question | Réponse du modèle | Reste ouverte ? |
+|---|---|---|
+| **Auto partielle ?** | **NON** — « une quantité insuffisante est **exclue** des résultats compatibles avec la recherche ». L'auto répond quand le stock **suffit** ; sinon elle ne répond pas. | **TRANCHÉ** — pas de réponse partielle automatique |
+| **Délai de courtoisie ?** | **NON** — « Une donnée fraîche peut répondre **immédiatement** ». Le modèle n'a aucun délai. | **TRANCHÉ** — réponse immédiate |
+| **Offre négociable ?** | **Le modèle Species n'a jamais traité la négociation** (0 occurrence de « négoci » dans le blueprint, le contrat buyer, `v2-roots.md`, le lifecycle). `price_kind` est arrivé **plus tard** (`R-H`, Root). L'auto Species cite « le prix » et « la réduction », pas un prix négocié. | **VRAIMENT OUVERTE** — intersection **Root**, pas un oubli de Species |
+
+### 5.3 Le vrai défaut de racine — le schéma ne peut PAS distinguer auto et humain
+
+**Root disait** `availability_responses` : « seller/**automation actor** ». **Mesure du schéma :**
+
+```
+v2_availability_responses (
+  responder_account_id uuid references v2_accounts(id) on delete set null,   -- nullable
+  ... aucune colonne actor_kind / source_kind
+)
+```
+
+`grep "actor_kind\|'automation'" db/migrations/*.sql` → **seule occurrence : le commentaire de `068`**.
+`grep "responder_account_id is null" src/ db/` → **vide** : le `NULL` n'est **jamais** interprété.
+
+**Conséquence, et c'est l'explication du mensonge `NR-7` :** le schéma **ne peut pas** dire si une
+réponse vient d'un vendeur ou de l'automation. L'app a donc **inventé** la marque « (source : auto) »
+en dur — elle ne pouvait pas la **lire**. **Un modèle Root non implémenté force l'interface à mentir.**
+
+### 5.4 Ce que TRUNK-X2 a construit — et ce qu'il a laissé
+
+Le contrat X2 dit explicitement : « Ce qui est automatique : offre transactable → `en_stock` … Un seul
+état dérive du stock : `en_stock` ». **X2 a construit le BADGE** (l'état de l'**offre**).
+
+Le modèle Species demandait **deux choses distinctes** — et la maquette porte **les deux** :
+1. **Disponibilité automatique** = l'**état/badge** de l'offre → **construit par X2** ✔
+2. **« Répondre automatiquement depuis le stock Omni »** = produire une **`availability_response`** au
+   nom de l'entité → **jamais construit** ✘
+
+**X2 a donc implémenté une partie du modèle Species, pas une erreur.** Le défaut est que l'app
+**présente la partie 1 comme si c'était la partie 2** (`NR-7`), et que le schéma ne permet pas de
+distinguer les deux (§5.3).
+
+### 5.5 Conditions d'éligibilité — reformulées depuis le modèle (pas inventées)
+
+Le modèle ne nomme pas de liste, mais **chaque condition est adossée à un texte** :
+
+| # | Condition | Texte d'autorité |
+|---|---|---|
+| C1 | **Entitlement Pro vivant** (lieu ou entité) | Species blueprint §95 « Seller **Pro** dispose d'un réglage » ; lifecycle §7 « sous réserve d'une **entitlement active** » ; X2 §6 |
+| C2 | **Réglage explicite activé** (« Répondre automatiquement depuis le stock Omni ») | Species blueprint §95 |
+| C3 | **Stock Omni frais** (fenêtre D-03 : 4 h frais / 24 h expiré) | Species buyer flow « Une réponse automatique **n'est visible que lorsque le stock Omni est frais** » |
+| C4 | **Quantité suffisante** — sinon **exclue**, jamais « partielle » | Species blueprint §113 |
+| C5 | **Ne transforme jamais une donnée périmée en vérité** → données anciennes ⇒ « vérification requise » ⇒ **humain** | Species buyer flow + blueprint §113 |
+| C6 | **Affiche** quantité Omni, prix, réduction, **âge de l'observation**, **niveau de confiance** | Species blueprint §113 |
+| C7 | **La transaction revalide la quantité** (et le Buyer **ne paie pas** un nouveau crédit pour cette revalidation) | Species blueprint §113/§115 |
+| C8 | **Déduit le stock alloué** à la transaction complétée | v1 mockup SCREEN 34 |
+| C9 | **Trace l'acteur `automation`** (distinct d'un vendeur) | Root §6.3 « seller/**automation actor** » — **à construire** |
+| C10 | **Répond au nom de l'entité, jamais à la place de l'acheteur** | Maquette V2 `seller-automation` |
+
+**Ce qui reste à trancher (une seule vraie question, Root-era) :** sur une offre
+`price_kind='negociable'`, l'auto répond-elle **au prix affiché** (donc refuse de négocier) ou
+**s'abstient-elle** pour laisser le vendeur négocier ? Le modèle Species n'a pas connu la négociation ;
+`R-H` l'a ajoutée après. **Intersection à trancher.**
 
 ## 6. Ce qui n'est PAS un défaut (vérifié, pour ne pas « corriger » l'inverse)
 
@@ -122,17 +180,34 @@ dérivées de décisions déjà verrouillées** (aucune invention) :
 
 | Ordre | Tranche | Pourquoi cet ordre |
 |---|---|---|
-| 1 | `NR-7` (retirer « source : auto ») | **Mensonge affiché** — coût minimal, honnêteté immédiate, aucune dépendance |
+| 1 | `NR-7` (retirer « source : auto ») | **Mensonge affiché** — coût minimal, honnêteté immédiate, aucune dépendance. **Ne PAS remplacer par une autre marque** tant que `NR-9` n'existe pas : le schéma ne peut pas distinguer (§5.3) |
 | 2 | `NR-4` (notifier le vendeur à l'intention) | **Racine** : sans l'événement, le vendeur ne sait pas ; débloque `NR-5` et `NR-6` |
 | 3 | `NR-5` (ouvrir le chat à l'intention, acheteur **et** vendeur) | S-27 ; dépend de `NR-4` pour le côté vendeur |
 | 4 | `NR-6` (le scan QR ouvre la transaction) | S-22/S-23/S-24 ; dépend de `NR-5` (une seule surface de chat) |
 | 5 | `NR-8` (logo in-app) | Visuel, indépendant |
-| 6 | `NR-9` (réponse auto) | **Bloqué** sur les 3 décisions du §5 — c'est une capacité **neuve** (fondation), interdite sur Branches sans décision |
+| 6 | `NR-9` (réponse auto) | **Capacité modélisée mais jamais construite** (Species §95/§113 + Root §6.3). Le modèle tranche **2 des 3** questions (§5.2) ; il reste **l'intersection `price_kind='negociable'`** et **la colonne `actor_kind`** à ajouter (§5.3). Reste une **fondation** : à décider explicitement |
 
 ## 8. Décisions fondateur demandées
 
-1. **Réponse auto** — les 3 points du §5 (partielle permise ? offre négociable ? délai de courtoisie ?).
-2. **Ordre** — confirmer `NR-7 → NR-4 → NR-5 → NR-6 → NR-8`, `NR-9` après décision.
+1. **Réponse auto (`NR-9`)** — **le modèle répond déjà** : pas de partielle (§5.2), pas de délai
+   (§5.2), acteur `automation` à tracer (§5.3). **Reste UNE question** : sur une offre
+   `price_kind='negociable'`, l'auto répond-elle **au prix affiché** (refuse de négocier) ou
+   **s'abstient-elle** ?
+2. **Ordre** — confirmer `NR-7 → NR-4 → NR-5 → NR-6 → NR-8`, puis `NR-9` (fondation).
 3. **Chat à l'intention** — ouvrir la **Room dédiée** (recommandé, une seule surface, fil complet)
    ou garder le chat **dans le flux** et le compléter ? La maquette dit `txn-track` + bouton
    « Ouvrir la Room » — donc **deux temps**, pas deux implémentations.
+
+## 9. Leçon de méthode (à ne pas réapprendre)
+
+**J'ai lu le résumé du Seed au lieu des artefacts d'autorité.** Le Seed dit en une ligne « réponse
+vendeur, ou auto depuis le stock alloué » — **un résumé**. Les **artefacts** qui font autorité
+(Species blueprint §95/§113, contrat buyer Species, Root `v2-roots.md` §4/§6.3/§7, maquette V2
+`seller-automation`) disaient **beaucoup plus** : un **réglage vendeur explicite**, une **règle de
+fraîcheur**, un **acteur `automation` dans la table**, et jusqu'à la **déduction sur transaction**.
+
+**Règle : quand une décision produit est en cause, lire la chaîne d'autorité complète
+(Seed → Species → Root → maquette), pas le seul Intent Brief.** Le brief **résume** ; les artefacts
+**spécifient**. Conclure « le modèle est muet » depuis un résumé m'a fait poser **3 questions déjà
+tranchées** — le fondateur a dû me corriger. C'est la même classe que `T-12`/`SP-1` : *mesurer au
+mauvais endroit et déclarer absent ce qui est écrit ailleurs.*
