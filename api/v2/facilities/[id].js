@@ -8443,8 +8443,8 @@ function routeNeonWebhookEvent(event) {
 }
 
 // src/server/offer-media-storage.ts
-import { head as head2 } from "@vercel/blob";
-import { handleUpload as handleUpload2 } from "@vercel/blob/client";
+import { head as head2, issueSignedToken } from "@vercel/blob";
+import { handleUpload as handleUpload2, handleUploadPresigned } from "@vercel/blob/client";
 var PRODUCT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 var OFFER_MEDIA_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp"];
 var OFFER_MEDIA_MAX_BYTES = 5 * 1024 * 1024;
@@ -8475,15 +8475,32 @@ var OfferMediaRequestError = class extends Error {
   }
 };
 var PUBLIC_BLOB_TOKEN_ENV_VARS = ["BLOB_PUBLIC_READ_WRITE_TOKEN", "OMNI_READ_WRITE_TOKEN", "OMNI_WEB_READ_WRITE_TOKEN"];
-function offerMediaBlobToken() {
-  for (const name of PUBLIC_BLOB_TOKEN_ENV_VARS) {
+var PUBLIC_BLOB_STORE_ID_ENV_VARS = ["BLOB_PUBLIC_STORE_ID", "OMNI_STORE_ID", "OMNI_WEB_STORE_ID"];
+var PUBLIC_BLOB_WEBHOOK_KEY_ENV_VARS = ["BLOB_PUBLIC_WEBHOOK_PUBLIC_KEY", "OMNI_WEBHOOK_PUBLIC_KEY", "OMNI_WEB_WEBHOOK_PUBLIC_KEY"];
+function firstEnv(names) {
+  for (const name of names) {
     const value = (process.env[name] ?? "").trim();
     if (value) return value;
   }
-  return (process.env.BLOB_READ_WRITE_TOKEN ?? "").trim();
+  return "";
+}
+function offerMediaBlobToken() {
+  return firstEnv(PUBLIC_BLOB_TOKEN_ENV_VARS) || (process.env.BLOB_READ_WRITE_TOKEN ?? "").trim();
+}
+function offerMediaStoreId() {
+  return firstEnv(PUBLIC_BLOB_STORE_ID_ENV_VARS);
+}
+function offerMediaWebhookKey() {
+  return firstEnv(PUBLIC_BLOB_WEBHOOK_KEY_ENV_VARS);
+}
+function offerMediaUploadMode() {
+  if (firstEnv(PUBLIC_BLOB_TOKEN_ENV_VARS)) return "token";
+  if (offerMediaStoreId() && offerMediaWebhookKey()) return "presigned";
+  if ((process.env.BLOB_READ_WRITE_TOKEN ?? "").trim()) return "token";
+  return "none";
 }
 function hasOfferMediaStorage() {
-  return Boolean(offerMediaBlobToken());
+  return offerMediaUploadMode() !== "none";
 }
 function requiredBlobToken2() {
   const token = offerMediaBlobToken();
@@ -8505,26 +8522,62 @@ function requestFromHeaders2(url, headers, body) {
 async function handleOfferMediaUpload(input) {
   if (!hasOfferMediaStorage()) throw new OfferMediaStorageError("Offer visual storage is not configured; no upload token was issued.");
   const prefix = offerMediaPrefix(input.productId);
-  const token = requiredBlobToken2();
   const body = input.body;
-  const isGenerate = body?.type === "blob.generate-client-token";
+  const isGenerate = body?.type === "blob.generate-client-token" || body?.type === "blob.generate-presigned-url";
   const isCompleted = body?.type === "blob.upload-completed";
   if (!body || typeof body !== "object" || !isGenerate && !isCompleted) {
     throw new OfferMediaRequestError("The upload request is not a valid Blob client-token request.");
   }
   const webRequest = requestFromHeaders2(input.url, input.headers, input.body);
+  const authorize = async (pathname) => {
+    const authUserId = await getAuthUserId(input.headers);
+    if (!authUserId) throw new OfferMediaAuthError("Sign in as an authorized seller before uploading an offer visual.");
+    const filePart = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : "";
+    if (!filePart || filePart.includes("/") || filePart.includes("..") || filePart.includes("\\") || /\s/.test(filePart)) throw new OfferMediaPolicyError("The upload path is not bound to this offer.");
+    const repository = createTrunkRepository();
+    const authorized = await repository.canManageSellerProduct({ authUserId, productId: input.productId });
+    if (!authorized) throw new OfferMediaPolicyError("Only the owner of the offer may attach a visual.");
+  };
+  const onUploadCompleted = async ({ blob, tokenPayload }) => {
+    let payload;
+    try {
+      payload = JSON.parse(tokenPayload ?? "{}");
+    } catch {
+      throw new OfferMediaPolicyError("The upload completion context is invalid.");
+    }
+    if (!payload.productId || !blob.pathname.startsWith(offerMediaPrefix(payload.productId))) throw new OfferMediaPolicyError("The completed object is not bound to this offer.");
+  };
+  if (offerMediaUploadMode() === "presigned") {
+    const storeId = offerMediaStoreId();
+    const webhookPublicKey = offerMediaWebhookKey();
+    if (!storeId || !webhookPublicKey) throw new OfferMediaStorageError("The public store is incomplete; presigned uploads need a store id and a webhook key.");
+    return handleUploadPresigned({
+      body: input.body,
+      request: webRequest,
+      webhookPublicKey,
+      onUploadCompleted,
+      getSignedToken: async (pathname) => {
+        await authorize(pathname);
+        const token2 = await issueSignedToken({ storeId, pathname: `${prefix}*`, operations: ["put"] });
+        return {
+          token: token2,
+          urlOptions: {
+            allowedContentTypes: [...OFFER_MEDIA_CONTENT_TYPES],
+            maximumSizeInBytes: OFFER_MEDIA_MAX_BYTES,
+            addRandomSuffix: true,
+            tokenPayload: JSON.stringify({ productId: input.productId })
+          }
+        };
+      }
+    });
+  }
+  const token = requiredBlobToken2();
   return handleUpload2({
     body: input.body,
     request: webRequest,
     token,
     onBeforeGenerateToken: async (pathname) => {
-      const authUserId = await getAuthUserId(input.headers);
-      if (!authUserId) throw new OfferMediaAuthError("Sign in as an authorized seller before uploading an offer visual.");
-      const filePart = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : "";
-      if (!filePart || filePart.includes("/") || filePart.includes("..") || filePart.includes("\\") || /\s/.test(filePart)) throw new OfferMediaPolicyError("The upload path is not bound to this offer.");
-      const repository = createTrunkRepository();
-      const authorized = await repository.canManageSellerProduct({ authUserId, productId: input.productId });
-      if (!authorized) throw new OfferMediaPolicyError("Only the owner of the offer may attach a visual.");
+      await authorize(pathname);
       return {
         allowedContentTypes: [...OFFER_MEDIA_CONTENT_TYPES],
         maximumSizeInBytes: OFFER_MEDIA_MAX_BYTES,
@@ -8532,15 +8585,7 @@ async function handleOfferMediaUpload(input) {
         tokenPayload: JSON.stringify({ productId: input.productId })
       };
     },
-    onUploadCompleted: async ({ blob, tokenPayload }) => {
-      let payload;
-      try {
-        payload = JSON.parse(tokenPayload ?? "{}");
-      } catch {
-        throw new OfferMediaPolicyError("The upload completion context is invalid.");
-      }
-      if (!payload.productId || !blob.pathname.startsWith(offerMediaPrefix(payload.productId))) throw new OfferMediaPolicyError("The completed object is not bound to this offer.");
-    }
+    onUploadCompleted
   });
 }
 async function verifyOfferMediaObjects(productId, raw) {
@@ -8548,12 +8593,14 @@ async function verifyOfferMediaObjects(productId, raw) {
   if (media.length < 1 || media.length > OFFER_MEDIA_MAX_ITEMS) throw new OfferMediaPolicyError("Provide one to four offer visuals.");
   if (!hasOfferMediaStorage()) throw new OfferMediaStorageError("Offer visual storage is not configured.");
   const prefix = offerMediaPrefix(productId);
-  const token = requiredBlobToken2();
+  const token = offerMediaBlobToken();
+  const storeId = offerMediaStoreId();
+  const headOptions = token ? { token } : storeId ? { storeId } : void 0;
   const verified = [];
   for (const item of media) {
     let metadata = null;
     try {
-      metadata = await head2(item.url, { token });
+      metadata = await head2(item.url, headOptions);
     } catch {
       metadata = null;
     }
@@ -10491,6 +10538,10 @@ async function handleApi(req, res, pathname, url) {
       return true;
     }
     const sellerMediaUploadMatch = pathname.match(/^\/api\/v2\/seller\/catalogue\/([0-9a-f-]{36})\/media-upload$/i);
+    if (sellerMediaUploadMatch && req.method === "GET") {
+      json(res, 200, { ok: true, correlationId, data: { mode: offerMediaUploadMode() } });
+      return true;
+    }
     if (sellerMediaUploadMatch && req.method === "POST") {
       const body = await parseRequestBody(req);
       const result = await handleOfferMediaUpload({ body, headers: req.headers, url: url.toString(), productId: sellerMediaUploadMatch[1] });

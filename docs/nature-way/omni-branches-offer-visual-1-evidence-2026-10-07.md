@@ -65,3 +65,59 @@ L'écriture est une **insertion** additive dans `neon_auth."user"` (n'écrase ri
 - Trois objets de sonde (privés) restent dans l'ancien store — à supprimer.
 - La prod sert le correctif **A** ; le correctif **B** est dans l'artefact mais **inerte** tant que
   (a) n'est pas fait (le repli retombe sur le store privé → l'upload reste refusé).
+
+---
+
+## 6. Suite `BRANCHES-OFFER-VISUAL-2` (2026-10-07) — deux faits qui ont changé la tranche
+
+### 6.1 Le compte du vrai utilisateur n'était pas à recréer — il était à **relier**
+
+Le plan « recréer `antpeteou@gmail.com` sur la canonique » était **impossible** : l'email
+existe **déjà** sur la canonique sous un **autre id** (`a924686b…`, créé **2026-08-06**,
+`emailVerified=false`) tandis que les données Omni (facilité **« Soja zozo »** + offre
+**« Riz au soja »**) sont liées à `1baf7989…` (id de l'instance par défaut). Une insertion
+violait l'unicité de l'email — la tranche était bloquée sur un mur qui n'aurait pas dû exister.
+
+**Mesure (canonique `br-dawn-hill-am5amy22`)** : 10 comptes, dont **1 seul** lié à une identité
+absente de `neon_auth."user"` — `1d264990…` → `1baf7989…` (le vrai utilisateur). Un **UPDATE**
+ciblé relie ce compte à l'identité canonique `a924686b…` : **aucune insertion**, **aucune donnée
+touchée** (facilité + offre conservées), **réversible** (valeur d'origine enregistrée).
+
+**Preuve** : après le rebind, `1d264990…` → `a924686b…` → email `antpeteou@gmail.com` ; comptes
+**10** (inchangé), facilités **13745** (inchangé), produits **17** (inchangé). Le chemin d'écriture
+déjà livré (`FIX-D2`) relie automatiquement `v2_accounts` à la bonne identité à la prochaine
+connexion — il manquait seulement le **pont** entre l'ancien id et le nouveau.
+
+**Leçon** : « recréer » était le mauvais verbe. La bonne question n'était pas « comment insérer
+sans collision » mais **« pourquoi y a-t-il deux identités pour le même email, et laquelle porte
+les données ? »**. Un mur d'unicité est souvent le symptôme d'un **doublon d'identité**, pas d'un
+manque de place.
+
+### 6.2 Le store public est connecté en **OIDC** — `handleUpload` ne peut pas l'utiliser
+
+Le fondateur a connecté le store public via le dashboard. Vercel connecte les stores en **OIDC par
+défaut** : il expose `BLOB_STORE_ID` + `BLOB_WEBHOOK_PUBLIC_KEY` (+ `VERCEL_OIDC_TOKEN` injecté à
+l'exécution) et **pas de read-write token**. Avec le préfixe `OMNI_` demandé, ces noms arrivent en
+`OMNI_STORE_ID` / `OMNI_WEBHOOK_PUBLIC_KEY`.
+
+Or `handleUpload` (le chemin livré en `B1`) **n'accepte qu'un read-write token** : sur un store OIDC
+il retombe sur le token privé → **`storeId` privé `z631cN4vVZcC11cz`** (reproduit en prod après
+déploiement, pas un défaut de déploiement).
+
+**Livré** : le serveur détecte le mode du store public (`token` / `presigned` / `none`) et bascule
+sur le chemin **présigné** de l'SDK (`handleUploadPresigned` + `issueSignedToken`, opération `put`
+limitée au préfixe de l'offre) quand il n'y a pas de read-write token. Le client interroge le mode
+via `GET …/media-upload` et choisit `upload` ou `uploadPresigned`. `head` (re-vérification à
+l'enregistrement) passe aussi le `storeId` pour l'OIDC.
+
+**Garde anti-régression** : les noms **nus** `BLOB_STORE_ID` / `BLOB_WEBHOOK_PUBLIC_KEY` ne sont
+**pas** lus — le store **privé** (evidence) est connecté au même projet et les définit ; les lire
+enverrait les visuels d'offre au store **privé**. Seuls les noms explicitement publics sont
+résolus (`BLOB_PUBLIC_*`, `OMNI_*`). **Falsifié** : réintroduire `BLOB_STORE_ID` → le test
+« ne résout jamais le store public depuis les noms nus du privé » **échoue**.
+
+**Preuve** : **1209/1209** tests, `tsc` 0, 5 gardes vertes, bundles serverless régénérés.
+**Résidu honnête** : le mode `presigned` n'est **pas encore actif en prod** tant que le store
+public n'expose pas `OMNI_STORE_ID` + `OMNI_WEBHOOK_PUBLIC_KEY` **au runtime de la fonction** — à
+confirmer par un nouvel appel `media-upload` (le `storeId` du `clientToken` doit cesser d'être
+`z631cN4vVZcC11cz`).

@@ -1,4 +1,4 @@
-import { upload as uploadBlobClient } from '@vercel/blob/client';
+import { upload as uploadBlobClient, uploadPresigned as uploadBlobClientPresigned } from '@vercel/blob/client';
 import { raceWithTimeout } from './request-timeout';
 import type { AccountCapabilitiesResult, AdCampaignCreateResult, AdCampaignListResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, ClaimByOsmRefInput, ClaimByOsmRefResult, CreateSellerFacilityResult, CreateTeamResult, FacilityOperationalState, FacilityType, MyTeamInvite, RoleManagementAccount, RoleManagementResult, TeamInviteResult, TeamListResult, TeamMemberResult, TeamInviteAcceptResult, FacilityZoneAssignment, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, CancelAvailabilityRequestResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, PublicEntity, PublicEntityDetail, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PublicStats, RoutingResult, PurchaseIntentResult, QrTokenIssueResult, QrRevocationResult, QrVerificationResult, DemandSignalsResult, OfferReportMotif, OfferReportCreateResult, OfferReportListResult, OfferReportOutcome, OfferReportDecisionResult, AcquisitionObjectiveListResult, AcquisitionObjectiveCreateResult, AcquisitionObjectiveState, FieldVisitSubjectType, FieldVisitCreateResult, FieldVisitListResult, FieldVisitClaimResult, FieldVisitState, VisitReportSubmitResult, OperatorEntitySideResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, SellerVerification, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind, SellerSlotStandingResult, FacilitySlotPurchaseResult } from './types';
 
@@ -574,15 +574,37 @@ export async function setSellerProductMedia(input: { token: string; productId: s
 /** S-20 / E-03 — uploads one public offer visual, then records the verified reference. */
 export async function uploadSellerProductMedia(input: { token: string; productId: string; file: File; onProgress?: (percentage: number) => void }): Promise<ApiResult<{ productId: string; media: import('./types').ProductMediaItem[] }>> {
   const safeName = input.file.name.normalize('NFKC').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120) || 'visual';
-  const blob = await uploadBlobClient(`offers/${input.productId}/${safeName}`, input.file, {
-    access: 'public',
+  const pathname = `offers/${input.productId}/${safeName}`;
+  const handleUploadUrl = `/api/v2/seller/catalogue/${encodeURIComponent(input.productId)}/media-upload`;
+  const options = {
+    access: 'public' as const,
     contentType: input.file.type,
     clientPayload: JSON.stringify({ productId: input.productId }),
-    handleUploadUrl: `/api/v2/seller/catalogue/${encodeURIComponent(input.productId)}/media-upload`,
+    handleUploadUrl,
     headers: { Authorization: `Bearer ${input.token}` },
-    onUploadProgress: (event) => input.onProgress?.(event.percentage),
-  });
+    onUploadProgress: (event: { percentage: number }) => input.onProgress?.(event.percentage),
+  };
+  // An OIDC-connected public store has no read-write token, so the server issues a PRESIGNED URL;
+  // a store with a token uses the classic client-token flow. Ask the server which one to use.
+  const mode = await getSellerProductMediaUploadMode(input);
+  const blob = mode === 'presigned'
+    ? await uploadBlobClientPresigned(pathname, input.file, options)
+    : await uploadBlobClient(pathname, input.file, options);
   return setSellerProductMedia({ token: input.token, productId: input.productId, media: [{ url: blob.url, kind: 'image' }] });
+}
+
+async function getSellerProductMediaUploadMode(input: { token: string; productId: string }): Promise<'token' | 'presigned' | 'none'> {
+  try {
+    const response = await fetchWithRecovery(`/api/v2/seller/catalogue/${encodeURIComponent(input.productId)}/media-upload`, {
+      headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+    });
+    const payload = (await response.json()) as ApiResult<{ mode: 'token' | 'presigned' | 'none' }>;
+    return payload.ok ? (payload.data?.mode ?? 'token') : 'token';
+  } catch {
+    // The POST still fails honestly if the store is absent; a failed probe must not block a
+    // classic (token) store, which is the historical default.
+    return 'token';
+  }
 }
 
 export async function setProductAvailability(input: { token: string; productId: string; to: import('./types').ProductAvailabilityState; expiresInHours: number | null }): Promise<ApiResult<{ productId: string; availabilityState: string; previousState: string | null }>> {

@@ -8,7 +8,7 @@ import { AvailabilityPolicyError, AvailabilityResponsePolicyError, BuyerSearchPo
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration } from './evidence-contract';
 import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, handleVisitEvidenceUpload, readPrivateEvidence } from './evidence-storage';
 import { NeonWebhookError, parseNeonWebhookBody, readNeonWebhookHeaders, routeNeonWebhookEvent, verifyNeonWebhookSignature } from './neon-webhooks';
-import { handleOfferMediaUpload, verifyOfferMediaObjects, OfferMediaPolicyError, OfferMediaStorageError, OfferMediaAuthError, OfferMediaRequestError } from './offer-media-storage';
+import { handleOfferMediaUpload, verifyOfferMediaObjects, offerMediaUploadMode, OfferMediaPolicyError, OfferMediaStorageError, OfferMediaAuthError, OfferMediaRequestError } from './offer-media-storage';
 import type { TransactionState } from '../domain/contracts';
 import type { OfferOwnerKind } from '../domain/contracts';
 import type { ClaimEvidenceItem, FacilityType } from '../trunk/types';
@@ -2082,6 +2082,12 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       return true;
     }
     const sellerMediaUploadMatch = pathname.match(/^\/api\/v2\/seller\/catalogue\/([0-9a-f-]{36})\/media-upload$/i);
+    if (sellerMediaUploadMatch && req.method === 'GET') {
+      // The client and the server must agree on how the public store accepts a browser upload:
+      // the classic client-token flow, or the presigned flow an OIDC-connected store requires.
+      json(res, 200, { ok: true, correlationId, data: { mode: offerMediaUploadMode() } });
+      return true;
+    }
     if (sellerMediaUploadMatch && req.method === 'POST') {
       const body = await parseRequestBody(req);
       const result = await handleOfferMediaUpload({ body, headers: req.headers, url: url.toString(), productId: sellerMediaUploadMatch[1] });
