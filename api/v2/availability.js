@@ -8558,7 +8558,7 @@ async function handleOfferMediaUpload(input) {
       onUploadCompleted,
       getSignedToken: async (pathname) => {
         await authorize(pathname);
-        const token2 = await issueSignedToken({ storeId, pathname: `${prefix}*`, operations: ["put"] });
+        const token2 = await issueSignedToken({ storeId, pathname, operations: ["put"] });
         return {
           token: token2,
           urlOptions: {

@@ -192,7 +192,9 @@ export async function handleOfferMediaUpload(input: { body: unknown; headers: In
       onUploadCompleted,
       getSignedToken: async (pathname) => {
         await authorize(pathname);
-        const token = await issueSignedToken({ storeId, pathname: `${prefix}*`, operations: ['put'] });
+        // The SDK rejects glob characters: sign the CONCRETE path the client asked for, never a
+        // `offers/{id}/*` pattern. `authorize` has already bound it to this offer.
+        const token = await issueSignedToken({ storeId, pathname, operations: ['put'] });
         return {
           token,
           urlOptions: {

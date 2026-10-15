@@ -133,6 +133,28 @@ describe('public offer visual boundary (S-20 / E-03)', () => {
       expect(issueSignedTokenMock).not.toHaveBeenCalled();
     });
 
+    it('signs the CONCRETE path, never a glob (the SDK refuses glob characters)', async () => {
+      vi.stubEnv('OMNI_STORE_ID', 'store_oidc');
+      vi.stubEnv('OMNI_WEBHOOK_PUBLIC_KEY', 'pubkey');
+      const authSpy = vi.spyOn(await import('./auth-context'), 'getAuthUserId').mockResolvedValue('seller-1');
+      const repoSpy = vi.spyOn(await import('./trunk-repository'), 'createTrunkRepository').mockReturnValue({ canManageSellerProduct: async () => true } as never);
+      issueSignedTokenMock.mockClear();
+      try {
+        await handleOfferMediaUpload({
+          productId,
+          headers: { authorization: 'Bearer test' },
+          url: `https://omni.example/api/v2/seller/catalogue/${productId}/media-upload`,
+          body: { type: 'blob.generate-presigned-url', payload: { pathname: `offers/${productId}/a.jpg`, clientPayload: null, multipart: false } },
+        });
+      } finally {
+        authSpy.mockRestore();
+        repoSpy.mockRestore();
+      }
+      const options = issueSignedTokenMock.mock.calls.at(-1)?.[0] as { pathname?: string };
+      expect(options?.pathname).toBe(`offers/${productId}/a.jpg`);
+      expect(options?.pathname).not.toContain('*');
+    });
+
     it('surfaces a provider refusal honestly (409 with the real reason), never an opaque 500', async () => {
       vi.stubEnv('OMNI_STORE_ID', 'store_oidc');
       vi.stubEnv('OMNI_WEBHOOK_PUBLIC_KEY', 'pubkey');
