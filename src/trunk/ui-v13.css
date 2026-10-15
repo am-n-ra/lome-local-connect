@@ -176,7 +176,8 @@ h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .plist{display:grid;gap:6px;margin-top:8px}
 .pitem{display:flex;align-items:center;gap:8px;padding:7px;border:1px solid var(--line);border-radius:11px;background:#fff;font-size:8.5px;cursor:pointer;transition:.15s var(--ease)}
 .pitem.sel{border-color:var(--ink);background:var(--panel)}
-.pitem .pthumb{width:34px;height:28px;flex:none;border-radius:7px;background:linear-gradient(135deg,#ececec,#d8d8d8)}
+.pitem .pthumb{width:34px;height:28px;flex:none;border-radius:7px;background:linear-gradient(135deg,#ececec,#d8d8d8);display:block}
+img.pthumb{object-fit:cover;background:#ececec}
 .pitem .chk{width:16px;height:16px;border-radius:5px;border:1.5px solid var(--ink);display:grid;place-items:center;color:var(--ink);font-size:10px;flex:none}
 .pitem.sel .chk{background:var(--ink);color:#fff}.pitem .pr{margin-left:auto;font-weight:800}.pitem small{display:block;color:var(--ink-soft);font-size:7px}
 

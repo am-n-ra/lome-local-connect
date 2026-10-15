@@ -71,7 +71,7 @@ import { entityBenefitLabel } from './entity-benefits';
 import { facilityFormLabel } from './facility-form';
 import { RESULTS_SORTS, sortResults, type ResultsSortKey } from './results-sort';
 import { worstFreshness, freshnessLabel } from './offer-freshness';
-import { EXISTENCE_LEVELS } from './offer-existence';
+import { EXISTENCE_LEVELS, primaryOfferVisual } from './offer-existence';
 import { priceDisplay } from './price-display';
 import { compareFacilities } from './v13-compare';
 import { OMNI_BASE_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, convertUsdMinorToLocal } from '../domain/pricing';
@@ -3034,7 +3034,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 return (
                   <div className={`pitem${on ? ' sel' : ''}${highlighted ? ' searched' : ''}`} key={product.id} role={buyerControlsVisible ? 'button' : undefined} tabIndex={buyerControlsVisible ? 0 : undefined} style={{ cursor: buyerControlsVisible ? 'pointer' : 'default', ...(highlighted ? { boxShadow: 'inset 0 0 0 1.5px var(--ink-faint)', borderRadius: 12 } : {}) }} onClick={buyerControlsVisible ? () => setCarts((current) => toggleCartProduct(current, selectedFacility.id, product.id)) : undefined}>
                     {buyerControlsVisible && <span className={`chk${on ? ' on' : ''}`} aria-hidden="true">{on ? '✓' : ''}</span>}
-                    <span className="pthumb" />
+                    {primaryOfferVisual(product.media)
+                      ? <img className="pthumb" src={primaryOfferVisual(product.media)!} alt="" loading="lazy" />
+                      : <span className="pthumb" />}
                     <span><b>{product.name}</b>{highlighted && <span className="status ink" style={{ marginLeft: 6 }}>Recherché</span>}<small>{product.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small>{carac.length > 0 && <small style={{ display: 'block', marginTop: 2 }}>{carac.map((c) => c.value).join(' · ')}</small>}
                       <span className={`trust${trust.ok ? ' ok' : ''}${trust.muted ? ' muted' : ''}`}>{trust.text}{trust.missing.length > 0 && <span className="miss"> · {trust.missing.join(', ')}</span>}</span>
                     </span>
@@ -3110,7 +3112,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             return (
               <div className="pitem" key={offer.id} role="button" tabIndex={0} style={{ cursor: 'pointer' }} onClick={() => { setSheet('facility'); setSelectedId(offer.facilityId); void handlePinSelect({ id: offer.facilityId }); }}>
                 <span className="chk" aria-hidden="true" />
-                <span className="pthumb" />
+                {primaryOfferVisual(offer.media)
+                  ? <img className="pthumb" src={primaryOfferVisual(offer.media)!} alt="" loading="lazy" />
+                  : <span className="pthumb" />}
                 <span><b>{offer.name}</b><small>{offer.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small>{carac.length > 0 && <small style={{ display: 'block', marginTop: 2 }}>{carac.map((c) => c.value).join(' · ')}</small>}</span>
                 <span className="pr">{pd.price}{pd.original && <span className="old">{pd.original}</span>}{pd.promo && <span className="promo">{pd.promo}</span>}</span>
               </div>

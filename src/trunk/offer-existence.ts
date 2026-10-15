@@ -157,6 +157,20 @@ export function normalizeProductMedia(raw: unknown): ProductMediaItem[] {
 }
 
 /**
+ * S-20 / E-03 — the offer visual a BUYER sees. The storage and the public contract exist; what
+ * was missing was the render: the buyer fiche showed a grey placeholder while the seller's own
+ * catalogue showed the image. This picks the first usable visual so both sides agree on which
+ * one is "the" visual (media is 1..4; the seller catalogue already uses index 0).
+ *
+ * Returns `null` (never a broken `<img src="">`) when there is no visual, so the caller keeps its
+ * placeholder instead of requesting an empty URL.
+ */
+export function primaryOfferVisual(media: unknown): string | null {
+  const first = normalizeProductMedia(media)[0];
+  return first ? first.url : null;
+}
+
+/**
  * S-32 — automatic offer integrity. Four measurable checks, and the FAILED ones are named:
  * a ✗ without a reason is unusable and unbelievable.
  *
