@@ -516,7 +516,6 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const [notifs, setNotifs] = useState<NotificationSummary[]>([]);
   const [notifsState, setNotifsState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [notifsError, setNotifsError] = useState('');
-  const [pendingResumeTxnId, setPendingResumeTxnId] = useState<string | null>(null);
   const [pendingResumeRequestId, setPendingResumeRequestId] = useState<string | null>(null);
   const [homeFocus, setHomeFocus] = useState<'top' | 'historique'>('top');
   const homeHistoriqueRef = useRef<HTMLDivElement | null>(null);
@@ -1149,10 +1148,27 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     }
   }, [requireAuth, role, sessionUser, loadSellerWorkspace]);
 
-  // FF-2 — reprendre une transaction en cours : recharge son état (l'intention reste
-  // verrouillée côté serveur, jamais annulée) sans repasser par la dispo.
-  // Déclaré avant openNotification (qui le réutilise pour les deep-links).
-  const resumeTransaction = useCallback(async (transaction: { transactionId: string; facilityName?: string | null; productName?: string | null }) => {
+  // X3 — ouvrir la Room dédiée d'une transaction (S-27) : suivi + chat complet + actions.
+  // Réutilise le token de session et la ligne de liste ; aucune lecture neuve.
+  const openRoom = useCallback(async (transaction: { transactionId: string; facilityName?: string | null; productName?: string | null; actorRole: 'buyer' | 'seller'; lastEventAt?: string | null }) => {
+    const token = await requireAuth({ kind: 'home', returnTo: 'home' });
+    if (!token) return;
+    setRoomTxn({
+      transactionId: transaction.transactionId,
+      token,
+      counterparty: transaction.facilityName ?? transaction.productName ?? null,
+      actorRole: transaction.actorRole,
+      lastEventAt: transaction.lastEventAt ?? null,
+      returnTo: transaction.actorRole === 'seller' ? 'seller' : 'home',
+    });
+    setSheet('room');
+  }, [requireAuth]);
+
+  // FF-2 — reprendre une transaction en cours. POINT 3 (2026-10-16) : la reprise ouvre
+  // désormais la ROOM, seule surface transactionnelle, au lieu du suivi court du flux
+  // (qui ne portait que 4 messages et dupliquait la Room). Le rôle est LU dans le
+  // snapshot (acheteur OU vendeur), jamais supposé — un vendeur reprend sa vente.
+  const resumeTransaction = useCallback(async (transaction: { transactionId: string; facilityName?: string | null; productName?: string | null; lastEventAt?: string | null }) => {
     const token = await requireAuth({ kind: 'home', returnTo: 'home' });
     if (!token) return;
     const result = await getTransaction({ transactionId: transaction.transactionId, token });
@@ -1160,11 +1176,14 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       setBuyerRequestsError(result.error?.message ?? 'Cette transaction ne peut pas être reprise pour le moment.');
       return;
     }
-    setFlowFacility({ id: result.data.facilityId, name: result.data.sellerFacilityName ?? transaction.facilityName ?? '' });
-    setFlowProduct({ id: result.data.productId, name: transaction.productName ?? '' });
-    setPendingResumeTxnId(transaction.transactionId);
-    setSheet('flow');
-  }, [requireAuth]);
+    await openRoom({
+      transactionId: transaction.transactionId,
+      facilityName: result.data.sellerFacilityName ?? transaction.facilityName ?? null,
+      productName: transaction.productName ?? null,
+      actorRole: result.data.actorRole,
+      lastEventAt: transaction.lastEventAt ?? null,
+    });
+  }, [requireAuth, openRoom]);
 
   // BRANCHES — « Historique des transactions » ouvre Mon espace déjà positionné sur la
   // section « Terminées » (le titre ne ment pas sur la destination), au lieu de répéter
@@ -1181,26 +1200,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const resumeAvailabilityRequest = useCallback((request: { requestId: string; facilityId: string; facilityName: string; productId: string; productName: string }) => {
     setFlowFacility({ id: request.facilityId, name: request.facilityName });
     setFlowProduct({ id: request.productId, name: request.productName });
-    setPendingResumeTxnId(null);
     setPendingResumeRequestId(request.requestId);
     setSheet('flow');
   }, []);
-
-  // X3 — ouvrir la Room dédiée d'une transaction (S-27) : suivi + chat complet + actions.
-  // Réutilise le token de session et la ligne de liste ; aucune lecture neuve.
-  const openRoom = useCallback(async (transaction: { transactionId: string; facilityName?: string | null; productName?: string | null; actorRole: 'buyer' | 'seller'; lastEventAt?: string | null }) => {
-    const token = await requireAuth({ kind: 'home', returnTo: 'home' });
-    if (!token) return;
-    setRoomTxn({
-      transactionId: transaction.transactionId,
-      token,
-      counterparty: transaction.facilityName ?? transaction.productName ?? null,
-      actorRole: transaction.actorRole,
-      lastEventAt: transaction.lastEventAt ?? null,
-      returnTo: transaction.actorRole === 'seller' ? 'seller' : 'home',
-    });
-    setSheet('room');
-  }, [requireAuth]);
 
   // TF-8 recovery (maquette `recovery`) : après une panne, rien n'est perdu —
   // panier (session), dernière recherche commise, transactions reprenables.
@@ -1354,7 +1356,6 @@ const [compareBlocked, setCompareBlocked] = useState(0);
 
   // Démarre un flux d'achat NEUF (pas une reprise) : on purge tout id de reprise résiduel.
   const startFlow = useCallback((facility: { id: string; name: string; latitude?: number | null; longitude?: number | null }, product: { id: string; name: string; priceKind?: string | null; listedPriceMinor?: number | null }) => {
-    setPendingResumeTxnId(null);
     setPendingResumeRequestId(null);
     setFlowFacility(facility);
     setFlowProduct(product);
@@ -3180,7 +3181,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         <CompanyV13 onClose={() => setSheet('seller')} onProducts={() => setSheet('products')} catalogue={sellerCatalogue} />
       )}
       {sheet === 'flow' && flowFacility && flowProduct && (
-        <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => { setPendingResumeTxnId(null); setPendingResumeRequestId(null); setSheet('facility'); }} resumeTxnId={pendingResumeTxnId} resumeRequestId={pendingResumeRequestId} onEngagement={maybePromptPush} onGate={gateRequest} onRoom={(transactionId: string) => { void openRoom({ transactionId, actorRole: 'buyer' }); }} onRoute={(longitude: number, latitude: number, name: string) => { setRouteTarget({ longitude, latitude, name }); setSheet('none'); }} walletBalanceMinor={wallet?.balanceMinor ?? null} />
+        <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => { setPendingResumeRequestId(null); setSheet('facility'); }} resumeRequestId={pendingResumeRequestId} onEngagement={maybePromptPush} onGate={gateRequest} onRoom={(transactionId: string) => { void openRoom({ transactionId, actorRole: 'buyer' }); }} walletBalanceMinor={wallet?.balanceMinor ?? null} />
       )}
       {sheet === 'admin' && adminTools && (
         <AdminV13 onClose={() => setSheet('menu')} onFocusFacility={(latitude: number, longitude: number, key: string) => { setFocusTarget({ latitude, longitude, key }); setSheet('none'); }} />
@@ -3499,7 +3500,6 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 </div>
                 <span className="tiny muted" style={{ marginTop: 4, display: 'block' }}>Reprendre · {relativeAge(transaction.lastEventAt)}</span>
               </button>
-              <button className="btn ghost sm" type="button" style={{ marginTop: 4 }} onClick={() => void openRoom(transaction)}>Ouvrir la Room · chat</button>
             </div>
           ))}
           <div className="eyebrow" style={{ marginTop: 14 }} ref={homeHistoriqueRef}>Terminées</div>
@@ -3868,6 +3868,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           counterparty={roomTxn.counterparty}
           lastEventAt={roomTxn.lastEventAt}
           onClose={() => { const back = roomTxn.returnTo; if (back === 'home') { void openHome(); } else { setSheet(back); void loadSellerWorkspace?.(); } }}
+          onRoute={(longitude: number, latitude: number, name: string) => { setRouteTarget({ longitude, latitude, name }); setSheet('none'); }}
         />
       )}
       {sheet === 'notifs' && (

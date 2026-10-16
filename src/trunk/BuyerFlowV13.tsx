@@ -1,60 +1,46 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, BadgeCheck, Banknote, CheckCircle2, Copy, Navigation, QrCode, Smartphone, Star, Wallet, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { confirmExternalPayment, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getBuyerCreditSummary, getTransaction, getTransactionMessages, issueBuyerQrToken, qrPayload, requestAvailability, revokeQrToken, sendTransactionMessage, submitTransactionRating, transitionTransaction, verifyQrToken } from './api';
-import type { BuyerCreditSummary, ExternalPaymentMethod, TransactionSnapshotResult, TransactionState } from './types';
+import { createPurchaseIntent, getAvailabilityResponses, getBuyerCreditSummary, requestAvailability } from './api';
+import type { BuyerCreditSummary } from './types';
 import { canProposePrice, isNegotiable } from './offer-price';
 import { availabilitySourceLabel } from './availability-source';
 import { useFreshnessTimer } from './useFreshnessTimer';
-import { deadlineLabel, deadlineState, transactionStateLabel, transactionStateResponsible } from './transaction-time';
 import type { PendingAction } from './ui-helpers';
 import { formatMoney } from '../domain/currency';
-import { OmniQr } from './OmniQr';
 
 type FlowProduct = { id: string; name: string; priceKind?: string | null; listedPriceMinor?: number | null };
 type FlowFacility = { id: string; name: string; latitude?: number | null; longitude?: number | null };
-type Stage = 'avail' | 'pending' | 'result' | 'intent' | 'txn' | 'qr' | 'pay' | 'rate';
+// POINT 1 (2026-10-16) : le flux s'arrête à l'INTENTION. Tout ce qui suit (suivi, chat,
+// QR, paiement, avis) vit dans la ROOM — seule surface transactionnelle. Le flux ne
+// gardait qu'une copie tronquée du fil et dupliquait la Room.
+type Stage = 'avail' | 'pending' | 'result' | 'intent';
 
 type BuyerFlowV13Props = {
   facility: FlowFacility;
   product: FlowProduct;
   onClose: () => void;
   onGate?: (action: PendingAction) => boolean;
-  onRoute?: (longitude: number, latitude: number, name: string) => void;
   /** BRANCHES-NOTIF-1 — signalé APRÈS l'action qui va utiliser les notifications
    *  (demande de dispo envoyée, intention d'achat créée). Jamais avant. */
   onEngagement?: (action: 'buyer-request' | 'buyer-intent') => void;
   walletBalanceMinor?: number | null;
-  /** FF-2 — si fourni, on saute directement au suivi de la transaction (reprise). */
-  resumeTxnId?: string | null;
   /** BRANCHES — si fourni, on rouvre le suivi d'une demande de disponibilité
    *  (étape « en attente de réponse » ou résultat) au lieu de repartir du formulaire. */
   resumeRequestId?: string | null;
   /** NR-5 / S-27 — à la confirmation de l'intention, on ouvre la ROOM de cette
-   *  transaction (chat complet + QR + suivi), au lieu de rester dans le suivi court
-   *  du flux. Le flux garde son étape `txn` comme repli si la Room n'est pas branchée. */
+   *  transaction. C'est la SEULE destination après intention (point 1, 2026-10-16). */
   onRoom?: (transactionId: string) => void;
 };
 
 const STEPS: Array<{ id: Stage; label: string }> = [
   { id: 'avail', label: 'Dispo' },
   { id: 'intent', label: 'Intention' },
-  { id: 'txn', label: 'Transaction' },
-  { id: 'rate', label: 'Avis' },
-];
-const TXN_STAGES = [
-  { label: 'Intention d\'achat', sub: 'votre décision d’achat' },
-  { label: 'Transaction créée', sub: 'en attente de vérification' },
-  { label: 'QR de transaction généré', sub: 'à faire scanner par le vendeur' },
-  { label: 'Vérifiée', sub: 'le vendeur a scanné le QR' },
-  { label: 'Paiement', sub: 'méthode choisie & déclarée' },
-  { label: 'Exécution', sub: 'retrait / remise / livraison' },
-  { label: 'Complétée', sub: 'notez le vendeur' },
 ];
 
 // Payload scannable par le vendeur: transactionId + jeton brut.
 
-export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, onEngagement, walletBalanceMinor, resumeTxnId, resumeRequestId, onRoom }: BuyerFlowV13Props) {
+export function BuyerFlowV13({ facility, product, onClose, onGate, onEngagement, walletBalanceMinor, resumeRequestId, onRoom }: BuyerFlowV13Props) {
   const [stage, setStage] = useState<Stage>('avail');
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -71,23 +57,9 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, onEn
   const [availNote, setAvailNote] = useState('');
   const [requestId, setRequestId] = useState<string | null>(null);
   const [liveResponse, setLiveResponse] = useState<{ priceMinor: number; quantityAvailable: number; status: string; observedAt: string | null; responderKind?: 'seller' | 'automation' } | null>(null);
-  const [txn, setTxn] = useState<TransactionSnapshotResult | null>(null);
-  const [txnId, setTxnId] = useState<string | null>(null);
-  const [qrToken, setQrToken] = useState<string | null>(null);
-  const [qrExpires, setQrExpires] = useState('');
-  const [messages, setMessages] = useState<Array<{ body: string; senderRole: string; createdAt: string }>>([]);
-  const [score, setScore] = useState(5);
-  const [note, setNote] = useState('');
-  const [chatDraft, setChatDraft] = useState('');
-  const [chatSending, setChatSending] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [creditSummary, setCreditSummary] = useState<BuyerCreditSummary | null>(null);
   const pollRef = useRef<number | null>(null);
   const freshness = useFreshnessTimer(liveResponse?.observedAt ?? null);
-
-  // FF-5 — expiration locale du QR émis (dérivée de l'échéance serveur).
-  const qrMinutesLeft = qrExpires ? Math.ceil((new Date(qrExpires).getTime() - Date.now()) / 60000) : 0;
-  const qrExpired = Boolean(qrExpires) && qrMinutesLeft <= 0;
 
   const refreshCredits = useCallback(async () => {
     const token = await getAuthToken();
@@ -112,24 +84,6 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, onEn
       return token;
     } catch { setError('Session requise.'); return null; }
   }, []);
-
-  const loadTxn = useCallback(async (id: string) => {
-    const token = await getAuthToken();
-    if (!token) return;
-    const [result, messagesResult] = await Promise.all([
-      getTransaction({ transactionId: id, token }),
-      getTransactionMessages({ transactionId: id, token }).catch(() => null),
-    ]);
-    if (result.ok && result.data) { setTxn(result.data); setTxnId(id); setStage('txn'); }
-    if (messagesResult?.ok && messagesResult.data) setMessages(messagesResult.data.messages.slice(-4));
-  }, []);
-
-  // FF-2 — reprise : si on arrive avec un id de transaction en cours, on court-circuite
-  // la phase dispo et on rejoue le suivi. La transaction verrouillée n'est jamais annulée.
-  useEffect(() => {
-    if (resumeTxnId) void loadTxn(resumeTxnId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resumeTxnId]);
 
   // BRANCHES — reprise d'une demande de disponibilité : on rouvre directement le suivi
   // (« en attente de réponse », ou le résultat si le vendeur a déjà répondu) au lieu de
@@ -156,23 +110,6 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, onEn
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resumeRequestId]);
-
-  const sendChat = useCallback(async () => {
-    const body = chatDraft.trim();
-    if (!body || !txnId || chatSending) return;
-    const token = await getAuthToken();
-    if (!token) { setError('Session requise.'); return; }
-    setChatSending(true);
-    try {
-      const result = await sendTransactionMessage({ transactionId: txnId, body, token });
-      if (result.ok && result.data) {
-        setMessages((current) => [...current, { body: result.data!.body, senderRole: result.data!.senderRole, createdAt: result.data!.createdAt }].slice(-4));
-        setChatDraft('');
-      } else { setError(result.error?.message ?? 'Message non envoyé.'); }
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Message non envoyé.');
-    } finally { setChatSending(false); }
-  }, [chatDraft, txnId, chatSending]);
 
   const request = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -240,118 +177,13 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, onEn
         setToast('');
         // BRANCHES-NOTIF-1 — l'intention est prise : l'acheteur attend le scan du vendeur.
         onEngagement?.('buyer-intent');
-        await loadTxn(intent.data.transactionId);
-        // NR-5 / S-27 — l'intention ouvre la ROOM : l'acheteur voit le chat de sa
-        // transaction et son QR au même endroit (la Room porte déjà les deux). Le
-        // suivi court du flux reste le repli si la Room n'est pas branchée.
+        // NR-5 / S-27 / POINT 1 — l'intention ouvre la ROOM, SEULE surface transactionnelle.
+        // Il n'y a plus de repli dans le flux : sans Room branchée, on ne prétend rien.
         if (onRoom) { onRoom(intent.data.transactionId); return; }
-        if (intent.data.qrToken) {
-          setQrToken(intent.data.qrToken);
-          setQrExpires(intent.data.qrExpiresAt ?? '');
-          setStage('qr');
-        }
+        setError('La transaction est ouverte dans votre espace.');
       } else { setError(intent.error?.message ?? 'Intention non créée.'); }
     } finally { setBusy(false); }
-  }, [needAuth, requestId, loadTxn, onEngagement, onRoom]);
-
-  const issueQr = useCallback(async () => {
-    const token = await needAuth();
-    if (!token || !txnId) return;
-    setBusy(true);
-    try {
-      const result = await issueBuyerQrToken({ transactionId: txnId, token });
-      if (result.ok && result.data) {
-        setQrToken(result.data.token);
-        setQrExpires(result.data.expiresAt);
-        setStage('qr');
-      } else { setError(result.error?.message ?? 'QR non émis.'); }
-    } finally { setBusy(false); }
-  }, [needAuth, txnId]);
-
-  // FF-5 — ré-émission : nouveau QR (nouveau TTL) si l'ancien a expiré.
-  const reissueQr = useCallback(async () => {
-    const token = await needAuth();
-    if (!token || !txnId) return;
-    setBusy(true);
-    try {
-      const result = await issueBuyerQrToken({ transactionId: txnId, token });
-      if (result.ok && result.data) {
-        setQrToken(result.data.token);
-        setQrExpires(result.data.expiresAt);
-        setStage('qr');
-        setToast('Nouveau QR émis.');
-      } else { setError(result.error?.message ?? 'QR non ré-émis.'); }
-    } finally { setBusy(false); }
-  }, [needAuth, txnId]);
-
-  // FF-5 — révocation avant scan (le QR n'est plus valable).
-  const revokeQr = useCallback(async () => {
-    const token = await needAuth();
-    if (!token || !txnId) return;
-    setBusy(true);
-    try {
-      const result = await revokeQrToken({ transactionId: txnId, token });
-      if (result.ok) {
-        setQrToken(null);
-        setQrExpires('');
-        setStage('txn');
-        setToast('QR révoqué. Vous pouvez en émettre un nouveau.');
-      } else { setError(result.error?.message ?? 'QR non révoqué.'); }
-    } finally { setBusy(false); }
-  }, [needAuth, txnId]);
-
-  const verifyQr = useCallback(async () => {
-    const token = await needAuth();
-    if (!token || !txnId || !qrToken) return;
-    setBusy(true);
-    try {
-      const result = await verifyQrToken({ transactionId: txnId, tokenHash: qrToken, token });
-      setToast(result.ok && result.data?.accepted ? 'QR vérifié par le vendeur côté caisse.' : (result.data?.reason ?? 'QR non vérifié.'));
-      void loadTxn(txnId);
-    } finally { setBusy(false); }
-  }, [needAuth, txnId, qrToken, loadTxn]);
-
-  const transition = useCallback(async (from: TransactionState, to: TransactionState) => {
-    const token = await needAuth();
-    if (!token || !txnId) return;
-    setBusy(true);
-    try {
-      const result = await transitionTransaction({ transactionId: txnId, from, to, actorRole: 'buyer', token });
-      if (result.ok) { void loadTxn(txnId); } else { setError(result.error?.message ?? 'Transition refusée.'); }
-    } finally { setBusy(false); }
-  }, [needAuth, txnId, loadTxn]);
-
-  const declarePay = useCallback(async (method: ExternalPaymentMethod) => {
-    const token = await needAuth();
-    if (!token || !txnId) return;
-    setBusy(true);
-    try {
-      const [declared, moved] = await Promise.all([
-        declareExternalPayment({ transactionId: txnId, method, token }).catch(() => null),
-        transitionTransaction({ transactionId: txnId, from: 'intent_created', to: 'payment_declared', actorRole: 'buyer', token }).catch(() => null),
-      ]);
-      if (declared?.ok || moved?.ok) { setStage('txn'); setToast('Paiement déclaré. Le vendeur confirme.'); void loadTxn(txnId); }
-      else setError('Déclaration de paiement non reçue.');
-    } finally { setBusy(false); }
-  }, [needAuth, txnId, loadTxn]);
-
-  const rate = useCallback(async () => {
-    const token = await needAuth();
-    if (!token || !txnId) return;
-    setBusy(true);
-    try {
-      const result = await submitTransactionRating({ transactionId: txnId, score, note: note, token });
-      if (result.ok) {
-        await transitionTransaction({ transactionId: txnId, from: 'received', to: 'rated', actorRole: 'buyer', token }).catch(() => null);
-        setStage('rate'); setToast('Merci, votre avis est enregistré.');
-      } else { setError(result.error?.message ?? 'Avis non enregistré.'); }
-    } finally { setBusy(false); }
-  }, [needAuth, txnId, score, note]);
-
-  const copyQr = useCallback(async () => {
-    if (!qrToken || !txnId) return;
-    try { await navigator.clipboard.writeText(qrPayload(txnId, qrToken)); setCopied(true); window.setTimeout(() => setCopied(false), 1500); } catch { /* fallback */ }
-  }, [qrToken, txnId]);
+  }, [needAuth, requestId, onEngagement, onRoom]);
 
   return (
     <section className="sheet h-mid" data-sheet="flow" role="dialog" aria-modal="true" aria-label="Demande de dispo">
@@ -446,165 +278,6 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, onEn
           <div className="btnrow" style={{ marginTop: 10 }}>
             <button className="btn ok" type="button" disabled={busy} onClick={() => void createIntent()}>Confirmer l'intention</button>
             <button className="btn ghost" type="button" onClick={() => setStage('avail')}>Retour</button>
-          </div>
-        </div>
-      )}
-      {stage === 'txn' && txn?.state === 'expired' && (
-        <div>
-          <div className="cardbox" style={{ marginTop: 8 }} role="status">
-            <div className="kv"><span>Étape</span><b>Expirée</b></div>
-            <p className="tiny muted" style={{ marginTop: 6 }}>
-              Cette intention n'a pas été vérifiée à temps. <b>Rien n'a été débité</b>. La réservation de stock a été libérée.
-            </p>
-            <button className="btn ok" style={{ marginTop: 8 }} type="button" onClick={() => setStage('avail')}>Nouvelle demande de disponibilité</button>
-          </div>
-        </div>
-      )}
-      {stage === 'txn' && txn?.state !== 'expired' && (
-        <div>
-          {(() => {
-            const currentState = txn?.state ?? 'intent_created';
-            const lastEvent = messages.length > 0 ? messages[messages.length - 1].createdAt : null;
-            const dl = deadlineState(currentState, lastEvent ?? null);
-            const responsible = transactionStateResponsible(currentState);
-            const who = responsible === 'buyer' ? 'À vous d’agir' : responsible === 'seller' ? 'En attente du vendeur' : 'Traitement Omni';
-            return (
-              <div className="cardbox" style={{ marginTop: 8 }} role="status" aria-live="polite">
-                <div className="kv"><span>Étape</span><b>{transactionStateLabel(currentState)}</b></div>
-                <div className="kv"><span>Qui agit</span><b>{who}</b></div>
-                {dl && <div className="kv"><span>Échéance</span><b>{deadlineLabel(dl.minutesLeft)}</b></div>}
-                <p className="tiny muted" style={{ marginTop: 6 }}>Transaction verrouillée : elle ne peut pas être annulée. Vous pouvez quitter et la reprendre depuis « Transactions en cours ».</p>
-              </div>
-            );
-          })()}
-          <div className="txntrack" style={{ marginTop: 8 }}>
-            {[
-              { id: 'intent', label: 'Intention d\'achat', sub: 'votre décision d’achat' },
-              { id: 'created', label: 'Transaction créée', sub: 'en attente de vérification' },
-              { id: 'qr', label: 'QR de transaction généré', sub: 'à faire scanner par le vendeur' },
-              { id: 'verified', label: 'Vérifiée', sub: 'le vendeur a scanné le QR' },
-              { id: 'payment', label: 'Paiement', sub: 'méthode choisie & déclarée' },
-              { id: 'fulfilled', label: 'Exécution', sub: 'retrait / remise / livraison' },
-              { id: 'completed', label: 'Complétée', sub: 'notez le vendeur' },
-            ].map((step, i) => {
-              const txnState = txn?.state ?? 'intent_created';
-              const stateMap: Record<string, number> = { intent_created: 0, qr_issued: 2, verified: 3, payment_declared: 4, fulfilled: 5, received: 5, rated: 6, closed: 6 };
-              const currentIdx = stateMap[txnState] ?? 0;
-              const cls = i < currentIdx ? 'ok' : (i === currentIdx ? 'now' : '');
-              return (
-                <div className="txstep" key={step.id}>
-                  <span className={`sdot ${cls}`} />
-                  <div><b>{step.label}</b><small>{step.sub}</small></div>
-                  <span className="go" style={{ fontSize: 10, color: cls === 'ok' ? 'var(--accent)' : cls === 'now' ? 'var(--ink)' : 'var(--ink-soft)' }}>{i < currentIdx ? '✓' : (i === currentIdx ? '→' : '')}</span>
-                </div>
-              );
-            })}
-          </div>
-          {messages.length > 0 && (
-            <div className="chatlog" aria-label="Conversation transaction" style={{ marginTop: 8 }}>
-              {messages.map((message) => (
-                <div className={`msg ${message.senderRole === 'buyer' ? 'me' : 'them'}`} key={message.createdAt + message.body}>
-                  {message.body}
-                  <small>{new Date(message.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</small>
-                </div>
-              ))}
-            </div>
-          )}
-          <form className="chatbar" onSubmit={(event) => { event.preventDefault(); void sendChat(); }}>
-            <input value={chatDraft} onChange={(event) => setChatDraft(event.target.value)} placeholder="Écrivez au commerce…" aria-label="Message au commerce" maxLength={1000} />
-            <button type="submit" aria-label="Envoyer" disabled={chatSending || !chatDraft.trim()}><ArrowRight size={15} /></button>
-          </form>
-          <div className="btnrow" style={{ marginTop: 8 }}>
-            <button className="btn" type="button" disabled={busy} onClick={() => void issueQr()}><QrCode size={15} /> Mon QR</button>
-            <button className="btn ghost" type="button" disabled={busy || !qrToken} onClick={() => void verifyQr()}>Vérifier</button>
-          </div>
-          {facility.latitude != null && facility.longitude != null && onRoute && (
-            <div className="cardbox" style={{ marginTop: 8 }}>
-              <div className="kv"><span>Vendeur</span><b>{facility.name}</b></div>
-              {(txn?.sellerContactPhone || txn?.sellerContactWhatsapp) && (
-                <div className="row" style={{ justifyContent: 'space-between', marginTop: 8 }}>
-                  <span className="tiny muted">Contact</span>
-                  <span style={{ textAlign: 'right' }}>
-                    {txn?.sellerContactPhone && <b>{txn.sellerContactPhone}</b>}
-                    {txn?.sellerContactPhone && txn?.sellerContactWhatsapp && <span style={{ margin: '0 4px' }}>·</span>}
-                    {txn?.sellerContactWhatsapp && <b>WhatsApp {txn.sellerContactWhatsapp}</b>}
-                  </span>
-                </div>
-              )}
-              <button
-                className="btn"
-                style={{ marginTop: 8, width: '100%' }}
-                type="button"
-                onClick={() => { onClose(); onRoute(facility.longitude!, facility.latitude!, facility.name); }}
-              >
-                <Navigation size={15} /> Itinéraire vers le vendeur
-              </button>
-              <p className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>Contact et localisation visibles après votre intention. Le chat transactionnel reste disponible ici.</p>
-            </div>
-          )}
-          <div className="btnrow">
-            <button className="btn ghost" type="button" disabled={busy} onClick={() => setStage('pay')}><Wallet size={15} /> Déclarer le paiement</button>
-            {(txn?.state === 'received' || txn?.state === 'fulfilled') && (
-              <button className="btn ghost" type="button" disabled={busy} onClick={async () => { await transition('received', 'rated').catch(() => undefined); void loadTxn(txnId!); setStage('rate'); }}>Donner mon avis</button>
-            )}
-          </div>
-        </div>
-      )}
-      {stage === 'qr' && qrToken && (
-        <div className="cardbox" style={{ textAlign: 'center' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
-            <OmniQr value={qrPayload(txnId!, qrToken)} />
-          </div>
-          <p className="tiny muted" style={{ wordBreak: 'break-all' }}>{qrPayload(txnId!, qrToken)}</p>
-          {qrExpired ? (
-            <p className="tiny" style={{ color: 'var(--warn)' }}>QR expiré. Ré-émettez-en un nouveau pour continuer.</p>
-          ) : (
-            <p className="tiny muted">Expire {new Date(qrExpires).toLocaleString('fr-FR')} ({deadlineLabel(qrMinutesLeft)})</p>
-          )}
-          <div className="btnrow">
-            <button className="btn" type="button" disabled={busy} onClick={() => void copyQr()}><Copy size={15} /> {copied ? 'Copié' : 'Copier'}</button>
-            {qrExpired
-              ? <button className="btn" type="button" disabled={busy} onClick={() => void reissueQr()}><QrCode size={15} /> Ré-émettre le QR</button>
-              : <button className="btn ghost" type="button" disabled={busy} onClick={() => void revokeQr()}>Révoquer</button>}
-            <button className="btn ghost" type="button" onClick={() => setStage('txn')}>Retour</button>
-          </div>
-        </div>
-      )}
-      {stage === 'pay' && (
-        <div>
-          <div className="cardbox">
-            <div className="row" style={{ justifyContent: 'space-between' }}>
-              <div><b>Portefeuille Omni</b><br /><span className="tiny muted">{walletBalanceMinor === null || walletBalanceMinor === undefined ? 'Solde indisponible. Rechargez votre portefeuille' : `${formatMoney(walletBalanceMinor, 'XOF')} disponible`}</span></div>
-              <span className="status gray">{walletBalanceMinor !== null && walletBalanceMinor !== undefined && walletBalanceMinor > 0 ? 'Disponible' : 'Indisponible'}</span>
-            </div>
-          </div>
-          <div className="cardbox" style={{ marginTop: 6 }}>
-            <div className="row" style={{ justifyContent: 'space-between' }}>
-              <div><b>Mobile Money / cash à la remise</b><br /><span className="tiny muted">Déclaré par l'acheteur, confirmé par le vendeur</span></div>
-              <span className="status ok">Recommandé</span>
-            </div>
-          </div>
-          <div className="cardbox" style={{ marginTop: 6 }}>
-            <div className="row" style={{ justifyContent: 'space-between' }}>
-              <div><b>Recharge du portefeuille</b><br /><span className="tiny muted">Hors transaction · paiement séparé</span></div>
-              <span className="status ink">Externe</span>
-            </div>
-          </div>
-          <button className="btn ok" style={{ marginTop: 10 }} type="button" disabled={busy} onClick={() => void declarePay('cash')}>Déclarer le paiement</button>
-          <p className="tiny muted" style={{ textAlign: 'center', marginTop: 9 }}>L'argent ne transite pas par Omni.</p>
-          <button className="btn ghost sm" style={{ width: 'auto', minHeight: 30, marginTop: 8 }} type="button" onClick={() => setStage('txn')}>Retour</button>
-        </div>
-      )}
-      {stage === 'rate' && (
-        <div className="cardbox">
-          <div className="row" style={{ gap: 6, marginBottom:  6 }}>
-            {[1, 2,  3,  4,  5].map((value) => (
-              <button type="button" key={value} className={score === value ? 'status ok' : 'status gray'} aria-label={`${value} étoiles`} onClick={() => setScore(value)}><Star size={14} /> {value}</button>
-            ))}
-          </div>
-          <input className="field" placeholder="Note courte (optionnelle)" value={note} onChange={(event) => setNote(event.target.value)} />
-          <div className="btnrow">
-            <button className="btn" type="button" disabled={busy} onClick={() => void rate()}><CheckCircle2 size={15} /> Envoyer mon avis</button>
           </div>
         </div>
       )}

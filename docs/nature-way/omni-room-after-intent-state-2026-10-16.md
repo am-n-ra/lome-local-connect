@@ -21,11 +21,11 @@ seule a été tranchée** (« 1 ok » sur les alertes ne portait pas sur ce poin
 
 | # | Question | État mesuré |
 |---|---|---|
-| 1 | **Deux surfaces de chat coexistent** : le chat du flux est **tronqué à 4 messages** (`BuyerFlowV13:124` et `:169`, `.slice(-4)`) et reste dans `stage='txn'` en **repli** si `onRoom` n'est pas branché. | **DÉFAUT RÉEL non fermé** — le repli est atteignable ; l'acheteur peut voir le chat court au lieu du fil complet |
+| 1 | **Deux surfaces de chat coexistent** : le chat du flux est **tronqué à 4 messages** (`BuyerFlowV13:124` et `:169`, `.slice(-4)`) et reste dans `stage='txn'` en **repli** si `onRoom` n'est pas branché. | **FERMÉ 2026-10-16** — la surface `txn/qr/pay/rate` du flux est **supprimée** : le flux s'arrête à l'**intention** (`type Stage = 'avail' \| 'pending' \| 'result' \| 'intent'`). Le chat tronqué, le QR, le paiement et l'avis du flux n'existent plus ; **la Room est la SEULE surface post-intention**. Garde `room-only-post-intent.test.ts` (6) falsifié. |
 | 2 | **Le vendeur n'est pas notifié à l'intention** : `createPurchaseIntent` écrit l'événement (`NR-4`, livré) — mais le **premier message utile** arrive au scan. Entre intention et scan, la notification existe désormais. | **Livré** (`NR-4`) ; reste à prouver en navigateur |
 | 3 | **« Valider · ouvre le chat de transaction »** (maquette `seller-validate`, l.1111) : surface **absente de l'app** (0 occurrence de « devenue une intention »). `S-27` dit « au clic, ça valide en auto et lui ouvre le chat de cette demande précise ». | **FERMÉ 2026-10-16** - `TransactionRoom.tsx` rend la surface à `qr_ready` ; **preuve 6/6 Postgres réel** (`prove-room-s22-dashboard-validate.mjs`) + rendu 9/9. Dossier `omni-room-s22-dashboard-validate-evidence-2026-10-16.md` |
 | 4 | **Le scan QR ouvre-t-il la Room ?** `NR-6` livré : le scan **ne jette plus** la transaction → « Ouvrir la transaction validée ». | **Livré** ; vérifier le comportement exact après validation |
-| 5 | **Chat à l'intention = Room dédiée ou chat du flux complété ?** | **Décision fondateur requise** — l'audit recommandait **Room dédiée** |
+| 5 | **Chat à l'intention = Room dédiée ou chat du flux complété ?** | **TRANCHÉ 2026-10-16** — **Room dédiée**. Le chat du flux n'existe plus : la Room porte le fil complet. La **reprise** d'une transaction (`resumeTransaction`, point 3) ouvre la Room, plus le flux ; le rôle est **lu** dans le snapshot (`actorRole`), jamais supposé (un vendeur reprend sa vente). |
 
 ## La question de fond, telle qu'elle se pose
 

@@ -49,22 +49,22 @@ describe('Heartwood S1 — OmniQr rend un vrai QR', () => {
     expect(el?.getAttribute('aria-label')).toBe('QR Omni');
   });
 
-  it('vide n’existe pas : les deux surfaces importent OmniQr et n’ont plus qrStyle', () => {
+  it('une seule surface porte le QR : la Room (le flux s’arrête à l’intention)', () => {
     const buyer = readFileSync('src/trunk/BuyerFlowV13.tsx', 'utf8');
     const room = readFileSync('src/trunk/TransactionRoom.tsx', 'utf8');
-    expect(buyer).toContain("from './OmniQr'");
+    // POINT 1 (2026-10-16) : le suivi/QR du flux a été retiré — la Room est la seule
+    // surface post-intention. Le QR doit donc vivre dans la Room, et nulle part ailleurs.
     expect(room).toContain("from './OmniQr'");
-    expect(buyer).not.toContain('qrStyle');
     expect(room).not.toContain('qrStyle');
+    expect(buyer).not.toContain("from './OmniQr'");
+    expect(buyer).not.toContain('qrStyle');
     // l'ancien conteneur inversé (encre de fond) portait l'aria-label ; il ne doit plus exister
     expect(buyer).not.toContain("fontFamily: 'monospace', fontSize: 18");
   });
 
   it('encode le payload que le scanner décode (`transactionId:token`)', () => {
     // qrPayload définit la forme ; le composant la reçoit telle quelle.
-    const buyer = readFileSync('src/trunk/BuyerFlowV13.tsx', 'utf8');
     const room = readFileSync('src/trunk/TransactionRoom.tsx', 'utf8');
-    expect(buyer).toContain('qrPayload(txnId!, qrToken)');
     expect(room).toContain('qrPayload(transactionId, qrToken)');
   });
 

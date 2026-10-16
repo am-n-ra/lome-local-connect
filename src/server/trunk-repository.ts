@@ -7796,6 +7796,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           f.name as seller_facility_name,
           f.contact_phone as seller_contact_phone,
           f.contact_whatsapp as seller_contact_whatsapp,
+          f.latitude as seller_facility_latitude,
+          f.longitude as seller_facility_longitude,
           m.role as actor_role,
           -- TRUNK-X1 : le verrou scanné (qr_verified) rend l'état de l'intention non
           -- pertinent ; sinon un pi.state='expired' DOIT primer sur le défaut retombé
@@ -7843,6 +7845,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         sellerFacilityName: row.seller_facility_name === null || row.seller_facility_name === undefined ? null : String(row.seller_facility_name),
         sellerContactPhone: row.seller_contact_phone === null || row.seller_contact_phone === undefined ? null : String(row.seller_contact_phone),
         sellerContactWhatsapp: row.seller_contact_whatsapp === null || row.seller_contact_whatsapp === undefined ? null : String(row.seller_contact_whatsapp),
+        sellerFacilityLatitude: row.seller_facility_latitude === null || row.seller_facility_latitude === undefined ? null : Number(row.seller_facility_latitude),
+        sellerFacilityLongitude: row.seller_facility_longitude === null || row.seller_facility_longitude === undefined ? null : Number(row.seller_facility_longitude),
       };
     },
 

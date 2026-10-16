@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowRight, BadgeCheck, Banknote, CheckCircle2, Copy, QrCode, Smartphone, Star, X } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Banknote, CheckCircle2, Copy, Navigation, QrCode, Smartphone, Star, X } from 'lucide-react';
 import { confirmExternalPayment, declareExternalPayment, getTransaction, getTransactionMessages, issueBuyerQrToken, qrPayload, revokeQrToken, sendTransactionMessage, submitTransactionRating, transitionTransaction } from './api';
 import { deadlineLabel, deadlineState, transactionStateLabel, transactionStateResponsible } from './transaction-time';
 import { Skeleton } from './Skeleton';
@@ -35,9 +35,12 @@ interface Props {
   lastEventAt?: string | null;
   onClose: () => void;
   onChanged?: () => void;
+  /** RT-D2 — ouvre l'itinéraire vers le vendeur. Après intention, c'est ici que
+   *  l'itinéraire vit (la Room est la seule surface transactionnelle). */
+  onRoute?: (longitude: number, latitude: number, name: string) => void;
 }
 
-export function TransactionRoom({ transactionId, token, actorRole, counterparty, lastEventAt = null, onClose, onChanged }: Props) {
+export function TransactionRoom({ transactionId, token, actorRole, counterparty, lastEventAt = null, onClose, onChanged, onRoute }: Props) {
   const [txn, setTxn] = useState<TransactionSnapshotResult | null>(null);
   const [messages, setMessages] = useState<TransactionMessage[]>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -179,6 +182,24 @@ export function TransactionRoom({ transactionId, token, actorRole, counterparty,
               <div className="kv"><span>Contact</span><b>{txn.sellerContactPhone ?? txn.sellerContactWhatsapp}</b></div>
             )}
           </div>
+
+          {/* RT-D2 — l'itinéraire vers le vendeur vit dans la Room (la seule surface
+              transactionnelle). Avant intention, il reste verrouillé : c'est le même
+              contrat que le contact, et la fiche facilité dit le chemin. */}
+          {actorRole === 'buyer' && onRoute && txn.sellerFacilityLatitude !== null && txn.sellerFacilityLongitude !== null && (
+            <div className="cardbox" style={{ marginTop: 10 }}>
+              <div className="kv"><span>Point de remise</span><b>{txn.sellerFacilityName ?? counterparty ?? 'N/D'}</b></div>
+              <button
+                className="btn"
+                style={{ marginTop: 8, width: '100%' }}
+                type="button"
+                onClick={() => { onClose(); onRoute(txn.sellerFacilityLongitude!, txn.sellerFacilityLatitude!, txn.sellerFacilityName ?? counterparty ?? ''); }}
+              >
+                <Navigation size={15} /> Itinéraire vers le vendeur
+              </button>
+              <p className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>Votre intention est prise : l'itinéraire est débloqué.</p>
+            </div>
+          )}
 
           <div className="cardbox">
             <div className="kv"><span>Étape</span><b>{transactionStateLabel(currentState)}<small className="tiny muted" style={{ display: 'block' }}>{sellerCanValidate ? 'vous validez (scan ou dashboard)' : responsible === 'system' ? 'système' : responsible === 'buyer' ? 'à l\'acheteur' : 'au vendeur'}</small></b></div>

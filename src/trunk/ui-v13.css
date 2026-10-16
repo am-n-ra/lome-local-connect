@@ -213,13 +213,6 @@ img.pthumb{object-fit:cover;background:#ececec}
 .chatbar input{flex:1;height:34px;border:1px solid var(--line);border-radius:999px;padding:0 12px;font-size:10px;outline:0}
 .chatbar button{width:34px;height:34px;border-radius:50%;background:var(--ink);color:#fff;flex:none;display:grid;place-items:center}
 .chatbar button svg{width:15px;height:15px}
-.txntrack{display:flex;flex-direction:column;gap:0;margin-top:8px;overflow:hidden}
-.txstep{display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);overflow:hidden}
-.txstep:last-child{border-bottom:none}
-.txstep .sdot{width:10px;height:10px;border-radius:50%;background:var(--panel);border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}
-.txstep .sdot.ok{background:var(--accent)}.txstep .sdot.now{background:var(--ink)}
-.txstep b{font-size:8.5px}.txstep small{display:block;color:var(--ink-soft);font-size:7px}
-.txstep .go{color:var(--ink-soft)}
 .navpill{position:absolute;z-index:11;bottom:var(--safe-bottom, 14px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:2px;padding:6px;border-radius:999px;background:var(--pill);box-shadow:var(--sh-lg);transition:width .32s var(--ease)}
 .navpill button{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:rgba(255,255,255,.78);position:relative;overflow:hidden;transition:background .2s var(--ease),color .2s var(--ease),transform .15s var(--ease)}
 .navpill button svg{width:18px;height:18px}

@@ -327,6 +327,11 @@ export interface TransactionSnapshotResult {
   sellerContactPhone: string | null;
   sellerContactWhatsapp: string | null;
   sellerFacilityName: string | null;
+  /** RT-D2 — coordonnées du vendeur, exposées UNIQUEMENT dans le contexte transactionnel
+   *  (membre), pour que la Room porte l'itinéraire après intention. Même règle que le
+   *  contact : jamais publiquement, seulement après l'intention d'achat. */
+  sellerFacilityLatitude: number | null;
+  sellerFacilityLongitude: number | null;
 }
 
 /** FF-2 — une transaction non terminale de l'utilisateur connecté, pour l'écran

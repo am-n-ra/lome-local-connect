@@ -55,6 +55,8 @@ const snapshot = (state: TransactionSnapshotResult['state']): TransactionSnapsho
   sellerContactPhone: null,
   sellerContactWhatsapp: null,
   sellerFacilityName: 'Épicerie Chez Afi',
+  sellerFacilityLatitude: 6.1319,
+  sellerFacilityLongitude: 1.2228,
 });
 
 const messages = [
