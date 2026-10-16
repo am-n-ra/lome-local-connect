@@ -108,5 +108,14 @@ porte **deux** listes de réponses ; une seule était protégée). **Selftest 31
   « Auto ON/OFF · Activer/Désactiver · Actualiser », réservé aux facilités Pro actives) — le
   contrôle de l'automate est donc **de bout en bout**, pas un résidu. Vérifié en le cherchant
   après avoir écrit le contraire : *ne pas déclarer manquant ce qu'on n'a pas cherché.*
-- **Web Push** : le drain est câblé, mais **VAPID n'est pas configuré en prod** → la route répond
-  honnêtement `configured:false`. La livraison réelle attend les clés (décision fondateur).
+- **Web Push est ARMÉ — correction d'une affirmation périmée.** VAPID **est** configuré en Production
+  (`VAPID_PUBLIC_KEY/PRIVATE_KEY/SUBJECT`, `WP-1`), vérifié **par le comportement** : `GET
+  /api/v2/notifications/push-key` → `configured:true` avec une vraie clé publique. La base canonique
+  porte **4 livraisons `web_push` en état `delivered`** (dernière 2026-10-15T16:13:38Z). J'avais écrit
+  « non configuré → `configured:false` » : **faux**, et contredit par une ligne `WP-1` **antérieure et
+  juste** du même document d'état. *Leçon : une ligne neuve peut écraser une vérité déjà consignée —
+  relire la ligne voisine avant d'écrire un résidu.*
+- **`in_app` reste `queued` — par conception, pas un défaut.** Le drain ne dépile que `web_push`
+  (`listPendingPushDeliveries` filtre `channel='web_push'`) ; le centre in-app lit
+  `v2_notification_events` (+ `seen_at` au tap), jamais la livraison. 5 livraisons `in_app` restent
+  `queued` avec `attempt_count=0` : c'est l'état normal d'un canal sans file d'envoi.
