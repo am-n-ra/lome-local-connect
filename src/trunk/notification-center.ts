@@ -26,6 +26,9 @@ export function notificationLabel(notification: Pick<NotificationSummary, 'event
     case 'transaction_intent_created': return 'Une intention d’achat vous attend';
     case 'availability_response_created': return 'Réponse à votre demande';
     case 'availability_request_created': return 'Nouvelle demande de disponibilité';
+    // TXN-G7 (GAP-7) : l'expiration était silencieuse. Chaque partie a son libellé.
+    case 'availability_request_expired': return 'Votre demande a expiré';
+    case 'availability_response_lapsed': return 'Demande expirée sans transaction';
     case 'claim_submitted': return 'Demande à examiner';
     case 'claim_reviewed':
       if (notification.reviewOutcome === 'certified') return 'Lieu vérifié';
@@ -53,6 +56,14 @@ export function notificationTarget(notification: Pick<NotificationSummary, 'even
     return { kind: 'availability-response', requestId: entityId };
   }
   if (eventType === 'availability_request_created' && entityType === 'availability_request') {
+    return { kind: 'seller-queue' };
+  }
+  // TXN-G7 (GAP-7) — l'acheteur dont la demande a expiré rouvre le SUIVI de sa demande
+  // (il y lit « Rien n'a été débité ») ; le vendeur qui avait répondu rouvre sa file.
+  if (eventType === 'availability_request_expired' && entityType === 'availability_request' && entityId) {
+    return { kind: 'availability-response', requestId: entityId };
+  }
+  if (eventType === 'availability_response_lapsed' && entityType === 'availability_request') {
     return { kind: 'seller-queue' };
   }
   if (eventType === 'claim_reviewed' && entityType === 'verification_request' && entityId) {

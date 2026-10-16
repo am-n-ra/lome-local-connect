@@ -89,6 +89,18 @@ export function pushMessageFor(
       body: 'Le vendeur a répondu à votre demande de disponibilité.',
       url: targetUrl,
     },
+    // TXN-G7 (GAP-7) — l'expiration n'est plus silencieuse. Chaque partie reçoit
+    // l'alerte qui la concerne, avec la même cible que la notification in-app.
+    availability_request_expired: {
+      title: 'Omni · demande expirée',
+      body: 'Votre demande a expiré sans transaction. Rien n’a été débité.',
+      url: targetUrl,
+    },
+    availability_response_lapsed: {
+      title: 'Omni · demande expirée',
+      body: 'Cette demande a expiré avant la transaction. Le stock réservé a été libéré.',
+      url: targetUrl,
+    },
   };
   if (kindMessages[kind]) return kindMessages[kind];
   const titles: Record<string, string> = {

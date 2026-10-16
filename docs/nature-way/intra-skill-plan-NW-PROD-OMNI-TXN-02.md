@@ -40,9 +40,9 @@
 | T-G2 | W-01 | Phase B — verrou | Expiration du verrouillé | D-TXN-3a/3b | NW | `blocked` | Décision + test SQL réel | **Argent** : ne rien débiter sans décision | Décision fondateur |
 | T-G3 | W-01 | Types | `expired` dans `TransactionState` domaine + validateur | — | NW | `verified` | tsc + garde de parité | Aucune donnée réécrite | — |
 | T-G4 | W-01 | Phase B — QR | QR persistant dans la Room | T-G3 | NW | `verified` | Garde falsifié + SQL réel canonique | Aucun token en clair renvoyé | — |
-| T-G5 | W-01 | Notifications | Intention d'achat notifiée au vendeur | — | NW | `ready` | Preuve branche jetable | Idempotent | — |
+| T-G5 | W-01 | Notifications | Intention d'achat notifiée au vendeur | — | NW | `done` | **Déjà livré** (`caf18e5`, NR-4) — GAP-5 était FAUX | — | — |
 | T-G6 | W-01 | Phase A — délai | Fenêtre 15 min visible | — | NW | `ready` | Garde + preuve navigateur | Aucun chiffre en dur | — |
-| T-G7 | W-01 | Notifications | Expiration notifiée aux deux parties | T-G2 | NW | `blocked` | Preuve branche jetable | Idempotent | Décision fondateur |
+| T-G7 | W-01 | Notifications | Expiration notifiée aux deux parties | — | NW | `verified` | Preuve jetable 11/11 + falsifié (5) | Idempotent (périmètre : avant verrou, comme le sweep) | — |
 | T-G8 | W-01 | Types | `failed` : écrit ou retiré | — | NW | `todo` | tsc + garde | Additif | — |
 
 ## Reconciliation log
@@ -53,14 +53,16 @@
 | 2026-10-15 | **TXN-G1 livré** : expirée visible (historique), sans reçu ; preuve SQL réelle | T-G1 `ready`→`verified` ; **GAP-10 ajouté** (zombie `qr_ready`+`expired` → projection corrigée) | `advance` | NW | T-G3 (types) |
 | 2026-10-15 | **TXN-G3 livré** : `expired` dans le type domaine ; client + validateur HTTP réutilisent la source unique | T-G3 `ready`→`verified` | `advance` | NW | T-G4 (QR) |
 | 2026-10-15 | **TXN-G4 livré** : la Room reçoit l'ÉTAT du QR (jamais le token en clair) et dit la vérité | T-G4 `ready`→`verified` ; GAP-4 requalifié (rehydratation impossible **par conception**) | `advance` | NW | T-G5/T-G6 |
+| 2026-10-15 | **RE-MESURE : GAP-5 était FAUX** (livré par `caf18e5`, NR-4) — le registre avait été écrit par grep | T-G5 `ready`→`done` ; registre corrigé | `advance` | NW | T-G7 |
+| 2026-10-15 | **TXN-G7 livré** : l'expiration notifie les DEUX parties (acheteur → suivi ; vendeur → file), idempotent | T-G7 `blocked`→`verified` ; GAP-7 corrigé | `advance` | NW | T-G6 |
 
 ## Handoff to Founder HQ
 
 > **Local status:** `partial`
-> **Gate decision:** `advance` — TXN-G1/G3/G4 livrés et prouvés ; la sous-file continue
-> **Closed:** T-G1 · T-G3 · T-G4 · W-01 mesure (registre `omni-transaction-gaps-register-2026-10-15.md`)
-> **Open or blocked:** T-G5/T-G6/T-G8 `ready` · T-G2/T-G7 `blocked` sur **D-TXN-3a/3b**
+> **Gate decision:** `advance` — TXN-G1/G3/G4/G7 livrés et prouvés ; GAP-5 démasqué faux
+> **Closed:** T-G1 · T-G3 · T-G4 · T-G5 (déjà livré) · T-G7 · W-01 mesure
+> **Open or blocked:** T-G6/T-G8 `ready` · T-G2 `blocked` sur **D-TXN-3a/3b**
 > **Resource Receipt:** 6 ressources chargées, 1 template instancié, 2 non applicables (justifiés)
 > **Residual gap:** preuve navigateur authentifiée non exécutée (sandbox sans session) ; décision fondateur requise sur l'expiration du verrouillé
-> **Next smallest action:** **T-G5** (notifier le vendeur de l'intention d'achat) — aucune décision fondateur requise
+> **Next smallest action:** **T-G6** (afficher la fenêtre de 15 min de la demande de dispo) — aucune décision fondateur requise
 > **Re-plan trigger:** décision D-TXN-3a/3b, ou une mesure qui contredit le contrat

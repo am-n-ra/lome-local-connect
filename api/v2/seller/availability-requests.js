@@ -111,6 +111,18 @@ function pushMessageFor(payload, entity = {}) {
       title: "Omni \xB7 r\xE9ponse re\xE7ue",
       body: "Le vendeur a r\xE9pondu \xE0 votre demande de disponibilit\xE9.",
       url: targetUrl
+    },
+    // TXN-G7 (GAP-7) — l'expiration n'est plus silencieuse. Chaque partie reçoit
+    // l'alerte qui la concerne, avec la même cible que la notification in-app.
+    availability_request_expired: {
+      title: "Omni \xB7 demande expir\xE9e",
+      body: "Votre demande a expir\xE9 sans transaction. Rien n\u2019a \xE9t\xE9 d\xE9bit\xE9.",
+      url: targetUrl
+    },
+    availability_response_lapsed: {
+      title: "Omni \xB7 demande expir\xE9e",
+      body: "Cette demande a expir\xE9 avant la transaction. Le stock r\xE9serv\xE9 a \xE9t\xE9 lib\xE9r\xE9.",
+      url: targetUrl
     }
   };
   if (kindMessages[kind]) return kindMessages[kind];
@@ -8069,6 +8081,51 @@ function createTrunkRepository(sql = database()) {
           join intent_expired ie on ie.id = st.intent_id
           on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
           returning entity_id
+        ),
+        -- TXN-G7 (GAP-7) : l'expiration était SILENCIEUSE. L'acheteur croyait sa demande
+        -- vivante et son stock réservé ; il ne l'apprenait qu'en rouvrant l'app. On notifie
+        -- les DEUX parties, chacune sur sa surface : l'acheteur sur le suivi de sa demande,
+        -- le vendeur (uniquement s'il avait répondu) sur sa file. Ancré sur intent_expired
+        -- (update … returning) : un rejeu ne re-notifie pas, et dedupe_key verrouille le
+        -- reste. Le push web n'est créé que si un abonnement actif existe (même règle que
+        -- BRANCHES-NOTIF-1) : on ne promet pas une alerte qui ne peut pas arriver.
+        expiry_targets as (
+          select st.buyer_account_id as recipient_account_id,
+                 'availability_request_expired' as event_type,
+                 st.request_id, null::uuid as response_id
+          from stale st
+          join intent_expired ie on ie.id = st.intent_id
+          union all
+          select ar.responder_account_id, 'availability_response_lapsed', st.request_id, ar.id
+          from stale st
+          join intent_expired ie on ie.id = st.intent_id
+          join v2_availability_responses ar on ar.request_id = st.request_id
+          where ar.responder_account_id is not null
+        ),
+        expiry_notified as (
+          insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
+          select t.recipient_account_id, t.event_type, 'availability_request', t.request_id::text,
+                 t.request_id::text || ':' || t.event_type,
+                 jsonb_build_object('kind', t.event_type, 'requestId', t.request_id::text),
+                 ${input.correlationId}
+          from expiry_targets t
+          on conflict (recipient_account_id, dedupe_key) do nothing
+          returning id, recipient_account_id
+        ),
+        expiry_in_app as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select id, 'in_app', 'queued' from expiry_notified
+          on conflict (event_id, channel) do nothing
+          returning id
+        ),
+        expiry_push as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select n.id, 'web_push', 'queued'
+          from expiry_notified n
+          join v2_web_push_subscriptions s on s.account_id = n.recipient_account_id
+          where s.permission_state = 'granted' and s.revoked_at is null
+          on conflict (event_id, channel) do nothing
+          returning id
         )
         select st.transaction_id, st.request_id from stale st
         join intent_expired ie on ie.id = st.intent_id
