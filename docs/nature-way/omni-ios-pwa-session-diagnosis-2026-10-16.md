@@ -105,3 +105,60 @@ Aucune des deux n'est un « quick fix » : la première est une **action platefo
 - **Manifest PWA** : correct (`display: standalone`, `scope: /`, icônes). Pas la cause.
 - **Le jeton** : jamais persisté sur disque (`setAuthToken` = state mémoire) — par conception,
   le cookie `HttpOnly` est la seule source. Confirme que sans cookie, il n'y a rien à restaurer.
+
+
+---
+
+## DÉCISION FONDATEUR : **B** — proxy same-origin (2026-10-16)
+
+Le fondateur a tranché **B**. Livré dans le dépôt, **sans 13e fonction Vercel**.
+
+### Ce qui est livré
+
+- **`src/server/auth-proxy.ts`** — proxy same-origin monté sur `/api/v2/auth/*`, câblé
+  **dans le catch-all existant** (`handleApi`) → la contrainte Hobby (12 fonctions) est tenue.
+  Il délègue à **`handleAuthProxyRequest`** (`@neondatabase/auth/server`), le chemin **supporté
+  par l'éditeur**, qui **réécrit chaque `Set-Cookie`** : supprime `Partitioned`, force `SameSite`
+  (`lax`) + `Secure`, garde `HttpOnly`. Un simple `rewrite` Vercel ne peut pas faire ça.
+- **Allowlist stricte** — seuls `get-session`, `sign-in/email`, `sign-up/email`, `sign-out`,
+  `email-otp/send-verification-otp`, `email-otp/verify-email`, `token` sont relayés ; tout autre
+  sous-chemin répond **404** (jamais un relais ouvert vers l'hôte d'auth).
+- **Le webhook est exclu** (`/api/v2/auth/webhook`) — il est déjà traité par `handleApi` avec
+  vérification de signature ; le proxifier la casserait.
+- **`src/auth.ts`** pointe le client sur **`/api/v2/auth`** (même origine). Une URL **absolue**
+  cross-site est **ignorée** : on ne peut pas revenir au cookie tiers par configuration.
+
+### Preuve (serveur réel, connexion réelle)
+
+`sign-in/email` via le proxy renvoie :
+
+```
+Set-Cookie: __Secure-neon-auth.session_token=…; Path=/; HttpOnly; Secure; SameSite=Lax
+```
+
+**sans `Domain`, sans `Partitioned`** → cookie **first-party**. Puis, avec ce même cookie :
+`/token` → **200** JWT valide ; `get-session` → **200** avec la session (plus `null`).
+C'est **exactement** le chemin qui échouait sur l'iPhone PWA.
+
+Autres preuves : `/api/v2/auth/admin/set-role` → **404** (refus, pas relais) ; `/api/v2/auth/webhook`
+→ **500** (traité par le webhook, pas par le proxy) ; client bundle = **0** occurrence de
+`neon.tech` (plus d'appel cross-site) et **0** code serveur ; serverless bundle porte le proxy.
+
+### Garde falsifiable
+
+`src/server/auth-proxy.test.ts` (8). **Falsifié** : repointer le client sur l'hôte `neon.tech`
+→ **1 échec** (nommé) ; restauré → 8/8. ⚠️ Le premier jet du garde **passait sur la sabotage**
+(faux négatif — motif ancré trop étroit ET commentaire `*.neon.tech` qui masquait) : corrigé en
+ciblant un **littéral d'URL** après **retrait des commentaires**. Un garde qui ne peut pas échouer
+ne prouve rien.
+
+### Ce que ça change côté configuration
+
+**Rien d'obligatoire.** `NEON_AUTH_URL` a un défaut serveur (l'hôte du projet, déjà public dans
+l'ancien bundle). `NEON_AUTH_COOKIE_SECRET` est **optionnel** (cache de session ; sans lui, le
+proxy relaie et réécrit quand même). Pour un autre environnement, poser `NEON_AUTH_URL`.
+
+### Résidu honnête
+
+La **preuve iPhone PWA réelle** (appareil du fondateur) reste à faire : elle est la seule qui
+tranche définitivement. La preuve ci-dessus est **serveur + navigateur local**, pas un iPhone.

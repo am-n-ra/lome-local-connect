@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getAuthUserId } from './auth-context';
 import { routingGate } from './routing-gate';
+import { handleAuthProxy, isAuthProxyPath } from './auth-proxy';
 import { recordRouteRequest, pruneRouteRequests, routeQuotaExceeded } from './route-quota';
 import { deliverPendingPush } from './web-push';
 import { isWebPushConfigured, sendWebPush, vapidConfig } from './web-push-provider';
@@ -471,6 +472,15 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
   if (!pathname.startsWith('/api/v2/')) return false;
   res.setHeader('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN ?? '*');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, Idempotency-Key');
+
+  // IOS-PWA-1: serve Neon Auth same-origin so the session cookie is FIRST-PARTY.
+  // WebKit/ITP blocks third-party cookies (auth lives on *.neon.tech), and a
+  // standalone iOS PWA has no exemption — the session never restored. This must
+  // run BEFORE the /api/v2/auth/webhook handler (the proxy explicitly skips that
+  // path) and needs no database.
+  if (isAuthProxyPath(pathname)) {
+    return await handleAuthProxy(req, res, pathname, url);
+  }
 
   // Routing is served BEFORE the repository is created: it needs no database,
   // and a database outage must not turn a working itinerary into a 500.

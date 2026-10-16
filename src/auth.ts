@@ -1,7 +1,25 @@
 import { createInternalNeonAuth } from '@neondatabase/auth';
 
-const DEFAULT_NEON_AUTH_URL = 'https://ep-plain-butterfly-amn21o8h.neonauth.c-5.us-east-1.aws.neon.tech/neondb/auth';
-const authUrl = ((import.meta.env.VITE_NEON_AUTH_URL as string | undefined) ?? DEFAULT_NEON_AUTH_URL).trim();
+/**
+ * IOS-PWA-1 (2026-10-16): the auth server lives on a THIRD-PARTY domain
+ * (`*.neon.tech`), so its session cookie is a third-party cookie — which WebKit
+ * strips, with no exemption in a standalone iOS PWA. We therefore talk to the
+ * **same-origin** proxy (`/api/v2/auth/*`) and only *it* reaches Neon Auth; the
+ * proxy rewrites every `Set-Cookie` to first-party. The client never needs to
+ * know the upstream host.
+ *
+ * A relative `VITE_NEON_AUTH_URL` is honoured (e.g. a different mount); an
+ * absolute cross-site URL is deliberately IGNORED, because pointing the client
+ * back at `*.neon.tech` would silently restore the third-party cookie.
+ */
+const SAME_ORIGIN_AUTH_PATH = '/api/v2/auth';
+const configured = (import.meta.env.VITE_NEON_AUTH_URL as string | undefined)?.trim();
+const relativeOverride = configured && configured.startsWith('/') ? configured : null;
+// In the browser the origin is real. In a non-browser context (SSR, unit tests)
+// there is no `window`, and better-auth rejects a relative base URL — fall back
+// to a syntactically valid origin; it is never used for a real request there.
+const authOrigin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : 'http://localhost';
+const authUrl = `${authOrigin}${relativeOverride ?? SAME_ORIGIN_AUTH_PATH}`;
 const neonAuth = createInternalNeonAuth(authUrl);
 export const authClient = neonAuth?.adapter ?? null;
 

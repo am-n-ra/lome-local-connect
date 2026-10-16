@@ -38,6 +38,101 @@ function routingGate(input) {
   return env.ROUTING_REQUIRE_INTENT === "1" ? "intent" : "identity";
 }
 
+// src/server/auth-proxy.ts
+import { handleAuthProxyRequest } from "@neondatabase/auth/server";
+var AUTH_PROXY_PREFIX = "/api/v2/auth";
+var AUTH_WEBHOOK_PATH = "/api/v2/auth/webhook";
+var ALLOWED_AUTH_PATHS = /* @__PURE__ */ new Set([
+  "get-session",
+  "sign-in/email",
+  "sign-up/email",
+  "sign-out",
+  "email-otp/send-verification-otp",
+  "email-otp/verify-email",
+  "token"
+]);
+var DEFAULT_UPSTREAM_AUTH_URL = "https://ep-plain-butterfly-amn21o8h.neonauth.c-5.us-east-1.aws.neon.tech/neondb/auth";
+function upstreamAuthBaseUrl(env = process.env) {
+  const raw = (env.NEON_AUTH_URL ?? env.VITE_NEON_AUTH_URL ?? DEFAULT_UPSTREAM_AUTH_URL).trim();
+  return raw ? raw.replace(/\/$/, "") : null;
+}
+function authCookieSecret(env = process.env) {
+  const raw = (env.NEON_AUTH_COOKIE_SECRET ?? "").trim();
+  return raw.length >= 32 ? raw : void 0;
+}
+function isAuthProxyPath(pathname) {
+  if (pathname === AUTH_WEBHOOK_PATH) return false;
+  return pathname === AUTH_PROXY_PREFIX || pathname.startsWith(`${AUTH_PROXY_PREFIX}/`);
+}
+function authProxyEndpoint(pathname) {
+  const rest = pathname.slice(AUTH_PROXY_PREFIX.length).replace(/^\/+/, "");
+  return ALLOWED_AUTH_PATHS.has(rest) ? rest : null;
+}
+async function toWebRequest(req, url) {
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (typeof value === "string") headers.set(key, value);
+    else if (Array.isArray(value)) headers.set(key, value.join(", "));
+  }
+  const method = req.method ?? "GET";
+  const body = method === "GET" || method === "HEAD" ? void 0 : new Uint8Array(await readIncomingBody(req));
+  return new Request(url.toString(), { method, headers, body });
+}
+async function readIncomingBody(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(Buffer.from(chunk));
+  return Buffer.concat(chunks);
+}
+async function handleAuthProxy(req, res, pathname, url) {
+  if (!isAuthProxyPath(pathname)) return false;
+  const endpoint = authProxyEndpoint(pathname);
+  if (!endpoint) {
+    res.statusCode = 404;
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    res.end(JSON.stringify({ error: "Unknown auth endpoint.", code: "AUTH_ENDPOINT_NOT_ALLOWED" }));
+    return true;
+  }
+  const baseUrl2 = upstreamAuthBaseUrl();
+  if (!baseUrl2) {
+    res.statusCode = 500;
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    res.end(JSON.stringify({ error: "Authentication is not configured.", code: "AUTH_NOT_CONFIGURED" }));
+    return true;
+  }
+  let upstream;
+  try {
+    upstream = await handleAuthProxyRequest({
+      request: await toWebRequest(req, url),
+      path: endpoint,
+      baseUrl: baseUrl2,
+      // A secret is required by the type, but the vendor only uses it for the
+      // optional session-data cache. A stable fallback keeps this stateless
+      // without weakening the session cookie (which upstream sets, we only rewrite).
+      cookieSecret: authCookieSecret() ?? "omni-auth-proxy-session-data-cache-fallback",
+      sameSite: "lax"
+    });
+  } catch {
+    res.statusCode = 502;
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    res.end(JSON.stringify({ error: "Authentication is temporarily unavailable.", code: "AUTH_UPSTREAM_UNAVAILABLE" }));
+    return true;
+  }
+  res.statusCode = upstream.status;
+  for (const header of ["content-type"]) {
+    const value = upstream.headers.get(header);
+    if (value) res.setHeader("Content-Type", value);
+  }
+  res.setHeader("Cache-Control", "no-store");
+  const cookies = upstream.headers.getSetCookie();
+  if (cookies.length > 0) res.setHeader("Set-Cookie", cookies);
+  const payload = Buffer.from(await upstream.arrayBuffer());
+  res.end(payload);
+  return true;
+}
+
 // src/server/route-quota.ts
 import { neon } from "@neondatabase/serverless";
 var ROUTE_QUOTA = {
@@ -9609,6 +9704,9 @@ async function handleApi(req, res, pathname, url) {
   if (!pathname.startsWith("/api/v2/")) return false;
   res.setHeader("Access-Control-Allow-Origin", process.env.ALLOWED_ORIGIN ?? "*");
   res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Idempotency-Key");
+  if (isAuthProxyPath(pathname)) {
+    return await handleAuthProxy(req, res, pathname, url);
+  }
   if (req.method === "GET" && pathname === "/api/v2/public/routing") {
     const from = {
       latitude: coordinateParam(url, "from_lat"),
