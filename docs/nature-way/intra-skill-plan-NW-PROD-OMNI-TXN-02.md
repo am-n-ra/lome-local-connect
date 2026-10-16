@@ -36,7 +36,7 @@
 |---|---|---|---|---|---|---|---|---|---|
 | G-01 | — | gate Branches | Clore les gaps transaction mesurés | — | NW | `in_progress` | Registre + tranches livrées + preuve prod | Ne pas ouvrir de fondation neuve | Décision fondateur |
 | W-01 | G-01 | Phase A/B — vérité | Rendre le parcours honnête de bout en bout | — | NW | `in_progress` | Registre `omni-transaction-gaps-register` | Docs only ici | — |
-| T-G1 | W-01 | Phase B — sortie | Transaction expirée visible + message honnête | — | NW | `ready` | Garde falsifié + preuve prod | Aucune migration | — |
+| T-G1 | W-01 | Phase B — sortie | Transaction expirée visible + message honnête | — | NW | `verified` | Garde falsifié + SQL réel canonique | Aucune migration | — |
 | T-G2 | W-01 | Phase B — verrou | Expiration du verrouillé | D-TXN-3a/3b | NW | `blocked` | Décision + test SQL réel | **Argent** : ne rien débiter sans décision | Décision fondateur |
 | T-G3 | W-01 | Types | `expired` dans `TransactionState` domaine + validateur | — | NW | `ready` | tsc + garde de parité | Aucune donnée réécrite | — |
 | T-G4 | W-01 | Phase B — QR | QR persistant dans la Room | T-G3 | NW | `ready` | Garde falsifié | Ré-émission = remplacement | — |
@@ -50,14 +50,15 @@
 | Date | Evidence or changed fact | Task changes | Decision | Owner | Next review |
 |---|---|---|---|---|---|
 | 2026-10-15 | Mesure : 9 gaps identifiés ; GAP-1 rend le message d'honnêteté inatteignable | W-01 opened, T-G1…T-G8 created | `replan` | NW | Après décision D-TXN-3 |
+| 2026-10-15 | **TXN-G1 livré** : expirée visible (historique), sans reçu ; preuve SQL réelle | T-G1 `ready`→`verified` ; **GAP-10 ajouté** (zombie `qr_ready`+`expired` → projection corrigée) | `advance` | NW | T-G3 (types) |
 
 ## Handoff to Founder HQ
 
 > **Local status:** `partial`
-> **Gate decision:** `replan` — la porte Branches reste ouverte ; une sous-file « clôture transaction » est ouverte
-> **Closed:** W-01 mesure (registre `omni-transaction-gaps-register-2026-10-15.md`)
-> **Open or blocked:** T-G1/T-G3/T-G4/T-G5/T-G6/T-G8 `ready` · T-G2/T-G7 `blocked` sur **D-TXN-3a/3b**
+> **Gate decision:** `advance` — TXN-G1 livré et prouvé (SQL réel) ; la sous-file continue
+> **Closed:** T-G1 (expirée visible + projection honnête) · W-01 mesure (registre `omni-transaction-gaps-register-2026-10-15.md`)
+> **Open or blocked:** T-G3/T-G4/T-G5/T-G6/T-G8 `ready` · T-G2/T-G7 `blocked` sur **D-TXN-3a/3b**
 > **Resource Receipt:** 6 ressources chargées, 1 template instancié, 2 non applicables (justifiés)
 > **Residual gap:** preuve navigateur authentifiée non exécutée (sandbox sans session) ; décision fondateur requise sur l'expiration du verrouillé
-> **Next smallest action:** **T-G1** (rendre une transaction expirée visible avec le message honnête) — aucune décision fondateur requise
+> **Next smallest action:** **T-G3** (aligner `expired` dans `TransactionState` domaine + validateur HTTP) — dépendance de T-G4, aucune décision fondateur requise
 > **Re-plan trigger:** décision D-TXN-3a/3b, ou une mesure qui contredit le contrat

@@ -200,6 +200,16 @@ await check('listSellerCatalogue (complete)', () => repository.listSellerCatalog
 await check('getSellerAvailabilityQueue', () => repository.getSellerAvailabilityQueue({ authUserId: SEED_COMPLETE }));
 await check('getBuyerAvailabilityRequests', () => repository.getBuyerAvailabilityRequests({ authUserId: SEED_COMPLETE }));
 await check('listOpenTransactions', () => repository.listOpenTransactions({ authUserId: SEED_COMPLETE }));
+// TXN-G1 (GAP-1) — l'historique doit accepter la forme `expired` : la requête doit
+// COMPILER et RENVOYER une ligne (l'ancienne `current_state = 'closed'` excluait
+// l'expirée, qui disparaissait). On ne juge pas la donnée ici, seulement que la
+// lecture est vivante et ne jette pas.
+await check('listClosedTransactions (accepts expired terminal state)', async () => {
+  const result = await repository.listClosedTransactions({ authUserId: SEED_COMPLETE });
+  const unexpected = result.transactions.find((t) => t.state !== 'closed' && t.state !== 'expired');
+  if (unexpected) throw new Error(`history returned a non-terminal state: ${unexpected.state}`);
+  return result;
+});
 await check('getWalletOverview', () => repository.getWalletOverview({ authUserId: SELLER_READY }));
 await check('getBuyerCreditSummary', () => repository.getBuyerCreditSummary({ authUserId: SEED_COMPLETE }));
 await check('getBuyerProStatus', () => repository.getBuyerProStatus({ authUserId: SEED_COMPLETE }));

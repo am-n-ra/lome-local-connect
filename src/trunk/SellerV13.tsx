@@ -986,17 +986,20 @@ export function SellerV13({ onClose, onProducts, onCompany, onReply, onRefresh, 
                   </button>
                 </div>
               ))}
-              {sellerTxn.closed.map((transaction) => (
+              {sellerTxn.closed.map((transaction) => {
+                const expired = transaction.state === 'expired';
+                return (
                 <div key={transaction.transactionId} style={{ marginTop: 6 }}>
                   <button type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => onOpenTransaction?.({ transactionId: transaction.transactionId, counterparty: 'Acheteur', actorRole: 'seller', lastEventAt: transaction.lastEventAt })}>
                     <div className="row" style={{ justifyContent: 'space-between' }}>
                       <div><b>{transaction.productName ?? 'Transaction'}</b><br /><span className="tiny muted">{transaction.quantity} unité{transaction.quantity === 1 ? '' : 's'}</span></div>
-                      <span className="status ok">Clôturée</span>
+                      <span className={`status ${expired ? 'gray' : 'ok'}`}>{expired ? 'Expirée' : 'Clôturée'}</span>
                     </div>
                     <span className="tiny muted" style={{ marginTop: 4, display: 'block' }}>Conversation · {relativeAge(transaction.lastEventAt)}</span>
                   </button>
                 </div>
-              ))}
+                );
+              })}
             </>
           )}
         </div>

@@ -48,7 +48,7 @@ Aucune ligne de code produit n'est modifiée par ce document.
 
 | ID | Gap | Preuve (fichier:ligne) | Sévérité | Effet utilisateur |
 |---|---|---|---|---|
-| **GAP-1** | Une transaction **expirée** n'apparaît **ni** dans « En cours » **ni** dans « Terminées » : elle **disparaît** | `trunk-repository.ts:7923` (`<> 'closed'` **+** exclusion `pi.state='expired'`) et `:8019` (`= 'closed'`) | **Haute** | L'acheteur ne retrouve **aucune trace** de son intention expirée. Le message d'honnêteté « Rien n'a été débité » que je viens d'ajouter dans la Room **n'est atteignable par aucun chemin** (défaut réel trouvé en le vérifiant). |
+| **GAP-1** | Une transaction **expirée** n'apparaît **ni** dans « En cours » **ni** dans « Terminées » : elle **disparaît** | `trunk-repository.ts:7923` (`<> 'closed'` **+** exclusion `pi.state='expired'`) et `:8019` (`= 'closed'`) | **Haute** | ~~L'acheteur ne retrouve aucune trace~~ **CORRIGÉ (TXN-G1, 2026-10-15)** : elle apparaît dans « Terminées », étiquetée « Expirée », sans reçu. |
 | **GAP-2** | Le balayage d'expiration ne couvre **que l'avant-verrou** (`not exists … state='qr_verified'`) | `trunk-repository.ts:8057-8060` | **Haute** | Une transaction **verrouillée** (QR scanné, paiement déclaré) qui stagne reste **ouverte indéfiniment** — ni clôture, ni expiration, ni remboursement. D-TXN-3 (« verrouillée stagnante : 72 h ») **non implémenté**. |
 | **GAP-3** | `'expired'` est **écrit** comme état de transaction mais **absent** de `TransactionState` (domaine) et du validateur HTTP | `domain/contracts.ts:45` (10 valeurs) · `http.ts:441` · vs `trunk/types.ts:245` (11 valeurs, dont `expired`) | Moyenne | Divergence **domaine/client**. Le serveur ne peut pas valider `expired` comme état ; le type ment. Aucune panne visible aujourd'hui, mais tout nouveau consommateur du type domaine sera faux. |
 | **GAP-4** | La Room **perd le QR** à la fermeture : `qrToken` n'est jamais rechargé (`useState(null)`, seul `issueQr` le pose) et `getTransaction` ne renvoie pas de jeton | `TransactionRoom.tsx:52,121` · `trunk-repository.ts:7786` | Moyenne | L'acheteur qui ferme et rouvre doit **ré-émettre** un QR. Ré-émettre est sûr (remplace l'ancien), mais l'UX ne le dit pas — elle affiche « Émettre mon QR » comme si rien n'avait existé. |
@@ -57,14 +57,31 @@ Aucune ligne de code produit n'est modifiée par ce document.
 | **GAP-7** | Aucune **notification à l'expiration** (ni acheteur, ni vendeur) | sweep `trunk-repository.ts:8046-8120` : `notification` = **0 occurrence** | Moyenne | Une transaction expire **en silence**. L'acheteur croit sa demande vivante ; le stock est libéré sans qu'il le sache. |
 | **GAP-8** | `'failed'` figure dans `AvailabilityStatus` mais **n'est jamais écrit** pour une demande | `domain/contracts.ts:41` ; 0 écriture hors FedaPay (`:5091`) | Basse | État mort. Pas d'effet utilisateur ; dette de type. |
 | **GAP-9** | « Signaler un problème » dans la Room = bouton **désactivé** « bientôt » (FF-9, litige hors V1) | `TransactionRoom.tsx:303` | Basse (assumée) | Conforme au contrat (litige = Gate 7). À **nommer** comme dette, pas à corriger maintenant. |
+| **GAP-10** | Un zombie **existant en base** a `current_state='qr_ready'` **et** intention `expired` ; `getTransaction` ne projetait `'expired'` que sur `intent_created` | mesuré `01256abd…`, `trunk-repository.ts:7830` | **Haute (corrigée)** | **CORRIGÉ (TXN-G1)** : la Room et l'historique disent maintenant la même chose. Ce cas n'était **visible par aucune lecture de code** — il a fallu le chercher dans la base. |
 
 ### Ce qui fonctionne (mesuré, pas supposé)
-
 - Le parcours complet A1→B9 **existe** et est câblé serveur + UI des deux côtés.
 - **Aucune impasse de transition** : chaque état a **exactement un** acteur qui agit, et cet acteur a un bouton dans la Room (vérifié état par état).
 - **Le rôle est lu au serveur** (`actorRole`), jamais supposé — la reprise ouvre la Room avec le bon rôle.
 - Le verrou (scan QR vendeur) est **réellement** appliqué : `qr_verified` est un état canonique, et le sweep **ne touche jamais** une transaction verrouillée (c'est la contrepartie de GAP-2).
-- Le message d'honnêteté d'expiration **existe** dans la Room (ajouté cette session) — mais GAP-1 le rend inatteignable.
+- Le message d'honnêteté d'expiration **existe** dans la Room et est **désormais atteignable** (TXN-G1).
+
+### TXN-G1 — livré 2026-10-15 (GAP-1)
+
+**Ce qui a changé :** une intention expirée est **terminale**. `listClosedTransactions` accepte les deux formes écrites (`closed` **et** `expired`, y compris la zombie pré-migration dont l'intention est `expired` sans événement) et les **projette sur un état honnête** (« Expirée »). Les deux UIs (acheteur, vendeur) étiquettent « Expirée », et une expirée **n'ouvre pas le reçu** (aucun achat) : elle ouvre la Room, où le message « Rien n'a été débité » est enfin lisible.
+
+**Défaut plus profond trouvé par la preuve SQL réelle (branche canonique, 2026-10-15) :** il existe sur la canonique **un** zombie (transaction `01256abd…`) dont `current_state` est `qr_ready` **et** l'intention `expired`. `getTransaction` ne projetait `'expired'` que sur `current_state = 'intent_created'` → la **Room** aurait dit « QR à scanner » pendant que l'**historique** disait « Expirée ». **Deux surfaces, deux réponses pour la même transaction.** Corrigé : `intent_state = 'expired'` suffit (l'`intent_state` est `null` dès qu'un verrou existe, donc `expired` implique « pas verrouillé »).
+
+**Preuve mesurée (avant/après), SQL réel :**
+
+| | `current_state` | `intent_state` | état montré |
+|---|---|---|---|
+| Ancienne projection | `qr_ready` | `expired` | `qr_ready` (« QR à scanner ») |
+| **Nouvelle projection** | `qr_ready` | `expired` | **`expired`** (« Expirée ») |
+
+**Preuves :** garde `txn-g1-expired-visible.test.ts` (4) + 3 tests repo, **falsifiés** dans les deux sens ; `prove-root-read-paths` étendu (**38 chemins**, SQL réel canonique) ; **1293/1293 tests** ; tsc 0 ; 6 gardes verts ; bundles serverless régénérés (le fix `pi2.state = 'expired'` présent dans `api/v2/availability.js` servi).
+
+### Ce qui fonctionne toujours (mesuré)
 
 ---
 

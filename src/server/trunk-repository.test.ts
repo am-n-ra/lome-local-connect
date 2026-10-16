@@ -3517,6 +3517,22 @@ describe('RAC-1 seller contact Root seam', () => {
     });
   });
 
+  // TXN-G1 — cas MESURÉ sur la canonique (2026-10-15) : un zombie pré-migration porte
+  // encore l'événement `qr_ready` alors que son intention est `expired`. Sans cette
+  // projection, la Room disait « QR à scanner » pendant que l'historique disait
+  // « Expirée » — deux surfaces, deux réponses pour la même transaction.
+  it('projects an expired intent as expired even when a stale qr_ready event remains', async () => {
+    const call = stubSql([{
+      transaction_id: 'transaction-z', product_id: 'product-1', facility_id: 'facility-1',
+      quantity: 1, unit_price_minor: 720, coupon_code: null, net_amount_minor: 720,
+      seller_facility_name: 'Omni Demo Seller Hub', seller_contact_phone: null, seller_contact_whatsapp: null,
+      actor_role: 'buyer', intent_state: 'expired', current_state: 'qr_ready',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.getTransaction({ authUserId: 'auth-user-1', transactionId: 'transaction-z' });
+    expect(result).toMatchObject({ transactionId: 'transaction-z', state: 'expired' });
+  });
+
   it('updates the seller contact only for the owning account', async () => {
     const call = stubSql([{
       facility_id: 'facility-1',
@@ -3657,7 +3673,7 @@ describe('closed-transaction history Root seam (S-26 / B18)', () => {
       quantity: 2, netAmountMinor: 1700,
     });
     expect(call.queries[0]).toContain('join v2_transaction_members');
-    expect(call.queries[0]).toContain("current_state = 'closed'");
+    expect(call.queries[0]).toContain("current_state in ('closed', 'expired')");
     expect(call.queries[0]).not.toContain("current_state <> 'closed'");
   });
 
@@ -3666,6 +3682,26 @@ describe('closed-transaction history Root seam (S-26 / B18)', () => {
     const repository = createTrunkRepository(call.sql);
     const result = await repository.listClosedTransactions({ authUserId: 'auth-user-empty' });
     expect(result.transactions).toEqual([]);
+  });
+
+  // TXN-G1 (GAP-1) — une intention expirée est TERMINALE : elle doit apparaître,
+  // pas disparaître. Deux formes écrites, une seule projection honnête.
+  it('projects an expired transaction into the history (never disappears)', async () => {
+    const call = stubSql([{
+      transaction_id: 'transaction-7', current_state: 'expired', actor_role: 'buyer',
+      product_id: 'product-7', product_name: 'Jus de gingembre', facility_id: 'facility-7',
+      facility_name: 'Omni Demo Seller Hub', seller_name: 'Omni Demo Seller Hub',
+      quantity: 1, net_amount_minor: 720,
+      last_event_at: '2026-10-15T09:10:00.000Z', created_at: '2026-10-15T08:55:00.000Z',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.listClosedTransactions({ authUserId: 'auth-user-1' });
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]).toMatchObject({ transactionId: 'transaction-7', state: 'expired' });
+    // La requête couvre les DEUX formes : événement 'expired' ET intention 'expired'
+    // sans événement (zombie pré-migration, lu 'intent_created').
+    expect(call.queries[0]).toContain("pi2.state = 'expired'");
+    expect(call.queries[0]).toContain("when mi.current_state = 'closed' then 'closed'");
   });
 });
 

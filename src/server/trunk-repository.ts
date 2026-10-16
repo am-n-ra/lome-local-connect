@@ -7828,8 +7828,15 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       `);
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) return null;
-      // L'expiration avant verrou prime si aucun événement 'expired' n'a encore été écrit.
-      const currentState = row.intent_state === 'expired' && row.current_state === 'intent_created'
+      // L'expiration avant verrou prime. `intent_state` vaut null UNIQUEMENT si un
+      // verrou (qr_verified) existe : donc un `intent_state = 'expired'` implique
+      // « pas encore verrouillé » et la transaction est expirée, QUELLE QUE SOIT la
+      // forme d'événement retombée. Le cas mesuré qui l'exige : un zombie pré-migration
+      // porte encore l'événement `qr_ready` alors que son intention est expirée — le
+      // restreindre à `current_state = 'intent_created'` faisait dire « QR à scanner »
+      // à la Room pendant que l'historique disait « Expirée » (deux surfaces, deux
+      // réponses pour la même transaction).
+      const currentState = row.intent_state === 'expired'
         ? 'expired'
         : String(row.current_state);
       return {
@@ -8001,7 +8008,16 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         )
         select
           mi.transaction_id,
-          mi.current_state,
+          -- GAP-1 (TXN-G1) : une intention expirée est TERMINALE. Elle n'a plus rien
+          -- à faire dans « en cours » (exclue là-bas), mais elle ne doit pas
+          -- DISPARAÎTRE : l'historique la porte, étiquetée « Expirée ». Deux formes
+          -- existent — l'événement 'expired' (sweep moderne) et l'intention
+          -- 'expired' sans événement (zombie pré-migration, lu 'intent_created') ;
+          -- les deux se projettent ici sur le même état honnête.
+          case
+            when mi.current_state = 'closed' then 'closed'
+            else 'expired'
+          end as current_state,
           mi.actor_role,
           mi.product_id,
           p.name as product_name,
@@ -8016,7 +8032,13 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         left join v2_products p on p.id = mi.product_id
         left join v2_facilities f on f.id = mi.facility_id
         left join v2_entities e on e.id = f.entity_id
-        where mi.current_state = 'closed'
+        where mi.current_state in ('closed', 'expired')
+           or exists (
+             select 1 from v2_transaction_snapshots s2
+             join v2_purchase_intents pi2 on pi2.id = s2.intent_id
+             where s2.transaction_id = mi.transaction_id
+               and pi2.state = 'expired'
+           )
         order by mi.last_event_at desc
         limit 50
       `);

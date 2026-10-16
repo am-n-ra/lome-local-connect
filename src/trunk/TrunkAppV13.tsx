@@ -3508,20 +3508,26 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div role="alert"><p className="tiny muted" style={{ marginTop: 6 }}>Votre historique ne peut pas être chargé pour le moment.</p></div>
           )}
           {closedTxnState === 'idle' && closedTxn.length === 0 && (
-            <p className="sub" style={{ marginTop: 6 }}>Aucune transaction clôturée. Vos versions gelées apparaîtront ici.</p>
+            <p className="sub" style={{ marginTop: 6 }}>Aucune transaction terminée. Vos achats et vos tentatives expirées apparaîtront ici.</p>
           )}
-          {closedTxn.map((transaction) => (
+          {closedTxn.map((transaction) => {
+            // GAP-1 (TXN-G1) : une expirée est terminale mais n'est PAS un achat.
+            // Elle apparaît ici (sinon elle disparaîtrait), sans reçu : il n'y a rien
+            // à compter, et le message dit qu'aucun argent n'a bougé.
+            const expired = transaction.state === 'expired';
+            return (
             <div key={transaction.transactionId} style={{ marginTop: 6 }}>
-              <button type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => { setReceiptTx(transaction); setSheet('receipt'); }}>
+              <button type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => { if (expired) { void openRoom(transaction); return; } setReceiptTx(transaction); setSheet('receipt'); }}>
                 <div className="row" style={{ justifyContent: 'space-between' }}>
                   <div><b>{transaction.productName ?? 'Transaction'}</b><br /><span className="tiny muted">{transaction.facilityName ?? 'N/D'} · {transaction.quantity} unité{transaction.quantity === 1 ? '' : 's'}</span></div>
-                  <span className="status ok">Clôturée</span>
+                  <span className={`status ${expired ? 'gray' : 'ok'}`}>{expired ? 'Expirée' : 'Clôturée'}</span>
                 </div>
-                <span className="tiny muted" style={{ marginTop: 4, display: 'block' }}>Reçu · {relativeAge(transaction.lastEventAt)}</span>
+                <span className="tiny muted" style={{ marginTop: 4, display: 'block' }}>{expired ? 'Aucun débit · ' : 'Reçu · '}{relativeAge(transaction.lastEventAt)}</span>
               </button>
               <button className="btn ghost sm" type="button" style={{ marginTop: 4 }} onClick={() => void openRoom(transaction)}>Ouvrir la Room · conversation</button>
             </div>
-          ))}
+            );
+          })}
           <div className="btnrow" style={{ marginTop: 10 }}>
             <button className="btn ghost" type="button" onClick={() => void openWallet()}><Wallet size={15} /> Portefeuille</button>
             <button className="btn ghost" type="button" onClick={() => setSheet('plans')}>Plans</button>
