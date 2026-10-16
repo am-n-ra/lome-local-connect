@@ -27,6 +27,9 @@ Porte : **BRANCHES** (`HEARTWOOD_CLOSED_BRANCHES_OPEN`). Ordre fondateur : « fe
 
 ## Ce qui a été ajouté (pour ne rien perdre)
 
+- **Honnêteté d'expiration.** Le flux affichait « Cette intention n'a pas été vérifiée à temps.
+  **Rien n'a été débité**. La réservation de stock a été libérée. » — fermer sa surface l'aurait
+  **perdu**. Porté dans la Room, verrouillé par le garde (falsifié).
 - **RT-D2 — l'itinéraire vit dans la Room.** Le flux portait l'itinéraire après intention ; sa
   suppression l'aurait perdu. `getTransaction` expose maintenant `sellerFacilityLatitude` /
   `sellerFacilityLongitude` **uniquement dans le contexte transactionnel (membre)** — même règle que
@@ -35,14 +38,14 @@ Porte : **BRANCHES** (`HEARTWOOD_CLOSED_BRANCHES_OPEN`). Ordre fondateur : « fe
 
 ## Preuves
 
-- **Garde falsifiable** `src/trunk/room-only-post-intent.test.ts` (6) : le flux n'a plus les étapes
+- **Garde falsifiable** `src/trunk/room-only-post-intent.test.ts` (7) : le flux n'a plus les étapes
   mortes, n'importe plus les appels de transaction, n'a plus de chat tronqué, et
   `resumeTransaction` ouvre la Room avec le rôle **lu**.
-  **Falsifié** : réintroduire `\| 'txn'` dans `type Stage` → **1 échec** ; restauré → **6/6**.
+  **Falsifié** : réintroduire `\| 'txn'` dans `type Stage` → **1 échec** ; restauré → **7/7**.
 - **SQL réel** : la requête `getTransaction` (colonne latitude ajoutée) **compile et s'exécute** sur
   Postgres — `lat = 6.3703 | lng = 2.3912 | facility = Omni Demo Seller Hub`.
   `prove-root-read-paths.mjs` : **37/37**.
-- **Suite** : **1286/1286** (157 fichiers), `tsc` 0 ; 6 gardes verts (boundary, live-surface,
+- **Suite** : **1287/1287** (157 fichiers), `tsc` 0 ; 6 gardes verts (boundary, live-surface,
   dead-css, state, docs, coherence). Build `index-CyemzV6b.js` ; bundles serverless régénérés
   (`seller_facility_latitude` présent dans `availability.js` / `facilities/[id].js` / `purchase-intents.js`).
 

@@ -294,6 +294,10 @@ export function TransactionRoom({ transactionId, token, actorRole, counterparty,
             </div>
           )}
 
+          {currentState === 'expired' && (
+            <p className="tiny" style={{ marginTop: 8 }}>Cette intention n'a pas été vérifiée à temps. <b>Rien n'a été débité</b>. La réservation de stock a été libérée.</p>
+          )}
+
           {terminal && (
             <div className="btnrow" style={{ marginTop: 10 }}>
               <button className="btn ghost sm" type="button" disabled aria-disabled="true" style={{ opacity: 0.55 }}>Signaler un problème · bientôt</button>

@@ -52,6 +52,13 @@ describe('POINT 3 — la reprise ouvre la Room, jamais le flux', () => {
     expect(APP).not.toContain('setPendingResumeTxnId');
   });
 
+  it('la Room porte le message d’honnêteté d’expiration (rien n’a été débité)', () => {
+    // Le flux affichait ce fait ; fermer sa surface ne doit pas le perdre.
+    const ROOM = readFileSync(new URL('./TransactionRoom.tsx', import.meta.url), 'utf8');
+    expect(ROOM).toContain("Rien n'a été débité");
+    expect(ROOM).toContain('La réservation de stock a été libérée');
+  });
+
   it('le flux n’a plus de prop de reprise de transaction (`resumeTxnId`)', () => {
     expect(FLOW).not.toContain('resumeTxnId');
     expect(APP).not.toMatch(/<BuyerFlowV13[^>]*resumeTxnId/);
