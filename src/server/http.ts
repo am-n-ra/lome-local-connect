@@ -10,6 +10,7 @@ import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, handleVisitEvide
 import { NeonWebhookError, parseNeonWebhookBody, readNeonWebhookHeaders, routeNeonWebhookEvent, verifyNeonWebhookSignature } from './neon-webhooks';
 import { handleOfferMediaUpload, verifyOfferMediaObjects, offerMediaUploadMode, OfferMediaPolicyError, OfferMediaStorageError, OfferMediaAuthError, OfferMediaRequestError } from './offer-media-storage';
 import type { TransactionState } from '../domain/contracts';
+import { TRANSACTION_STATES } from '../domain/contracts';
 import type { OfferOwnerKind } from '../domain/contracts';
 import type { ClaimEvidenceItem, FacilityType } from '../trunk/types';
 import { admitIntakeBatch, classifyIntakePoint, parseIntakeScope } from '../domain/place-intake';
@@ -438,22 +439,10 @@ export function extractFedaPayTransaction(payload: Record<string, unknown>): { t
   return { transaction, metadata };
     }
 
-const TRANSACTION_STATES: readonly TransactionState[] = [
-  'intent_created',
-  'qr_ready',
-  'qr_verified',
-  'payment_declared',
-  'payment_confirmed',
-  'fulfilment_pending',
-  'fulfilled',
-  'received',
-  'rated',
-  'closed',
-];
-
+// TXN-G3 : la liste runtime vient du domaine (source unique). Le type et le validateur
+// partagent `TRANSACTION_STATES` — ils ne peuvent plus diverger (GAP-3 du registre).
 export const isTransactionState = (value: unknown): value is TransactionState =>
   typeof value === 'string' && TRANSACTION_STATES.includes(value as TransactionState);
-
 function numberParam(url: URL, key: string, fallback: number): number {
   const value = Number(url.searchParams.get(key));
   return Number.isFinite(value) ? value : fallback;

@@ -7751,6 +7751,25 @@ function createTrunkRepository(sql = database()) {
           f.contact_whatsapp as seller_contact_whatsapp,
           f.latitude as seller_facility_latitude,
           f.longitude as seller_facility_longitude,
+          -- TXN-G4 (GAP-4) : la Room ne peut PAS rehydrater l'image QR — le token en
+          -- clair n'est jamais stocké (seul token_hash l'est, par conception : stocker
+          -- le clair serait une régression de sécurité). Ce qu'on expose est donc l'ÉTAT
+          -- honnête du QR : émis et encore valable, ou absent/expiré. La Room dit alors
+          -- la vérité (QR déjà émis, ré-émettre le remplace) au lieu de prétendre
+          -- que rien n'a existé.
+          (
+            select jsonb_build_object(
+              'issued', true,
+              'active', (q.verified_at is null and q.expires_at > now()),
+              'expiresAt', q.expires_at
+            )
+            from v2_qr_tokens q
+            where q.transaction_id = s.transaction_id
+              and q.verified_at is null
+              and q.replay_count = 0
+            order by q.created_at desc
+            limit 1
+          ) as qr_state,
           m.role as actor_role,
           -- TRUNK-X1 : le verrou scanné (qr_verified) rend l'état de l'intention non
           -- pertinent ; sinon un pi.state='expired' DOIT primer sur le défaut retombé
@@ -7796,7 +7815,12 @@ function createTrunkRepository(sql = database()) {
         sellerContactPhone: row.seller_contact_phone === null || row.seller_contact_phone === void 0 ? null : String(row.seller_contact_phone),
         sellerContactWhatsapp: row.seller_contact_whatsapp === null || row.seller_contact_whatsapp === void 0 ? null : String(row.seller_contact_whatsapp),
         sellerFacilityLatitude: row.seller_facility_latitude === null || row.seller_facility_latitude === void 0 ? null : Number(row.seller_facility_latitude),
-        sellerFacilityLongitude: row.seller_facility_longitude === null || row.seller_facility_longitude === void 0 ? null : Number(row.seller_facility_longitude)
+        sellerFacilityLongitude: row.seller_facility_longitude === null || row.seller_facility_longitude === void 0 ? null : Number(row.seller_facility_longitude),
+        qrState: row.qr_state === null || row.qr_state === void 0 ? null : {
+          issued: true,
+          active: Boolean(row.qr_state.active),
+          expiresAt: new Date(String(row.qr_state.expiresAt)).toISOString()
+        }
       };
     },
     // FF-2 — transactions non terminales de l'appelant (acheteur ou vendeur), pour
@@ -8956,6 +8980,21 @@ async function verifyOfferMediaObjects(productId, raw) {
   return verified;
 }
 
+// src/domain/contracts.ts
+var TRANSACTION_STATES = [
+  "intent_created",
+  "qr_ready",
+  "qr_verified",
+  "payment_declared",
+  "payment_confirmed",
+  "fulfilment_pending",
+  "fulfilled",
+  "received",
+  "rated",
+  "closed",
+  "expired"
+];
+
 // src/domain/place-intake.ts
 var PLACEHOLDER_NAME = /^\s*unnamed\b/i;
 function classifyIntakePoint(point, isPilotZone) {
@@ -9298,18 +9337,6 @@ function extractFedaPayTransaction(payload) {
   const metadata = transaction.custom_metadata && typeof transaction.custom_metadata === "object" && !Array.isArray(transaction.custom_metadata) ? transaction.custom_metadata : {};
   return { transaction, metadata };
 }
-var TRANSACTION_STATES = [
-  "intent_created",
-  "qr_ready",
-  "qr_verified",
-  "payment_declared",
-  "payment_confirmed",
-  "fulfilment_pending",
-  "fulfilled",
-  "received",
-  "rated",
-  "closed"
-];
 var isTransactionState = (value) => typeof value === "string" && TRANSACTION_STATES.includes(value);
 function numberParam(url, key, fallback) {
   const value = Number(url.searchParams.get(key));

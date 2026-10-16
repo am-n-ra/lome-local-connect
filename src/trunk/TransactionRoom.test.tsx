@@ -57,6 +57,7 @@ const snapshot = (state: TransactionSnapshotResult['state']): TransactionSnapsho
   sellerFacilityName: 'Épicerie Chez Afi',
   sellerFacilityLatitude: 6.1319,
   sellerFacilityLongitude: 1.2228,
+  qrState: null,
 });
 
 const messages = [

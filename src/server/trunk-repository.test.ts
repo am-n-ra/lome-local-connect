@@ -3533,6 +3533,24 @@ describe('RAC-1 seller contact Root seam', () => {
     expect(result).toMatchObject({ transactionId: 'transaction-z', state: 'expired' });
   });
 
+  // TXN-G4 (GAP-4) — le token clair n'est JAMAIS renvoyé (seul un hash est stocké) ;
+  // la Room ne peut pas recharger l'image. Elle reçoit l'ÉTAT du QR pour dire la vérité.
+  it('exposes the QR state, never the plaintext token', async () => {
+    const call = stubSql([{
+      transaction_id: 'transaction-q', product_id: 'product-1', facility_id: 'facility-1',
+      quantity: 1, unit_price_minor: 720, coupon_code: null, net_amount_minor: 720,
+      seller_facility_name: 'Hub', seller_contact_phone: null, seller_contact_whatsapp: null,
+      actor_role: 'buyer', current_state: 'intent_created',
+      qr_state: { issued: true, active: false, expiresAt: '2026-10-15T09:00:00.000Z' },
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.getTransaction({ authUserId: 'auth-user-1', transactionId: 'transaction-q' });
+    expect(result?.qrState).toEqual({ issued: true, active: false, expiresAt: '2026-10-15T09:00:00.000Z' });
+    // La requête expose l'ÉTAT, jamais la valeur du jeton.
+    expect(call.queries[0]).toContain("'issued', true");
+    expect(call.queries[0]).not.toContain('q.token_hash');
+  });
+
   it('updates the seller contact only for the owning account', async () => {
     const call = stubSql([{
       facility_id: 'facility-1',

@@ -52,7 +52,31 @@ export type TransactionState =
   | 'fulfilled'
   | 'received'
   | 'rated'
-  | 'closed';
+  | 'closed'
+  // TXN-G1 (GAP-3) : `expired` est un état de transaction RÉEL, écrit par le sweep
+  // avant verrou (`stalled_before_lock`). Il était absent du type domaine alors que
+  // le client le lisait déjà — divergence corrigée ici, source unique.
+  | 'expired';
+
+/** États transactionnels TERMINAUX : une transaction n'en sort plus. `closed` est
+ * une clôture aboutie ; `expired` une intention morte avant verrou (aucun débit). */
+export const TERMINAL_TRANSACTION_STATES: readonly TransactionState[] = ['closed', 'expired'];
+
+/** La liste runtime canonique des états — un seul endroit la définit pour que le
+ * type, le validateur serveur et le client ne puissent pas diverger. */
+export const TRANSACTION_STATES: readonly TransactionState[] = [
+  'intent_created',
+  'qr_ready',
+  'qr_verified',
+  'payment_declared',
+  'payment_confirmed',
+  'fulfilment_pending',
+  'fulfilled',
+  'received',
+  'rated',
+  'closed',
+  'expired',
+];
 
 export type WalletEntryKind =
   | 'recharge'

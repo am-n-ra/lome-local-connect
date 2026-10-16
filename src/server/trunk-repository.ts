@@ -7798,6 +7798,25 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           f.contact_whatsapp as seller_contact_whatsapp,
           f.latitude as seller_facility_latitude,
           f.longitude as seller_facility_longitude,
+          -- TXN-G4 (GAP-4) : la Room ne peut PAS rehydrater l'image QR — le token en
+          -- clair n'est jamais stocké (seul token_hash l'est, par conception : stocker
+          -- le clair serait une régression de sécurité). Ce qu'on expose est donc l'ÉTAT
+          -- honnête du QR : émis et encore valable, ou absent/expiré. La Room dit alors
+          -- la vérité (QR déjà émis, ré-émettre le remplace) au lieu de prétendre
+          -- que rien n'a existé.
+          (
+            select jsonb_build_object(
+              'issued', true,
+              'active', (q.verified_at is null and q.expires_at > now()),
+              'expiresAt', q.expires_at
+            )
+            from v2_qr_tokens q
+            where q.transaction_id = s.transaction_id
+              and q.verified_at is null
+              and q.replay_count = 0
+            order by q.created_at desc
+            limit 1
+          ) as qr_state,
           m.role as actor_role,
           -- TRUNK-X1 : le verrou scanné (qr_verified) rend l'état de l'intention non
           -- pertinent ; sinon un pi.state='expired' DOIT primer sur le défaut retombé
@@ -7854,6 +7873,13 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         sellerContactWhatsapp: row.seller_contact_whatsapp === null || row.seller_contact_whatsapp === undefined ? null : String(row.seller_contact_whatsapp),
         sellerFacilityLatitude: row.seller_facility_latitude === null || row.seller_facility_latitude === undefined ? null : Number(row.seller_facility_latitude),
         sellerFacilityLongitude: row.seller_facility_longitude === null || row.seller_facility_longitude === undefined ? null : Number(row.seller_facility_longitude),
+        qrState: row.qr_state === null || row.qr_state === undefined
+          ? null
+          : {
+            issued: true,
+            active: Boolean((row.qr_state as Record<string, unknown>).active),
+            expiresAt: new Date(String((row.qr_state as Record<string, unknown>).expiresAt)).toISOString(),
+          },
       };
     },
 

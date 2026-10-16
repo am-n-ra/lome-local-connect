@@ -242,7 +242,11 @@ export interface CancelAvailabilityRequestResult {
   cancelled: boolean;
 }
 
-export type TransactionState = 'intent_created' | 'qr_ready' | 'qr_verified' | 'payment_declared' | 'payment_confirmed' | 'fulfilment_pending' | 'fulfilled' | 'received' | 'rated' | 'closed' | 'expired';
+// TXN-G3 : le client ne redéfinit plus l'union — il la RÉUTILISE depuis le domaine
+// (`src/domain/contracts.ts`), source unique. Deux listes séparées divergeaient :
+// le client portait `expired` que le domaine ignorait (GAP-3 du registre).
+import type { TransactionState } from '../domain/contracts';
+export type { TransactionState } from '../domain/contracts';
 export type ExternalPaymentMethod = 'cash' | 'mobile_money';
 
 export interface PurchaseIntentResult {
@@ -332,6 +336,11 @@ export interface TransactionSnapshotResult {
    *  contact : jamais publiquement, seulement après l'intention d'achat. */
   sellerFacilityLatitude: number | null;
   sellerFacilityLongitude: number | null;
+  /** TXN-G4 (GAP-4) — état du QR acheteur. Le token EN CLAIR n'est jamais renvoyé
+   *  (seul un hash est stocké) : la Room ne peut donc pas rehydrater l'image, mais
+   *  elle peut dire la VÉRITÉ — un QR a-t-il déjà été émis et est-il encore valable ?
+   *  `null` = aucun QR vivant. */
+  qrState: { issued: true; active: boolean; expiresAt: string } | null;
 }
 
 /** FF-2 — une transaction non terminale de l'utilisateur connecté, pour l'écran

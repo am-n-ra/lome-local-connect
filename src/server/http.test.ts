@@ -194,6 +194,11 @@ describe('Root HTTP error boundary', () => {
   it('accepts only the locked transaction states at the HTTP boundary', () => {
     expect(isTransactionState('qr_verified')).toBe(true);
     expect(isTransactionState('closed')).toBe(true);
+    // TXN-G3 : `expired` est un état transactionnel réel (écrit par le sweep avant
+    // verrou). Le validateur le reconnaît — mais un client ne peut PAS forcer une
+    // transition vers lui : la matrice de transitions SQL ne le liste pas comme cible
+    // et refuse en échec fermé.
+    expect(isTransactionState('expired')).toBe(true);
     expect(isTransactionState('rejected')).toBe(false);
     expect(isTransactionState('disputed')).toBe(false);
     expect(isTransactionState(null)).toBe(false);

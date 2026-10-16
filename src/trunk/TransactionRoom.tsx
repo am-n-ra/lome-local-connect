@@ -235,7 +235,19 @@ export function TransactionRoom({ transactionId, token, actorRole, counterparty,
                   </div>
                 </>
               ) : (
-                <button className="btn" style={{ marginTop: 8 }} type="button" disabled={busy} onClick={() => void issueQr()}><QrCode size={15} /> Émettre mon QR</button>
+                <>
+                  <button className="btn" style={{ marginTop: 8 }} type="button" disabled={busy} onClick={() => void issueQr()}><QrCode size={15} /> {txn?.qrState?.issued ? 'Ré-émettre mon QR' : 'Émettre mon QR'}</button>
+                  {txn?.qrState?.issued && (
+                    // TXN-G4 (GAP-4) : le token clair n'est jamais stocké, donc l'image
+                    // ne peut pas être rechargée. On ne prétend pas que rien n'a existé :
+                    // on dit ce qui est vrai et ce que le geste fait.
+                    <p className="tiny muted" style={{ marginTop: 6 }}>
+                      {txn.qrState.active
+                        ? 'Un QR est déjà émis et encore valable. Par sécurité, son image n\'est pas rechargée : ré-émettre le remplace.'
+                        : 'Le QR précédent a expiré. Ré-émettre en crée un nouveau.'}
+                    </p>
+                  )}
+                </>
               )}
               <p className="tiny muted" style={{ marginTop: 6 }}>À faire scanner par le vendeur côté caisse. Le temps relance, il n'annule jamais.</p>
             </div>
