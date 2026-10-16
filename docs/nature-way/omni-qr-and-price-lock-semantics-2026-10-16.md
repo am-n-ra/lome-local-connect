@@ -84,3 +84,41 @@ ajoutée par erreur (`072`) puis **retirée** (`075`) : sur une table append-onl
 5. Le QR d'entité n'est pas le QR de lieu : un décodeur d'entité **rejette** `?facility=` (contrôle
    négatif prouvé, Heartwood S1b).
 6. Les moyens de paiement `NULL` ⇒ les deux (repli honnête), jamais « aucun ».
+
+
+---
+
+## P4 CLOS — preuve E2E du gel (2026-10-16)
+
+Le câblage du gel (snapshot `list_price_minor`/`discount_minor` à l'intention, migration
+`074` appliquée, `075` retirant la colonne morte `cemented_at`) était **livré** mais
+**jamais prouvé de bout en bout** — c'était le manque réel, pas le code.
+
+**Preuve livrée** : `scripts/prove-price-freeze.mjs` (`npm run proof:price-freeze`), sur
+**branche jetable** (`br-late-paper-amh9fvk2`, supprimée) avec le **code livré** — **9/9 PASS** :
+
+- **T1** à l'intention, le snapshot porte l'**origine** (1000), la **remise** (100 = 10 %)
+  et le prix **dû** (900) ; le total (1800) porte le prix remisé, jamais le plein.
+- **T3** le vendeur **change le prix (1000 → 5000) et la remise (10 % → 50 %) APRÈS**
+  l'intention → la transaction relue par `getTransaction` garde **exactement** ses chiffres
+  (1000 / 100 / 900 / 1800). **C'est le gel.**
+- **T4** le snapshot **refuse toute mutation** (append-only) — la contrainte qui rend le gel réel.
+
+**Falsifié** : forcer la remise à 0 dans la dérivation fait **échouer 6 assertions**
+(T1b/T1c/T1d, T3b/T3c/T3d) ; restauré → 9/9. Garde source `src/server/price-freeze.test.ts`
+(3), falsifié aussi (1 échec nommé). **Canonique vérifiée intacte** (0 résidu de la preuve).
+
+### Ce que « gel » veut dire, exactement (pour le fondateur)
+
+- **Avant l'intention** : le prix est **annoncé** (fiche, file, flux) et peut encore changer —
+  c'est une offre vivante.
+- **À l'intention** : le prix est **GELÉ** — la transaction garde ses chiffres pour toujours,
+  même si le vendeur modifie son offre. Le snapshot est **append-only** : il ne peut pas être
+  réécrit.
+- **À la validation du vendeur via Omni** (scan en retrait, clic dashboard en livraison) :
+  le prix est **CIMENTÉ** au sens « irrévocable par le geste du vendeur ». Ce ciment est
+  **dérivé** de l'événement `qr_verified`, jamais stocké (une colonne serait morte : le
+  snapshot est append-only — c'est l'erreur corrigée par `075`).
+
+Le vendeur **ne peut donc plus** modifier le prix d'une transaction engagée : il n'y a
+**aucun chemin d'écriture** vers le snapshot (append-only au niveau de la base).
