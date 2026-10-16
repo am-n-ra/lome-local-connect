@@ -67,6 +67,7 @@
 | NR-11 | G-01 | Branch | expliquer le plan Pro vendeur | — | relais | `ready` | garde : chaque ligne Pro porte une phrase | durcissement d'honnêteté | — |
 | MB-1 | G-01 | Branch | frontière budget/prix par le helper partagé (UNI-MONEY-1) | — | relais | `done` | garde falsifié `buyer-flow-money` + 0 conversion manuelle dans le bundle servi | bug latent : champ vide → plafond 0 FCFA | — |
 | MB-2 | G-01 | Branch | chaque producteur de push produit un deep-link | — | relais | `done` | garde falsifié `push-target-coverage` (2) | **risque latent** : aujourd'hui les 4 types poussés sont ciblés ; le garde empêche une régression future | — |
+| IOS-PWA-1 | G-01 | Branch | session perdue sur iPhone **en PWA** (cookie tiers bloqué) | décision A/B fondateur | fondateur | `blocked` | preuve navigateur iPhone PWA après remède | **action plateforme (A)** ou **tranche auth (B)** ; aucune migration | décision A/B |
 | GUIDE-SPEC | G-01 | Species | direction visuelle de l'entrée (accueil · guide · spotlight) | acceptation fondateur | fondateur | `blocked` | mini-maquette acceptée | **aucun redessin sans maquette** (74 écrans n'ont AUCUNE surface de guide) | décision A/B/C |
 
 ## Reconciliation log
@@ -94,3 +95,5 @@
 | 2026-10-15 | `NR-9` livrée : migration `072` (canonique), `decideAutoResponse`, producteur, **18/18** Postgres réel · **bug R-H pré-existant** trouvé et corrigé (`price_minor` absent de la requête de nature → toute proposition refusée) | `NR-9` → `done` | exécution | relais | après push + T-07d |
 | 2026-10-15 | `check:dock-search` échouait sur HEAD propre ; `--selftest` passait à tort | garde réparé (2 mutations périmées, règle poll renforcée) | correction de garde | relais | — |
 | 2026-10-16 | balayage d'incohérences : `BuyerFlowV13` re-divisait à la main (champ vide → plafond 0 FCFA) ; les 4 types d'événements poussés sont ciblés (pas de bug actif) | `MB-1`/`MB-2` créés `done` | exécution | relais | — |
+| 2026-10-16 | fondateur : session perdue **sur iPhone en PWA** seulement (PC/mobile/PWA-PC OK). Mesuré : l'auth vit sur un **domaine tiers** (`neonauth…neon.tech`) appelé depuis `sparkafrika.online` -> **cookie tiers** bloque par WebKit/ITP, sans exemption en PWA standalone. Ce n'est **pas** `P3` (bouclage UI) : ici la session n'est **jamais** restauree. | `IOS-PWA-1` cree `blocked` | replan | fondateur | decision A (domaine perso) / B (proxy same-origin) |
+| 2026-10-16 | verifie et ecarte : service worker (ignore cross-origin), manifest PWA (correct), jeton jamais persiste (cookie `HttpOnly` = seule source) | aucun | — | relais | — |
