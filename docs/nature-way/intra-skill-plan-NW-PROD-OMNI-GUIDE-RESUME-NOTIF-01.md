@@ -79,9 +79,9 @@
 > **Gate decision:** `go` — fondateur a autorisé la fondation neuve (« ok go »)
 > **Closed:** `NR-1` (visibilité réponse vendeur) · `NR-2` (drain Web Push) · `NR-3` (le vendeur **peut** répondre : stock nommé, formulaire pré-rempli)
 > **Open:** `GR-1`, `GR-2`, `GR-3`, `NT-1`. **Fermés le 2026-10-15 :** `NR-4`…`NR-9` (livrés, poussés, prod-vérifiés pour NR-4…NR-8).
-> **Residual gap:** la **réponse auto** est désormais **construite** (`actor_kind`, `decideAutoResponse`, producteur prouvé 18/18) — le mensonge `NR-7` est fermé à la racine. Restent : preuve navigateur sur appareil réel (notification reçue), et l'**interrupteur vendeur** d'`auto_availability` (colonne + serveur livrés, UI séparée).
-> **Next smallest action:** décision fondateur — exposer l'**interrupteur** « Répondre automatiquement » dans l'espace vendeur, et configurer **VAPID** pour la livraison Web Push réelle.
-> **Re-plan trigger:** le fondateur veut l'interrupteur d'auto, les clés VAPID, un badge de notif / un son, ou le spot-check navigateur.
+> **Residual gap:** la **réponse auto** est désormais **construite** (`actor_kind`, `decideAutoResponse`, producteur prouvé 18/18) — le mensonge `NR-7` est fermé à la racine. Reste : preuve navigateur sur appareil réel (notification reçue). L'**interrupteur vendeur** d'`auto_availability` **existe déjà** (TRUNK-X2, `SellerV13`) — le contrôle de l'automate est **de bout en bout**.
+> **Next smallest action:** décision fondateur — configurer **VAPID** pour la livraison Web Push réelle (le réglage d'auto existe déjà côté vendeur).
+> **Re-plan trigger:** le fondateur veut les clés VAPID, un badge de notif / un son, ou le spot-check navigateur.
 | 2026-10-15 | `caf18e5` : NR-4/5/6/7/8 livrés (1259→1260 tests, 7 gardes verts) | `NR-4/5/6/7/8` → `done` | exécution | relais | après push + T-07d |
 | 2026-10-15 | `NR-9` livrée : migration `072` (canonique), `decideAutoResponse`, producteur, **18/18** Postgres réel · **bug R-H pré-existant** trouvé et corrigé (`price_minor` absent de la requête de nature → toute proposition refusée) | `NR-9` → `done` | exécution | relais | après push + T-07d |
 | 2026-10-15 | `check:dock-search` échouait sur HEAD propre ; `--selftest` passait à tort | garde réparé (2 mutations périmées, règle poll renforcée) | correction de garde | relais | — |

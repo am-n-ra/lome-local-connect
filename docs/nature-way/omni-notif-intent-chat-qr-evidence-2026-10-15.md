@@ -104,7 +104,9 @@ porte **deux** listes de réponses ; une seule était protégée). **Selftest 31
 - **Preuve navigateur non exécutée** : recevoir une notification sur un **appareil réel** (FCM)
   et voir la Room s'ouvrir depuis le tap demande une session réelle et un appareil — reste
   **manuelle** (prochain spot-check).
-- **Réglage `auto_availability`** : la colonne et le comportement serveur sont livrés ; l'exposition
-  d'un interrupteur « Répondre automatiquement » dans l'espace vendeur est un pas d'UI séparé.
+- **Réglage `auto_availability`** : l'interrupteur vendeur **existe déjà** (`SellerV13`, TRUNK-X2 :
+  « Auto ON/OFF · Activer/Désactiver · Actualiser », réservé aux facilités Pro actives) — le
+  contrôle de l'automate est donc **de bout en bout**, pas un résidu. Vérifié en le cherchant
+  après avoir écrit le contraire : *ne pas déclarer manquant ce qu'on n'a pas cherché.*
 - **Web Push** : le drain est câblé, mais **VAPID n'est pas configuré en prod** → la route répond
   honnêtement `configured:false`. La livraison réelle attend les clés (décision fondateur).
