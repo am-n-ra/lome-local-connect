@@ -41,6 +41,9 @@
 | 8 | `NR-6` scan QR → ouvre la transaction | le scanner ouvre la Room de la transaction scannée | preuve navigateur + garde | `done` | le QR doit rester un simple verrou |
 | 9 | `NR-8` logo Omni in-app | le centre de notifications porte le logo | garde de rendu | `done` | — |
 | 10 | `NR-9` réponse auto au nom de l'entité | conditions C1–C10 tenues et prouvées (Species §95/§113, Root §6.3) | contrat + migration (`actor_kind`) + preuve | `done` | **LIVRÉE 2026-10-15** (fondateur « ok go ») : `decideAutoResponse` + `actor_kind` + producteur, **18/18** Postgres réel. **Abstention sur négociation** (deux couches, falsifiée) |
+| 11 | `NR-10` « alertes » acheteur (promesse du plan sans producteur) | une recherche sauvegardée produit un **événement** quand une offre correspond | producteur + cible de tap + garde | `ready` | **Fondateur « 1 ok » (2026-10-15)** → **construire**. Même famille que `NR-9` ; aucun mensonge à corriger, une capacité à créer |
+| 12 | `NR-11` expliquer le plan Pro vendeur | chaque capacité Pro porte une phrase, dont **quand l'automate s'abstient** | texte + garde de complétude | `ready` | **Fondateur « 2 ok » (2026-10-15)**. Le plus petit pas à valeur immédiate ; **durcissement**, pas de fondation |
+| 13 | `GUIDE-SPEC` entrée & guide (accueil · guide · spotlight) | direction visuelle **acceptée** avant tout redessin | mini-maquette Species V2b + acceptation | `blocked` | **Fondateur « 3 trop génériques » (2026-10-15)**. **La maquette (74 écrans) n'a AUCUNE surface de guide** → les 3 surfaces de l'app sont des `orphaned leaves`. **Décision A/B/C demandée** (`omni-guide-onboarding-diagnostic-2026-10-15.md`) |
 
 ## Dependency-aware task tree
 
@@ -60,6 +63,9 @@
 | NR-6 | G-01 | Branch | le scan QR ouvre la transaction | NR-5 | relais | `done` | preuve navigateur : scan → Room de la bonne txn | le verrou reste (S-22) | le QR doit rester un verrou nu |
 | NR-8 | G-01 | Branch | logo Omni dans le centre in-app | — | relais | `done` | garde de rendu | visuel seul | — |
 | NR-9 | G-01 | Branch | réponse auto au nom de l'entité | décisions §5 | relais | `done` | contrat C1–C10 + migration `072` + preuve SQL **18/18** | **fondation neuve AUTORISÉE** (fondateur « ok go ») | — |
+| NR-10 | G-01 | Branch | « alertes » acheteur (promesse du plan sans producteur) | NR-9 | relais | `ready` | recherche sauvegardée → événement ; garde falsifiée | **capacité neuve AUTORISÉE** (fondateur « 1 ok ») | décision d'ordre |
+| NR-11 | G-01 | Branch | expliquer le plan Pro vendeur | — | relais | `ready` | garde : chaque ligne Pro porte une phrase | durcissement d'honnêteté | — |
+| GUIDE-SPEC | G-01 | Species | direction visuelle de l'entrée (accueil · guide · spotlight) | acceptation fondateur | fondateur | `blocked` | mini-maquette acceptée | **aucun redessin sans maquette** (74 écrans n'ont AUCUNE surface de guide) | décision A/B/C |
 
 ## Reconciliation log
 
@@ -75,13 +81,13 @@
 
 ## Handoff to Founder HQ
 
-> **Local status:** `complete` — `NR-4`…`NR-9` livrés, chacun falsifié ; `NR-9` prouvée contre Postgres réel
-> **Gate decision:** `go` — fondateur a autorisé la fondation neuve (« ok go »)
+> **Local status:** `complete` pour `NR-4…NR-9` ; **3 tranches ouvertes** (`NR-10`, `NR-11`, `GUIDE-SPEC`)
+> **Gate decision:** `go` — fondateur a autorisé la capacité neuve (« 1 ok ») et l'explication du plan (« 2 ok ») ; **décision A/B/C en attente sur l'entrée/guide**
 > **Closed:** `NR-1` (visibilité réponse vendeur) · `NR-2` (drain Web Push) · `NR-3` (le vendeur **peut** répondre : stock nommé, formulaire pré-rempli)
-> **Open:** `GR-1`, `GR-2`, `GR-3`, `NT-1`. **Fermés le 2026-10-15 :** `NR-4`…`NR-9` (livrés, poussés, prod-vérifiés pour NR-4…NR-8).
-> **Residual gap:** la **réponse auto** est désormais **construite** (`actor_kind`, `decideAutoResponse`, producteur prouvé 18/18) — le mensonge `NR-7` est fermé à la racine. Reste : preuve navigateur sur appareil réel (notification reçue). L'**interrupteur vendeur** d'`auto_availability` **existe déjà** (TRUNK-X2, `SellerV13`) — le contrôle de l'automate est **de bout en bout**.
-> **Next smallest action:** décision fondateur — configurer **VAPID** pour la livraison Web Push réelle (le réglage d'auto existe déjà côté vendeur).
-> **Re-plan trigger:** le fondateur veut les clés VAPID, un badge de notif / un son, ou le spot-check navigateur.
+> **Open:** `NR-10` (ready — « alertes » à construire), `NR-11` (ready — expliquer le plan), `GUIDE-SPEC` (**blocked** — décision A/B/C), `GR-1`, `GR-2`, `GR-3`, `NT-1`. **Fermés le 2026-10-15 :** `NR-4`…`NR-9`.
+> **Residual gap:** la **réponse auto** est construite (`actor_kind`, `decideAutoResponse`, prouvé 18/18) ; VAPID **est armé** (`push-key` `configured:true`, 4 `web_push` `delivered`). Restent : **« alertes » acheteur** (promesse du plan **sans producteur** — `NR-10`), **explication du plan** (`NR-11`), et **l'entrée/guide sans direction visuelle** (`GUIDE-SPEC` : la maquette, 74 écrans, n'a **aucune** surface de guide → 3 `orphaned leaves`).
+> **Next smallest action:** `NR-11` (expliquer le plan) — le plus petit pas à valeur immédiate, sans visuel ni migration ; puis `NR-10` sur ordre.
+> **Re-plan trigger:** le fondateur tranche A/B/C sur l'entrée/guide, ordonne `NR-10`/`NR-11`, ou veut un badge de notif / un son.
 | 2026-10-15 | `caf18e5` : NR-4/5/6/7/8 livrés (1259→1260 tests, 7 gardes verts) | `NR-4/5/6/7/8` → `done` | exécution | relais | après push + T-07d |
 | 2026-10-15 | `NR-9` livrée : migration `072` (canonique), `decideAutoResponse`, producteur, **18/18** Postgres réel · **bug R-H pré-existant** trouvé et corrigé (`price_minor` absent de la requête de nature → toute proposition refusée) | `NR-9` → `done` | exécution | relais | après push + T-07d |
 | 2026-10-15 | `check:dock-search` échouait sur HEAD propre ; `--selftest` passait à tort | garde réparé (2 mutations périmées, règle poll renforcée) | correction de garde | relais | — |
