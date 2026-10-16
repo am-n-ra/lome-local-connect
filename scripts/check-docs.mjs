@@ -26,6 +26,7 @@ const V2_CHAIN = [
   'omni-system-dependency-map-2026-09-23.md',
   'omni-root-v2-entity-layer-contract-2026-09-23.md',
   'omni-species-v2-interactive.html',
+  'omni-species-v2b-entry-guide.html',
 ];
 
 // A document "asserts a single master" when it uses one of these phrases about a NON-chain file.

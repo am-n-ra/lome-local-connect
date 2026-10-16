@@ -24,6 +24,7 @@ Nature Way : *une seule source de vérité **par sujet**. Ne pas entretenir de m
 | **Dépendances / architecture causale** | [`nature-way/omni-system-dependency-map-2026-09-23.md`](./nature-way/omni-system-dependency-map-2026-09-23.md) | **normatif** |
 | **Contrat du socle (entité, offre)** | [`nature-way/omni-root-v2-entity-layer-contract-2026-09-23.md`](./nature-way/omni-root-v2-entity-layer-contract-2026-09-23.md) | **normatif** |
 | **Design visuel accepté** | [`maquette/omni-species-v2-interactive.html`](./maquette/omni-species-v2-interactive.html) — **74 écrans** | **CLOS `founder-confirmed` 2026-09-25** |
+| **Design visuel · entrée & guide (extension)** | [`maquette/omni-species-v2b-entry-guide.html`](./maquette/omni-species-v2b-entry-guide.html) — **3 écrans** (accueil · guide · spotlight) | **PROPOSÉ — en attente d'acceptation fondateur** (`npm run check:maquette-v2b`) |
 | **Décisions produit du jour** | [`founder-hq/current-state.md`](./founder-hq/current-state.md) | **source d'état** |
 | **Plan / board** | [`founder-hq/founder-hq-board.md`](./founder-hq/founder-hq-board.md), [`founder-hq/founder-hq-master-plan.md`](./founder-hq/founder-hq-master-plan.md) | **source d'exécution** |
 | **Cohérence Seed ↔ code** | [`nature-way/omni-seed-vs-code-coherence-register-2026-09-23.md`](./nature-way/omni-seed-vs-code-coherence-register-2026-09-23.md) | **0 incohérence ouverte** (`npm run check:coherence`) |
