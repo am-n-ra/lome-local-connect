@@ -43,7 +43,7 @@
 | T-G5 | W-01 | Notifications | Intention d'achat notifiée au vendeur | — | NW | `done` | **Déjà livré** (`caf18e5`, NR-4) — GAP-5 était FAUX | — | — |
 | T-G6 | W-01 | Phase A — délai | Fenêtre 15 min visible | — | NW | `verified` | Garde falsifié + test unitaire (jamais un faux zéro) | Aucun chiffre en dur : l'échéance vient de `expires_at` | — |
 | T-G7 | W-01 | Notifications | Expiration notifiée aux deux parties | — | NW | `verified` | Preuve jetable 11/11 + falsifié (5) | Idempotent (périmètre : avant verrou, comme le sweep) | — |
-| T-G8 | W-01 | Types | `failed` : écrit ou retiré | — | NW | `todo` | tsc + garde | Additif | — |
+| T-G8 | W-01 | Types | `failed` : écrit ou retiré | — | NW | `done` | Décision : garder (aligné sur le CHECK DB ; retirer créerait une divergence inverse) | Retirer = risque de bug au read | — |
 
 ## Reconciliation log
 
@@ -60,10 +60,10 @@
 ## Handoff to Founder HQ
 
 > **Local status:** `partial`
-> **Gate decision:** `advance` — TXN-G1/G3/G4/G7 livrés et prouvés ; GAP-5 démasqué faux
-> **Closed:** T-G1 · T-G3 · T-G4 · T-G5 (déjà livré) · T-G7 · W-01 mesure
-> **Open or blocked:** T-G6/T-G8 `ready` · T-G2 `blocked` sur **D-TXN-3a/3b**
+> **Gate decision:** `advance` — TXN-G1/G3/G4/G6/G7 livrés et prouvés ; GAP-5 démasqué faux
+> **Closed:** T-G1 · T-G3 · T-G4 · T-G5 (déjà livré) · T-G6 · T-G7 · T-G8 (décision) · W-01 mesure
+> **Open or blocked:** T-G2 `blocked` sur **D-TXN-3a/3b** (expiration du verrouillé — argent)
 > **Resource Receipt:** 6 ressources chargées, 1 template instancié, 2 non applicables (justifiés)
-> **Residual gap:** preuve navigateur authentifiée non exécutée (sandbox sans session) ; décision fondateur requise sur l'expiration du verrouillé
-> **Next smallest action:** **T-G6** (afficher la fenêtre de 15 min de la demande de dispo) — aucune décision fondateur requise
+> **Residual gap:** preuve navigateur authentifiée non exécutée (sandbox sans session) ; décision fondateur requise sur l'expiration du verrouillé (T-G2)
+> **Next smallest action:** **T-G2** — l'unique item de la sous-file qui reste, et il exige une décision fondateur. Aucune autre tranche de code n'est disponible sans elle.
 > **Re-plan trigger:** décision D-TXN-3a/3b, ou une mesure qui contredit le contrat
