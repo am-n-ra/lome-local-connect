@@ -37,7 +37,7 @@
 | G-01 | — | gate Branches | Clore les gaps transaction mesurés | — | NW | `in_progress` | Registre + tranches livrées + preuve prod | Ne pas ouvrir de fondation neuve | Décision fondateur |
 | W-01 | G-01 | Phase A/B — vérité | Rendre le parcours honnête de bout en bout | — | NW | `in_progress` | Registre `omni-transaction-gaps-register` | Docs only ici | — |
 | T-G1 | W-01 | Phase B — sortie | Transaction expirée visible + message honnête | — | NW | `verified` | Garde falsifié + SQL réel canonique | Aucune migration | — |
-| T-G2 | W-01 | Phase B — verrou | Expiration du verrouillé | D-TXN-3a/3b | NW | `blocked` | Décision + test SQL réel | **Argent** : ne rien débiter sans décision | Décision fondateur |
+| T-G2 | W-01 | Phase B — verrou | Expiration du verrouillé | D-TXN-3a/3b | NW | `blocked` | Décision + test SQL réel | **Argent** : ne rien débiter sans décision — options écrites (`omni-d-txn-3-locked-expiry-options-2026-10-15.md`) | Décision fondateur |
 | T-G3 | W-01 | Types | `expired` dans `TransactionState` domaine + validateur | — | NW | `verified` | tsc + garde de parité | Aucune donnée réécrite | — |
 | T-G4 | W-01 | Phase B — QR | QR persistant dans la Room | T-G3 | NW | `verified` | Garde falsifié + SQL réel canonique | Aucun token en clair renvoyé | — |
 | T-G5 | W-01 | Notifications | Intention d'achat notifiée au vendeur | — | NW | `done` | **Déjà livré** (`caf18e5`, NR-4) — GAP-5 était FAUX | — | — |
