@@ -13,6 +13,7 @@ import { qrExpiryFrom, resolveQrTtlMinutes } from '../trunk/transaction-time';
 import { computeIntegrity, computeReputation, existenceFor, normalizeProductMedia } from '../trunk/offer-existence';
 import { normalizeStockForUniqueness, uniquenessStockRejection } from '../trunk/offer-uniqueness';
 import { proposedPriceRejection } from '../trunk/offer-price';
+import { decideAutoResponse } from '../trunk/auto-response';
 import { normalizeTogoPhone } from '../domain/phone';
 import { isInsidePilotZone } from './routing-adapter';
 
@@ -4145,11 +4146,14 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           ar.seller_message,
           ar.observed_at,
           -- Root §6.3 : l'origine de la réponse est un FAIT (« seller/automation actor »).
-          -- On la lit ici au lieu de la laisser inventer par la surface. Une réponse sans
-          -- compte répondant EST l'acteur automatique (Species §95, jamais construit) ;
-          -- aujourd'hui respondAvailability est le seul producteur, donc « seller ».
+          -- NR-9 (migration 072) l'a rendu LISIBLE : actor_kind est DÉCLARÉE par le producteur,
+          -- jamais déduite de l'absence de compte — un compte vendeur supprimé (on delete set
+          -- null) reste seller, il ne devient pas une machine. Le repli sur la nullité ne sert
+          -- qu'aux lignes antérieures à 072, où l'absence de compte EST l'acteur automatique.
           case
             when ar.id is null then null
+            when ar.actor_kind = 'automation' then 'automation'
+            when ar.actor_kind = 'seller' then 'seller'
             when ar.responder_account_id is null then 'automation'
             else 'seller'
           end as responder_kind,
@@ -8190,7 +8194,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       // est rejouée dans la requête (garde en profondeur, cf. `price_rule`).
       if (input.proposedPriceMinor !== null) {
         const nature = await retryDatabase(() => sql`
-          select p.price_kind, p.discount_kind, p.discount_value
+          select p.price_kind, p.discount_kind, p.discount_value, p.price_minor
           from v2_products p
           where p.id = ${input.productId}::uuid
           limit 1
@@ -8338,6 +8342,156 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         monthlyQuota: standing ? standing.monthlyQuota : 0,
         plan: standing ? standing.plan : 'free',
       };
+    },
+    /**
+     * NR-9 — l'automate répond AU NOM DE L'ENTITÉ (Species §95, Root §6.3/§7 : « Authorized
+     * seller **or approved automation** »). Même table, même lecture, même notification que le
+     * chemin vendeur : la seule différence est `actor_kind='automation'` et l'absence de compte
+     * répondant. Une surface qui lit `responder_kind` n'a donc rien à changer.
+     *
+     * La décision est prise par le module PUR `decideAutoResponse` (C1–C10), et la même garde est
+     * rejouée en SQL — un appel direct à la base ne peut pas produire une réponse incohérente.
+     *
+     * Ne lève JAMAIS : l'automate est une commodité. S'il s'abstient (réglage éteint, Pro absent,
+     * stock périmé, quantité insuffisante, négociation ouverte), la demande reste simplement
+     * « en attente » — c'est-à-dire exactement ce qu'elle était avant NR-9.
+     */
+    async respondAvailabilityAutomatically(input: {
+      requestId: string;
+      correlationId: string;
+    }): Promise<{ responded: boolean; reason?: string }> {
+      // Les faits, lus en UNE fois : offre + nature + stock réel + Pro vivant + proposition.
+      const factsRows = await retryDatabase(() => sql`
+        select
+          r.requested_quantity,
+          r.proposed_price_minor,
+          p.auto_availability,
+          p.price_minor,
+          p.discount_kind,
+          p.discount_value,
+          p.uniqueness_kind,
+          p.availability_state,
+          p.availability_expires_at,
+          p.quantity_allocated_omni,
+          p.quantity_reserved_omni,
+          f.id as facility_id,
+          coalesce(p.entity_id, f.entity_id) as entity_id,
+          exists (
+            select 1 from v2_facility_entitlements fe
+            where fe.entitlement_kind = 'facility_pro'
+              and fe.state = 'active'
+              and fe.ends_at > now()
+              and (fe.facility_id = f.id or (fe.entity_id is not null and fe.entity_id = coalesce(p.entity_id, f.entity_id)))
+          ) as pro_alive
+        from v2_availability_requests r
+        join v2_products p on p.id = r.product_id
+        join v2_facilities f on f.id = r.facility_scope[1]
+        where r.id = ${input.requestId}::uuid
+          and r.status = 'submitted'
+        limit 1
+      `);
+      const factsRow = (factsRows as Record<string, unknown>[])[0];
+      if (!factsRow) return { responded: false, reason: 'not-open' };
+
+      const allocated = Number(factsRow.quantity_allocated_omni ?? 0);
+      const reserved = Number(factsRow.quantity_reserved_omni ?? 0);
+      // FF-8 / R-G : la capacité réelle. Une pièce unique est une PRÉSENCE, pas un décompte.
+      const availableStock = factsRow.uniqueness_kind === 'piece_unique'
+        ? (allocated >= 1 && reserved < 1 ? 1 : 0)
+        : Math.max(0, allocated - reserved);
+
+      const decision = decideAutoResponse({
+        autoEnabled: factsRow.auto_availability === true,
+        proAlive: factsRow.pro_alive === true,
+        availabilityState: factsRow.availability_state === null || factsRow.availability_state === undefined ? null : String(factsRow.availability_state),
+        availabilityExpiresAt: factsRow.availability_expires_at === null || factsRow.availability_expires_at === undefined ? null : String(factsRow.availability_expires_at),
+        availableStock,
+        requestedQuantity: Number(factsRow.requested_quantity),
+        listedPriceMinor: listedPriceMinor(factsRow),
+        proposedPriceMinor: factsRow.proposed_price_minor === null || factsRow.proposed_price_minor === undefined ? null : Number(factsRow.proposed_price_minor),
+        now: Date.now(),
+      });
+      if (decision.kind === 'defer') return { responded: false, reason: decision.reason };
+
+      const facilityId = String(factsRow.facility_id);
+      // Écriture gardée : les mêmes conditions sont rejouées ici. `on conflict` sur l'index
+      // partiel (une seule réponse auto par demande) rend le rejeu inoffensif.
+      const rows = await retryDatabase(() => sql`
+        with target as (
+          select r.id as request_id, r.buyer_account_id, r.product_id, f.id as facility_id
+          from v2_availability_requests r
+          -- L'ordre compte : f doit être joint AVANT p, car le ON de p lit f.id.
+          -- Un JOIN ne voit que les tables déjà jointes (Postgres « missing FROM-clause entry »).
+          join v2_facilities f on f.id = ${facilityId}::uuid and f.id = any(r.facility_scope)
+          join v2_products p on p.id = r.product_id and p.facility_id = f.id
+          where r.id = ${input.requestId}::uuid
+            and r.status = 'submitted'
+            and r.proposed_price_minor is null
+            and p.auto_availability = true
+            and p.publication_state = 'published'
+            and p.availability_state in ('en_stock', 'verifie')
+            and p.availability_expires_at is not null
+            and p.availability_expires_at > now() + interval '4 hours'
+            and ${decision.quantityAvailable}::int <= greatest(p.quantity_allocated_omni - p.quantity_reserved_omni, 0)
+            and exists (
+              select 1 from v2_facility_entitlements fe
+              where fe.entitlement_kind = 'facility_pro'
+                and fe.state = 'active'
+                and fe.ends_at > now()
+                and (fe.facility_id = f.id or (fe.entity_id is not null and fe.entity_id = coalesce(p.entity_id, f.entity_id)))
+            )
+        ),
+        inserted as (
+          insert into v2_availability_responses
+            (request_id, facility_id, responder_account_id, actor_kind, status, quantity_available, price_minor, offer_snapshot, seller_message, idempotency_key)
+          select t.request_id, t.facility_id, null, 'automation', 'available',
+                 ${decision.quantityAvailable}::int, ${decision.priceMinor}::int,
+                 jsonb_build_object('unit_price_minor', ${decision.priceMinor}::int, 'currency', 'XOF', 'source', 'auto_stock_omni'),
+                 null, 'auto:' || t.request_id::text
+          from target t
+          on conflict (request_id) where actor_kind = 'automation' do nothing
+          returning id, request_id, facility_id, status, quantity_available, price_minor, observed_at
+        ),
+        -- L'acheteur attend hors écran : la réponse automatique doit surgir comme une réponse
+        -- humaine. Même producteur, même cible (le suivi de la demande).
+        notified as (
+          insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
+          select rq.buyer_account_id, 'availability_response_created', 'availability_request', i.request_id::text,
+                 i.id::text || ':response_created',
+                 jsonb_build_object('kind', 'availability_response_created', 'status', i.status, 'productId', rq.product_id::text, 'responseId', i.id::text, 'actorKind', 'automation'),
+                 ${input.correlationId}
+          from inserted i
+          join v2_availability_requests rq on rq.id = i.request_id
+          on conflict (recipient_account_id, dedupe_key) do nothing
+          returning id, recipient_account_id
+        ),
+        deliveries as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select id, 'in_app', 'queued' from notified
+          on conflict (event_id, channel) do nothing
+          returning id
+        ),
+        push_deliveries as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select n.id, 'web_push', 'queued'
+          from notified n
+          join v2_web_push_subscriptions s on s.account_id = n.recipient_account_id
+          where s.permission_state = 'granted' and s.revoked_at is null
+          on conflict (event_id, channel) do nothing
+          returning id
+        )
+        select id from inserted limit 1
+      `);
+      const wrote = (rows as Record<string, unknown>[])[0];
+      if (!wrote) return { responded: false, reason: 'race-or-guard' };
+
+      // L'automate a parlé : l'audit le trace comme acteur, distinct d'un vendeur (C9).
+      await retryDatabase(() => sql`
+        insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)
+        values (null, 'availability_response_created', 'availability_response', ${String(wrote.id)}, ${input.correlationId}, 'automation', now())
+        on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
+      `);
+      return { responded: true };
     },
     async createBulkAvailabilityRequest(input: {
       authUserId: string;

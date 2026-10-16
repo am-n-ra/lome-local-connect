@@ -40,7 +40,7 @@
 | 7 | `NR-5` intention → chat ouvert | acheteur **et** vendeur atteignent la **même** Room au moment de l'intention | preuve navigateur 2 rôles + garde | `done` | décision : Room vs chat du flux |
 | 8 | `NR-6` scan QR → ouvre la transaction | le scanner ouvre la Room de la transaction scannée | preuve navigateur + garde | `done` | le QR doit rester un simple verrou |
 | 9 | `NR-8` logo Omni in-app | le centre de notifications porte le logo | garde de rendu | `done` | — |
-| 10 | `NR-9` réponse auto (capacité **modélisée, jamais construite**) | conditions C1–C10 tenues et prouvées (Species §95/§113, Root §6.3) | contrat + migration (`actor_kind`) + preuve | `blocked` | **1 seule décision fondateur** : auto sur offre `price_kind='negociable'` (le modèle tranche le reste) |
+| 10 | `NR-9` réponse auto au nom de l'entité | conditions C1–C10 tenues et prouvées (Species §95/§113, Root §6.3) | contrat + migration (`actor_kind`) + preuve | `done` | **LIVRÉE 2026-10-15** (fondateur « ok go ») : `decideAutoResponse` + `actor_kind` + producteur, **18/18** Postgres réel. **Abstention sur négociation** (deux couches, falsifiée) |
 
 ## Dependency-aware task tree
 
@@ -59,7 +59,7 @@
 | NR-5 | G-01 | Branch | l'intention OUVRE le chat (2 rôles) | NR-4 | relais | `done` | preuve navigateur acheteur+vendeur, une seule surface | pas de 2ᵉ chat | décision Room vs flux |
 | NR-6 | G-01 | Branch | le scan QR ouvre la transaction | NR-5 | relais | `done` | preuve navigateur : scan → Room de la bonne txn | le verrou reste (S-22) | le QR doit rester un verrou nu |
 | NR-8 | G-01 | Branch | logo Omni dans le centre in-app | — | relais | `done` | garde de rendu | visuel seul | — |
-| NR-9 | G-01 | Branch | réponse auto (capacité neuve) | décisions §5 | relais | `blocked` | contrat C1–C10 + migration + preuve SQL | **fondation neuve** : interdite sans décision | les 3 décisions du §5 |
+| NR-9 | G-01 | Branch | réponse auto au nom de l'entité | décisions §5 | relais | `done` | contrat C1–C10 + migration `072` + preuve SQL **18/18** | **fondation neuve AUTORISÉE** (fondateur « ok go ») | — |
 
 ## Reconciliation log
 
@@ -75,12 +75,13 @@
 
 ## Handoff to Founder HQ
 
-> **Local status:** `partial` — 1 bug mesuré prêt, 2 trous de mémoire, 1 réponse factuelle
-> **Gate decision:** `pause` — attendre la **décision d'ordre** du fondateur avant de coder
+> **Local status:** `complete` — `NR-4`…`NR-9` livrés, chacun falsifié ; `NR-9` prouvée contre Postgres réel
+> **Gate decision:** `go` — fondateur a autorisé la fondation neuve (« ok go »)
 > **Closed:** `NR-1` (visibilité réponse vendeur) · `NR-2` (drain Web Push) · `NR-3` (le vendeur **peut** répondre : stock nommé, formulaire pré-rempli)
-> **Open:** `NR-7` (ready, mensonge « source : auto »), `NR-4` (ready, intention → notif vendeur), `GR-1` (ready), `NR-5`/`NR-6`/`NR-8`/`GR-2`/`GR-3`/`NT-1` (planned), **`NR-9` (blocked — 3 décisions fondateur)**
-> **Residual gap:** la **réponse auto** n'existe pas comme producteur de réponse (le mot « auto » recouvre le **badge** TRUNK-X2 et une **réponse** jamais construite) → l'app affiche un mensonge ; l'accès du vendeur à la Room existe **sans avis** (l'intention ne notifie personne) et le scan QR **n'ouvre pas** la transaction.
-> **Next smallest action:** décision fondateur — **ordre** (`NR-7 → NR-4 → NR-5 → NR-6 → NR-8`) + les **3 questions du §5** (auto partielle ? offre négociable ? délai de courtoisie ?).
-> **Re-plan trigger:** le fondateur choisit l'ordre, tranche les conditions d'auto-réponse, ou veut un badge de notif / un son.
+> **Open:** `GR-1`, `GR-2`, `GR-3`, `NT-1`. **Fermés le 2026-10-15 :** `NR-4`…`NR-9` (livrés, poussés, prod-vérifiés pour NR-4…NR-8).
+> **Residual gap:** la **réponse auto** est désormais **construite** (`actor_kind`, `decideAutoResponse`, producteur prouvé 18/18) — le mensonge `NR-7` est fermé à la racine. Restent : preuve navigateur sur appareil réel (notification reçue), et l'**interrupteur vendeur** d'`auto_availability` (colonne + serveur livrés, UI séparée).
+> **Next smallest action:** décision fondateur — exposer l'**interrupteur** « Répondre automatiquement » dans l'espace vendeur, et configurer **VAPID** pour la livraison Web Push réelle.
+> **Re-plan trigger:** le fondateur veut l'interrupteur d'auto, les clés VAPID, un badge de notif / un son, ou le spot-check navigateur.
 | 2026-10-15 | `caf18e5` : NR-4/5/6/7/8 livrés (1259→1260 tests, 7 gardes verts) | `NR-4/5/6/7/8` → `done` | exécution | relais | après push + T-07d |
+| 2026-10-15 | `NR-9` livrée : migration `072` (canonique), `decideAutoResponse`, producteur, **18/18** Postgres réel · **bug R-H pré-existant** trouvé et corrigé (`price_minor` absent de la requête de nature → toute proposition refusée) | `NR-9` → `done` | exécution | relais | après push + T-07d |
 | 2026-10-15 | `check:dock-search` échouait sur HEAD propre ; `--selftest` passait à tort | garde réparé (2 mutations périmées, règle poll renforcée) | correction de garde | relais | — |

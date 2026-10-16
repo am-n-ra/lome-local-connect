@@ -56,16 +56,55 @@ porte **deux** listes de réponses ; une seule était protégée). **Selftest 31
 - Producteur + drain présents dans l'artefact serverless **commité**
   (`api/v2/purchase-intents.js` : `transaction_intent_created` ×3, drain ×15).
 
+## NR-9 — réponse automatique au nom de l'entité (LIVRÉE 2026-10-15)
+
+- **Décision fondateur « ok go ».** Species §95/§113 : l'automate répond **au nom de l'entité**
+  quand l'offre est vivante, sans qu'un humain ait à la confirmer. Root §6.3/§7 nomme l'acteur
+  (« seller **or approved automation** »).
+- **Le mensonge `NR-7` est fermé à la racine.** `v2_availability_responses.actor_kind`
+  (`'seller' | 'automation'`, défaut `'seller'`) dit **qui** a répondu. La lecture acheteur
+  (`responderKind`) lit ce **fait** ; le repli sur `responder_account_id is null` ne couvre que
+  les lignes antérieures à la migration — un compte vendeur supprimé (`on delete set null`) reste
+  `'seller'`, il ne devient **jamais** une machine.
+- **`decideAutoResponse` (module pur) encode les abstentions :** pas de Pro (D-04/R-4b), offre
+  non publiée ou non fraîche (D-03, fenêtre 4 h), stock insuffisant (jamais de partiel, §113),
+  `auto_availability` éteint (§95 : un réglage explicite, jamais une déduction silencieuse), et
+  **la négociation ouverte** : dès qu'un acheteur a proposé un prix, l'automate **s'abstient** —
+  négocier est un acte vendeur.
+- **Deux couches, prouvées séparément.** La règle vit dans le module **et** est rejouée dans le
+  SQL (`proposed_price_minor is null`), pour qu'un appel direct ne puisse pas la contourner.
+  **Falsifié** : neutraliser le module seul → T2 tient (le SQL rattrape) ; neutraliser le SQL seul
+  → T2 tient (le module rattrape) ; neutraliser **les deux** → **T2 échoue** (`price_minor: 20000`,
+  le prix brut au lieu du remisé). Une preuve qui ne peut pas échouer ne prouve rien.
+- **Preuve Postgres réelle** (`scripts/prove-nr9-auto-response.mjs`, branche jetable, code livré) :
+  **18/18 PASS** — l'automate répond (acteur `automation`, **aucun compte**, la quantité demandée,
+  le **prix affiché remisé**), l'acheteur **lit** `responderKind=automation`, il est **notifié**,
+  le rejeu **ne double pas** la réponse, la négociation **abstient** (avec contrôle : la même offre
+  sans proposition est bien servie), stock périmé/expiré/insuffisant/Pro absent/auto éteint
+  abstiennent, le schéma **refuse** une automation avec compte (C9) ou sans quantité (C4), l'audit
+  trace `automation`.
+- **Migration `072_v2_automation_actor.sql`** — additive, idempotente, **appliquée à la canonique**
+  `br-dawn-hill-am5amy22` (checksum `0e0c4ad1…`, 13 réponses intactes, 0 automation). Deux CHECK
+  (acteur + quantité auto) et l'index partiel (une seule réponse auto par demande) vérifiés
+  **par l'objet**, pas par le registre.
+
+## Bug pré-existant trouvé par la preuve NR-9 : R-H refusait TOUTE proposition
+
+- La requête de **nature d'offre** lue avant le refus R-H (`trunk-repository.ts`) ne sélectionnait
+  **pas** `price_minor`. `listedPriceMinor` lisait donc `undefined → 0`, et **toute** proposition de
+  prix était refusée (« votre proposition dépasse le prix affiché ») — y compris une proposition
+  **plus basse** que le prix réel. **R-H n'a jamais fonctionné pour une proposition > 0.**
+- **Invisible aux 1277 tests** : ils utilisent un `sql` **stubbé** qui ne compile jamais la requête
+  (classe `NW-13j` / `RH-02`). Seule la preuve Postgres réelle le voit.
+- Corrigé (la requête porte `p.price_minor`) et **verrouillé** par une garde statique falsifiée
+  (`auto-response-producer.test.ts` : la requête de nature doit citer `p.price_minor`).
+
 ## Résidus honnêtes
 
-- **`NR-9` — réponse automatique au nom de l'entité (Species §95).** Le modèle l'a spécifiée
-  comme un **acteur** (Root §6.3/§7 : « seller **or approved automation** »), mais
-  `v2_availability_responses` n'a **aucune colonne `actor_kind`** : le schéma **ne peut pas
-  distinguer** auto et humain — c'est précisément ce qui a produit le mensonge `NR-7`. Construire
-  cette capacité est une **fondation neuve** (migration + producteur + contrat), interdite sur
-  Branches sans décision fondateur. **Non construite.**
 - **Preuve navigateur non exécutée** : recevoir une notification sur un **appareil réel** (FCM)
   et voir la Room s'ouvrir depuis le tap demande une session réelle et un appareil — reste
   **manuelle** (prochain spot-check).
-- La décision fondateur « auto sur offre `price_kind='negociable'` » reste ouverte (Species n'a
-  jamais traité la négociation ; `price_kind` vient de `R-H`).
+- **Réglage `auto_availability`** : la colonne et le comportement serveur sont livrés ; l'exposition
+  d'un interrupteur « Répondre automatiquement » dans l'espace vendeur est un pas d'UI séparé.
+- **Web Push** : le drain est câblé, mais **VAPID n'est pas configuré en prod** → la route répond
+  honnêtement `configured:false`. La livraison réelle attend les clés (décision fondateur).

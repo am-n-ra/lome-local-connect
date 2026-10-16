@@ -2788,6 +2788,20 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const idempotencyKey = typeof rawIdempotencyKey === 'string' ? rawIdempotencyKey : '';
       const validated = validateAvailabilityRequestCreate(input, idempotencyKey, authUserId);
       const result = await repository.createAvailabilityRequest({ ...validated, correlationId });
+      // NR-9 — l'automate répond AU NOM DE L'ENTITÉ, s'il est activé et si les conditions sont
+      // tenues (Species §95/§113, Root §6.3/§7). Il vit ICI, au niveau de la route, pour deux
+      // raisons : (1) c'est le même endroit que le drain des notifications — un effet de bord de
+      // la requête, pas une partie de son contrat d'écriture ; (2) le dépôt garde ses statements
+      // séquencés et testables sans base. Mieux-effort : s'il s'abstient, la demande reste
+      // simplement « en attente », exactement comme avant NR-9.
+      try {
+        await repository.respondAvailabilityAutomatically({
+          requestId: result.requestId,
+          correlationId,
+        });
+      } catch {
+        // L'automate est une commodité, jamais une cause d'échec de la demande.
+      }
       // BRANCHES-NOTIF-DRAIN — le producteur vient de mettre la notification vendeur en file
       // (`web_push` 'queued'). Sans ce drain, elle restait `queued` jusqu'au cron quotidien :
       // le vendeur ne recevait RIEN. La file est ordonnée par `created_at`, donc un ancien
