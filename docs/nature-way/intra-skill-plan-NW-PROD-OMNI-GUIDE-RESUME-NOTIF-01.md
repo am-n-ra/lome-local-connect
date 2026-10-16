@@ -65,6 +65,8 @@
 | NR-9 | G-01 | Branch | réponse auto au nom de l'entité | décisions §5 | relais | `done` | contrat C1–C10 + migration `072` + preuve SQL **18/18** | **fondation neuve AUTORISÉE** (fondateur « ok go ») | — |
 | NR-10 | G-01 | Branch | « alertes » acheteur (promesse du plan sans producteur) | NR-9 | relais | `ready` | recherche sauvegardée → événement ; garde falsifiée | **capacité neuve AUTORISÉE** (fondateur « 1 ok ») | décision d'ordre |
 | NR-11 | G-01 | Branch | expliquer le plan Pro vendeur | — | relais | `ready` | garde : chaque ligne Pro porte une phrase | durcissement d'honnêteté | — |
+| MB-1 | G-01 | Branch | frontière budget/prix par le helper partagé (UNI-MONEY-1) | — | relais | `done` | garde falsifié `buyer-flow-money` + 0 conversion manuelle dans le bundle servi | bug latent : champ vide → plafond 0 FCFA | — |
+| MB-2 | G-01 | Branch | chaque producteur de push produit un deep-link | — | relais | `done` | garde falsifié `push-target-coverage` (2) | **risque latent** : aujourd'hui les 4 types poussés sont ciblés ; le garde empêche une régression future | — |
 | GUIDE-SPEC | G-01 | Species | direction visuelle de l'entrée (accueil · guide · spotlight) | acceptation fondateur | fondateur | `blocked` | mini-maquette acceptée | **aucun redessin sans maquette** (74 écrans n'ont AUCUNE surface de guide) | décision A/B/C |
 
 ## Reconciliation log
@@ -83,7 +85,7 @@
 
 > **Local status:** `complete` pour `NR-4…NR-9` ; **3 tranches ouvertes** (`NR-10`, `NR-11`, `GUIDE-SPEC`)
 > **Gate decision:** `go` — fondateur a autorisé la capacité neuve (« 1 ok ») et l'explication du plan (« 2 ok ») ; **décision A/B/C en attente sur l'entrée/guide**
-> **Closed:** `NR-1` (visibilité réponse vendeur) · `NR-2` (drain Web Push) · `NR-3` (le vendeur **peut** répondre : stock nommé, formulaire pré-rempli)
+> **Closed:** `NR-1` (visibilité réponse vendeur) · `NR-2` (drain Web Push) · `NR-3` (le vendeur **peut** répondre : stock nommé, formulaire pré-rempli) · **`MB-1`/`MB-2`** (2026-10-16 : frontière budget partagée ; cible push verrouillée pour chaque producteur)
 > **Open:** `NR-10` (ready — « alertes » à construire), `NR-11` (ready — expliquer le plan), `GUIDE-SPEC` (**blocked** — décision A/B/C), `GR-1`, `GR-2`, `GR-3`, `NT-1`. **Fermés le 2026-10-15 :** `NR-4`…`NR-9`.
 > **Residual gap:** la **réponse auto** est construite (`actor_kind`, `decideAutoResponse`, prouvé 18/18) ; VAPID **est armé** (`push-key` `configured:true`, 4 `web_push` `delivered`). Restent : **« alertes » acheteur** (promesse du plan **sans producteur** — `NR-10`), **explication du plan** (`NR-11`), et **l'entrée/guide sans direction visuelle** (`GUIDE-SPEC` : la maquette, 74 écrans, n'a **aucune** surface de guide → 3 `orphaned leaves`).
 > **Next smallest action:** `NR-11` (expliquer le plan) — le plus petit pas à valeur immédiate, sans visuel ni migration ; puis `NR-10` sur ordre.
@@ -91,3 +93,4 @@
 | 2026-10-15 | `caf18e5` : NR-4/5/6/7/8 livrés (1259→1260 tests, 7 gardes verts) | `NR-4/5/6/7/8` → `done` | exécution | relais | après push + T-07d |
 | 2026-10-15 | `NR-9` livrée : migration `072` (canonique), `decideAutoResponse`, producteur, **18/18** Postgres réel · **bug R-H pré-existant** trouvé et corrigé (`price_minor` absent de la requête de nature → toute proposition refusée) | `NR-9` → `done` | exécution | relais | après push + T-07d |
 | 2026-10-15 | `check:dock-search` échouait sur HEAD propre ; `--selftest` passait à tort | garde réparé (2 mutations périmées, règle poll renforcée) | correction de garde | relais | — |
+| 2026-10-16 | balayage d'incohérences : `BuyerFlowV13` re-divisait à la main (champ vide → plafond 0 FCFA) ; les 4 types d'événements poussés sont ciblés (pas de bug actif) | `MB-1`/`MB-2` créés `done` | exécution | relais | — |
