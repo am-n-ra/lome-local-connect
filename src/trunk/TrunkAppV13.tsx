@@ -2488,6 +2488,19 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     void openEntity(facility.entityId);
   }, [openEntity]);
 
+  // S-21 — QR PUBLIC d'entité (`<origin>/?entity=<uuid>`) : le vendeur l'affiche en boutique,
+  // un client le scanne avec l'appareil photo NATIF (pas le scanner in-app) et tombe sur cette
+  // URL. Sans ce handler, il atterrissait sur la carte vide : le QR n'était résolu que par le
+  // scanner in-app, jamais par le lien qu'il encode. La page entité est publique (aucune auth),
+  // donc ce deep-link fonctionne sans compte. Déclaré APRÈS `openEntity` (pas de TDZ).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const entityId = params.get('entity');
+    if (!entityId || !parseEntityIdFromQr(entityId)) return;
+    window.history.replaceState(null, '', window.location.pathname);
+    void openEntity(entityId);
+  }, [openEntity]);
+
   // S1b (S-21) — le QR public d'entité : scan in-store → page de l'entité (ses offres, son avantage).
   const handleEntityQrDetected = useCallback(async (entityId: string) => {
     if (!parseEntityIdFromQr(entityId)) { setQrError('QR non reconnu. Visez le QR public d’une entité.'); return; }
