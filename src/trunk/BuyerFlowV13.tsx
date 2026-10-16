@@ -7,6 +7,7 @@ import { canProposePrice, isNegotiable } from './offer-price';
 import { availabilitySourceLabel } from './availability-source';
 import { useFreshnessTimer } from './useFreshnessTimer';
 import { requestCountdownLabel } from './transaction-time';
+import { budgetFieldToMinor } from './search-constraints';
 import type { PendingAction } from './ui-helpers';
 import { formatMoney } from '../domain/currency';
 
@@ -154,8 +155,8 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onEngagement,
         facilityId: facility.id,
         quantity: quantityValue,
         budgetMode,
-        budgetMinor: budgetMode === 'maximum' ? Math.round(Number(budget) * 100) : null,
-        proposedPriceMinor: negotiable && proposedPrice.trim() !== '' ? Math.round(Number(proposedPrice) * 100) : null,
+        budgetMinor: budgetMode === 'maximum' ? budgetFieldToMinor(budget) : null,
+        proposedPriceMinor: negotiable ? budgetFieldToMinor(proposedPrice) : null,
         deliveryMode,
         note: availNote.trim().length > 0 ? availNote.trim() : null,
         token,
