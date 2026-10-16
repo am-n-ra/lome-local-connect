@@ -37,7 +37,7 @@
 | G-01 | — | gate Branches | Clore les gaps transaction mesurés | — | NW | `in_progress` | Registre + tranches livrées + preuve prod | Ne pas ouvrir de fondation neuve | Décision fondateur |
 | W-01 | G-01 | Phase A/B — vérité | Rendre le parcours honnête de bout en bout | — | NW | `in_progress` | Registre `omni-transaction-gaps-register` | Docs only ici | — |
 | T-G1 | W-01 | Phase B — sortie | Transaction expirée visible + message honnête | — | NW | `verified` | Garde falsifié + SQL réel canonique | Aucune migration | — |
-| T-G2 | W-01 | Phase B — verrou | Expiration du verrouillé | D-TXN-3a/3b | NW | `blocked` | Décision + test SQL réel | **Argent** : ne rien débiter sans décision — options écrites (`omni-d-txn-3-locked-expiry-options-2026-10-15.md`) | Décision fondateur |
+| T-G2 | W-01 | Phase B — verrou | Expiration du verrouillé | D-TXN-3a/3b | NW | `verified` | Preuve jetable 4/4 + falsifié (2) + garde `locked-expiry-surface` | **Argent** : n'expire QUE l'état exactement `qr_verified` (aucune avance) — ne peut jamais tuer une transaction payée | — |
 | T-G3 | W-01 | Types | `expired` dans `TransactionState` domaine + validateur | — | NW | `verified` | tsc + garde de parité | Aucune donnée réécrite | — |
 | T-G4 | W-01 | Phase B — QR | QR persistant dans la Room | T-G3 | NW | `verified` | Garde falsifié + SQL réel canonique | Aucun token en clair renvoyé | — |
 | T-G5 | W-01 | Notifications | Intention d'achat notifiée au vendeur | — | NW | `done` | **Déjà livré** (`caf18e5`, NR-4) — GAP-5 était FAUX | — | — |
@@ -56,14 +56,16 @@
 | 2026-10-15 | **RE-MESURE : GAP-5 était FAUX** (livré par `caf18e5`, NR-4) — le registre avait été écrit par grep | T-G5 `ready`→`done` ; registre corrigé | `advance` | NW | T-G7 |
 | 2026-10-15 | **TXN-G7 livré** : l'expiration notifie les DEUX parties (acheteur → suivi ; vendeur → file), idempotent | T-G7 `blocked`→`verified` ; GAP-7 corrigé | `advance` | NW | T-G6 |
 | 2026-10-15 | **TXN-G6 livré** : le délai de 15 min est enfin VISIBLE des deux côtés (échéance réelle, rafraîchie) | T-G6 `ready`→`verified` ; GAP-6 corrigé | `advance` | NW | T-G8, puis décision T-G2 |
+| 2026-10-15 | **D-TXN-3a/3b tranchées (A1 + B3, 72 h)** : options adossées à la mesure (aucun débit wallet dans une transaction ; seul actif retenu = réservation de stock) | T-G2 `blocked`→`ready` | `advance` | NW | T-G2 |
+| 2026-10-15 | **TXN-G2 livré** : le verrouillé jamais engagé (état exactement `qr_verified`) expire — stock libéré + les deux parties notifiées ; un verrou avancé (argent/remise) n'est JAMAIS touché. Preuve jetable 4/4, falsifiée ×2 | T-G2 `ready`→`verified` ; GAP-2 corrigé | `advance` | NW | W-01 prêt à clore |
 
 ## Handoff to Founder HQ
 
-> **Local status:** `partial`
-> **Gate decision:** `advance` — TXN-G1/G3/G4/G6/G7 livrés et prouvés ; GAP-5 démasqué faux
-> **Closed:** T-G1 · T-G3 · T-G4 · T-G5 (déjà livré) · T-G6 · T-G7 · T-G8 (décision) · W-01 mesure
-> **Open or blocked:** T-G2 `blocked` sur **D-TXN-3a/3b** (expiration du verrouillé — argent)
+> **Local status:** `verified` — la sous-file W-01 est **complète**
+> **Gate decision:** `advance` — T-G1…T-G8 tous livrés/vérifiés ; GAP-5 démasqué faux ; T-G2 (le dernier) livré
+> **Closed:** T-G1 · T-G2 · T-G3 · T-G4 · T-G5 (déjà livré) · T-G6 · T-G7 · T-G8 (décision) · W-01 mesure
+> **Open or blocked:** aucun — W-01 prêt à clore
 > **Resource Receipt:** 6 ressources chargées, 1 template instancié, 2 non applicables (justifiés)
-> **Residual gap:** preuve navigateur authentifiée non exécutée (sandbox sans session) ; décision fondateur requise sur l'expiration du verrouillé (T-G2)
-> **Next smallest action:** **T-G2** — l'unique item de la sous-file qui reste, et il exige une décision fondateur. Aucune autre tranche de code n'est disponible sans elle.
-> **Re-plan trigger:** décision D-TXN-3a/3b, ou une mesure qui contredit le contrat
+> **Residual gap:** preuve navigateur authentifiée non exécutée (sandbox sans session) ; escalade des verrous AVANCÉS abandonnés (surface opérateur) = tranche séparée, hors T-G2
+> **Next smallest action:** aucune dans cette sous-file. Prochaine tranche Branches = décision fondateur (escalade opérateur des verrous avancés, ou autre gap).
+> **Re-plan trigger:** une mesure qui contredit le contrat, ou un nouveau gap fondateur

@@ -2508,6 +2508,9 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       // le cron : chaque consultation des transactions en cours expire les intentions
       // échues avant le verrou. Idempotent ; un échec ne casse jamais la lecture.
       void repository.sweepExpiredIntents({ now: new Date().toISOString(), correlationId }).catch(() => undefined);
+      // T-G2 / D-TXN-3b (B3) — une transaction verrouillée JAMAIS engagée (état exactement
+      // `qr_verified`) retenait son stock pour toujours. Même filet opportuniste.
+      void repository.sweepStalledLockedTransactions({ now: new Date().toISOString(), correlationId }).catch(() => undefined);
       // Filet Web Push : si un drain opportuniste n'a pas eu lieu (serverless), la
       // consultation des transactions en cours rattrape les livraisons en attente.
       void drainWebPushBestEffort(repository);
@@ -2809,12 +2812,15 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const result = await repository.sweepExpiredIntents({ now: new Date().toISOString(), correlationId });
+      // T-G2 / D-TXN-3b (B3) — expiration du verrouillé jamais engagé. Un échec ici ne
+      // doit pas faire échouer le sweep pré-verrou (les deux sont indépendants).
+      const lockedResult = await repository.sweepStalledLockedTransactions({ now: new Date().toISOString(), correlationId }).catch(() => ({ expired: 0, transactionIds: [] as string[] }));
       // RT-D1: drop itinerary-usage rows past the longest quota window. Runs on
       // the existing schedule; a failure here must not fail the intent sweep.
       await pruneRouteRequests().catch(() => undefined);
       // Web Push : filet de sécurité des drains opportunistes (serverless = freeze).
       await drainWebPushBestEffort(repository);
-      json(res, 200, { ok: true, correlationId, data: result });
+      json(res, 200, { ok: true, correlationId, data: { ...result, lockedExpired: lockedResult.expired } });
       return true;
     }
     // VAPID public key — la clé publique n'est pas un secret, elle est faite pour le

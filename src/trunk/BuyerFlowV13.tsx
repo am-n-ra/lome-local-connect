@@ -59,6 +59,9 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onEngagement,
   const [requestId, setRequestId] = useState<string | null>(null);
   // TXN-G6 (GAP-6) — l'échéance de la demande (15 min). Exposée par l'API, rendue ici.
   const [requestExpiresAt, setRequestExpiresAt] = useState<string | null>(null);
+  // T-G2 (B3) — la demande a expiré (ou a été retirée) : on arrête le poll et on le DIT,
+  // au lieu de laisser « En attente » clignoter pour toujours sur une demande morte.
+  const [requestClosed, setRequestClosed] = useState<'expired' | 'cancelled' | null>(null);
   const [liveResponse, setLiveResponse] = useState<{ priceMinor: number; quantityAvailable: number; status: string; observedAt: string | null; responderKind?: 'seller' | 'automation' } | null>(null);
   const [creditSummary, setCreditSummary] = useState<BuyerCreditSummary | null>(null);
   const pollRef = useRef<number | null>(null);
@@ -103,18 +106,26 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onEngagement,
     if (!resumeRequestId) return;
     setRequestId(resumeRequestId);
     setStage('pending');
+    setRequestClosed(null);
     // TXN-G6 — on récupère l'échéance réelle de la demande reprise (jamais inventée).
+    // T-G2 (B3) — et son ÉTAT : une demande déjà expirée ne doit pas relancer un poll
+    // éternel qui laisse croire qu'une réponse peut encore arriver.
+    let closed = false;
     void (async () => {
       const token = await getAuthToken();
       if (!token) return;
       const mine = await getBuyerAvailabilityRequests({ token });
       const found = mine.ok ? mine.data?.requests?.find((r) => r.id === resumeRequestId) : null;
       if (found?.expiresAt) setRequestExpiresAt(found.expiresAt);
+      if (found?.requestStatus === 'expired' || found?.requestStatus === 'cancelled') {
+        closed = true;
+        setRequestClosed(found.requestStatus);
+      }
     })();
     let cancelled = false;
     const poll = async (): Promise<void> => {
       const token = await getAuthToken();
-      if (!token || cancelled) return;
+      if (!token || cancelled || closed) return;
       const responses = await getAvailabilityResponses({ requestId: resumeRequestId, token });
       const list = responses.ok ? (responses.data?.responses ?? []) : [];
       if (list.length > 0) {
@@ -153,6 +164,8 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onEngagement,
       if (result.ok && result.data) {
         setRequestId(result.data.requestId);
         setRequestExpiresAt(result.data.expiresAt ?? null);
+        // T-G2 (B3) — une NOUVELLE demande ne doit pas hériter du « expirée » d'une reprise.
+        setRequestClosed(null);
         setToast('');
         setError('');
         // BRANCHES-NOTIF-1 — la demande part : l'acheteur attend une réponse hors écran.
@@ -263,10 +276,22 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onEngagement,
             <div className="kv"><span>{product.name} ×{quantityValue}</span><b className="status gray">En attente</b></div>
             {/* TXN-G6 (GAP-6) — le délai est enfin VISIBLE : l'acheteur sait combien de temps
                 il attend, au lieu de découvrir la disparition. */}
-            {requestCountdownLabel(requestExpiresAt, nowTick) && (
+            {!requestClosed && requestCountdownLabel(requestExpiresAt, nowTick) && (
               <div className="kv"><span>Réponse attendue</span><b className="status gray">{requestCountdownLabel(requestExpiresAt, nowTick)}</b></div>
             )}
           </div>
+          {/* T-G2 (B3) — une demande expirée (ou retirée) le DIT et n'attend plus. Avant,
+              la reprise affichait « En attente » pour toujours sur une demande morte. */}
+          {requestClosed && (
+            <div className="cardbox" style={{ marginTop: 8, borderColor: 'var(--warn)' }}>
+              <div className="kv"><span>{requestClosed === 'expired' ? 'Demande expirée' : 'Demande retirée'}</span><b className="status warn">{requestClosed === 'expired' ? 'Expirée' : 'Annulée'}</b></div>
+              <p className="tiny muted" style={{ marginTop: 7 }}>
+                {requestClosed === 'expired'
+                  ? 'Le délai de réponse est passé. Aucune réponse n’est plus attendue, rien ne vous a été débité, et le stock réservé au vendeur a été libéré. Vous pouvez refaire une demande.'
+                  : 'Vous avez retiré cette demande. Aucune réponse n’est plus attendue.'}
+              </p>
+            </div>
+          )}
           <p className="tiny muted" style={{ marginTop: 7 }}>Sans réponse, Omni ne transforme jamais le silence en « disponible ». Cette page se met à jour dès que le vendeur répond.</p>
         </div>
       )}

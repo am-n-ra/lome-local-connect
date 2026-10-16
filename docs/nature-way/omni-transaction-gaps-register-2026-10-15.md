@@ -49,7 +49,7 @@ Aucune ligne de code produit n'est modifiée par ce document.
 | ID | Gap | Preuve (fichier:ligne) | Sévérité | Effet utilisateur |
 |---|---|---|---|---|
 | **GAP-1** | Une transaction **expirée** n'apparaît **ni** dans « En cours » **ni** dans « Terminées » : elle **disparaît** | `trunk-repository.ts:7923` (`<> 'closed'` **+** exclusion `pi.state='expired'`) et `:8019` (`= 'closed'`) | **Haute** | ~~L'acheteur ne retrouve aucune trace~~ **CORRIGÉ (TXN-G1, 2026-10-15)** : elle apparaît dans « Terminées », étiquetée « Expirée », sans reçu. |
-| **GAP-2** | Le balayage d'expiration ne couvre **que l'avant-verrou** (`not exists … state='qr_verified'`) | `trunk-repository.ts:8057-8060` | **Haute** | Une transaction **verrouillée** (QR scanné, paiement déclaré) qui stagne reste **ouverte indéfiniment** — ni clôture, ni expiration, ni remboursement. D-TXN-3 (« verrouillée stagnante : 72 h ») **non implémenté**. |
+| **GAP-2** | Le balayage d'expiration ne couvre **que l'avant-verrou** (`not exists … state='qr_verified'`) | `trunk-repository.ts:8057-8060` | **Haute** | ~~Une transaction **verrouillée** (QR scanné, paiement déclaré) qui stagne reste **ouverte indéfiniment**~~ **CORRIGÉ (TXN-G2, 2026-10-15)** : un verrou **jamais engagé** (état exactement `qr_verified`, > 72 h) expire — stock libéré + les deux parties notifiées. Un verrou **avancé** (`payment_declared`+, argent/remise en jeu) n'est **jamais** expiré automatiquement (escalade opérateur = tranche séparée). |
 | **GAP-3** | `'expired'` est **écrit** comme état de transaction mais **absent** de `TransactionState` (domaine) et du validateur HTTP | `domain/contracts.ts:45` (10 valeurs) · `http.ts:441` · vs `trunk/types.ts:245` (11 valeurs, dont `expired`) | Moyenne | ~~Divergence domaine/client~~ **CORRIGÉ (TXN-G3, 2026-10-15)** : une seule source (`domain/contracts.ts`) ; client et validateur la réutilisent. |
 | **GAP-4** | La Room **perd le QR** à la fermeture : `qrToken` n'est jamais rechargé (`useState(null)`, seul `issueQr` le pose) et `getTransaction` ne renvoie pas de jeton | `TransactionRoom.tsx:52,121` · `trunk-repository.ts:7786` | Moyenne | ~~L'acheteur qui ferme et rouvre doit ré-émettre~~ **CORRIGÉ (TXN-G4, 2026-10-15)** : le token **en clair n'est jamais stocké** (seul `token_hash`), donc l'image ne peut pas être rechargée — c'est **correct**. La Room reçoit l'**état** du QR et dit la vérité (« un QR est déjà émis, ré-émettre le remplace »). |
 | **GAP-5** | ~~Le vendeur n'est pas notifié de la création d'une intention d'achat~~ | ~~`createPurchaseIntent` : 0 notification~~ | ~~Moyenne~~ | **FAUX — déjà livré.** Re-mesuré le 2026-10-15 : `transaction_intent_created` existe dans `createPurchaseIntent` (commit `caf18e5`, NR-4/S-27), est câblé dans `notification-center.ts` (libellé + cible Room) et présent dans le bundle servi. **Le registre initial avait été écrit par grep et le grep avait raté le producteur.** |
@@ -101,7 +101,7 @@ Les gaps 3–8 sont des **défauts de cohérence et de visibilité** : ils ne ca
 | Tranche | Contenu | Dépend de | Ferme |
 |---|---|---|---|
 | **TXN-G1** | **Historique honnête** : une transaction expirée apparaît dans une 3ᵉ vue « Expirées » (ou est marquée dans « Terminées »), avec le message « Rien n'a été débité » | — | GAP-1 |
-| **TXN-G2** | **Expiration du verrouillé** : règle serveur (D-TXN-3, 72 h proposé) sur transaction verrouillée stagnante → état canonique + libération/remboursement + audit | D-TXN-3 (décision fondateur) | GAP-2 |
+| **TXN-G2** | **Expiration du verrouillé** : règle serveur (D-TXN-3b = **B3**, décision fondateur 2026-10-15) — un verrou **jamais engagé** (état exactement `qr_verified`) expire après **72 h** → état canonique `expired` + libération du stock + audit + notification des deux parties ; un verrou **avancé** (`payment_declared`+) n'est **jamais** expiré automatiquement | D-TXN-3 (tranchée A1+B3) | GAP-2 |
 | **TXN-G3** | **Types alignés** : `expired` entre dans `TransactionState` domaine + validateur HTTP ; une seule définition | — | GAP-3 |
 | **TXN-G4** | **QR persistant** : `getTransaction` renvoie le QR vivant (ou l'état `qr_ready`) → la Room l'affiche sans ré-émission ; ré-émission explicite seulement si expiré | TXN-G3 (types) | GAP-4 |
 | **TXN-G5** | **Notification d'intention** au vendeur (même producteur que la demande de dispo) | — | GAP-5 |
@@ -109,8 +109,8 @@ Les gaps 3–8 sont des **défauts de cohérence et de visibilité** : ils ne ca
 | **TXN-G7** | **Notification d'expiration** aux deux parties | TXN-G2 (état canonique) | GAP-7 |
 | **TXN-G8** | **Dette de type** : retirer `failed` d'`AvailabilityStatus` ou l'écrire réellement | — | GAP-8 |
 
-**Décisions fondateur requises avant TXN-G2/TXN-G7 :**
-- **D-TXN-3a** : fenêtre d'expiration d'une transaction **verrouillée** (proposé **72 h**).
-- **D-TXN-3b** : à l'expiration d'un verrouillé — **libération simple** du stock, ou **remboursement wallet** (aucun débit Omni n'existe aujourd'hui hors wallet, donc probablement libération seule) ?
+**Décisions fondateur — TRANCHÉES le 2026-10-15 :**
+- **D-TXN-3a = A1** : garder 15 min (demande) / 60 min (intention pré-verrou). Aucun changement.
+- **D-TXN-3b = B3** : à l'expiration d'un verrou **jamais engagé** (état exactement `qr_verified`, 72 h) → **libération simple du stock** + notification des deux parties. Un verrou **avancé** (paiement déclaré/confirmé, ou remise en cours) n'est **jamais** expiré automatiquement — escalade opérateur (tranche séparée). **Il n'y a rien à rembourser au wallet** : une transaction ne débite pas le wallet (l'achat circule en externe, FedaPay). La formulation d'origine du contrat (« rembourse le wallet ») était **inexacte**.
 
 **Résidu honnête** : aucune preuve navigateur **authentifiée** n'a été faite ici (sandbox sans session réelle). Le parcours est prouvé par lecture des requêtes réelles + suite de tests ; le spot-check fondateur reste requis avant de déclarer la clôture.

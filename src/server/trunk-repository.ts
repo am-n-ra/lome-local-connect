@@ -8212,6 +8212,131 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       };
     },
 
+    // T-G2 / D-TXN-3b (B3, décision fondateur 2026-10-15) — expiration d'une transaction
+    // VERROUILLÉE mais jamais engagée. Le sweep pré-verrou (`sweepExpiredIntents`) EXCLUT
+    // explicitement le verrouillé (`not exists … qr_verified`) : après le verrou, le stock
+    // n'était plus jamais libéré que par la clôture. Mesuré : 5 transactions d'août/septembre
+    // jamais clôturées, dont une `qr_ready` tenant 1 unité réservée sur un produit alloué à 1
+    // — le vendeur ne pouvait plus vendre son unité, pour toujours.
+    //
+    // Règle : expire UNIQUEMENT si l'état courant est EXACTEMENT `qr_verified` — c'est-à-dire
+    // que la transaction n'a JAMAIS avancé (pas de paiement déclaré, pas de remise). Dès
+    // qu'une étape ultérieure existe (`payment_declared`+), de l'argent réel ou une remise
+    // est en jeu : on ne touche pas, on escalade ailleurs (litige = D-TXN-5, hors V1). C'est
+    // la version resserrée de B3 : le critère n'est pas « aucun paiement » mais « aucune
+    // avancée », qui est le fait exact du cas abandonné et ne peut pas tuer un engagement.
+    async sweepStalledLockedTransactions(input: { now: string; correlationId: string; windowMinutes?: number }): Promise<{ expired: number; transactionIds: string[] }> {
+      const windowMinutes = Number.isInteger(input.windowMinutes) && (input.windowMinutes as number) > 0 ? (input.windowMinutes as number) : 72 * 60;
+      const rows = await retryDatabase(() => sql`
+        with locked as (
+          -- Dernier événement par transaction = état courant (D-TXN-11).
+          select transaction_id,
+                 (array_agg(state order by created_at desc, state_rank desc))[1] as current_state,
+                 max(created_at) as last_at
+          from v2_transaction_events
+          group by transaction_id
+        ),
+        stalled as (
+          select l.transaction_id, s.buyer_account_id, s.intent_id, ar.request_id
+          from locked l
+          join v2_transaction_snapshots s on s.transaction_id = l.transaction_id
+          join v2_purchase_intents pi on pi.id = s.intent_id
+          join v2_availability_responses ar on ar.id = pi.response_id
+          where l.current_state = 'qr_verified'
+            and l.last_at < ${input.now}::timestamptz - (${windowMinutes} * interval '1 minute')
+        ),
+        intent_expired as (
+          update v2_purchase_intents pi
+          set state = 'expired'
+          from stalled st
+          where pi.id = st.intent_id and pi.state = 'active'
+          returning pi.id
+        ),
+        request_expired as (
+          update v2_availability_requests r
+          set status = 'expired'
+          from stalled st
+          join intent_expired ie on ie.id = st.intent_id
+          where r.id = st.request_id and r.status not in ('expired', 'cancelled')
+          returning r.id
+        ),
+        -- Libération du stock, ancrée sur intent_expired (idempotent).
+        stock_release as (
+          update v2_products p
+          set quantity_reserved_omni = greatest(p.quantity_reserved_omni - s.quantity, 0)
+          from intent_expired ie
+          join v2_transaction_snapshots s on s.intent_id = ie.id
+          where p.id = s.product_id
+          returning p.id
+        ),
+        event_expired as (
+          insert into v2_transaction_events (transaction_id, actor_account_id, state, metadata, created_at)
+          select st.transaction_id, st.buyer_account_id, 'expired',
+                 jsonb_build_object('reason', 'stalled_after_lock'), ${input.now}::timestamptz
+          from stalled st
+          join intent_expired ie on ie.id = st.intent_id
+          on conflict (transaction_id, state) do nothing
+          returning transaction_id
+        ),
+        audited as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)
+          select st.buyer_account_id, 'locked_transaction_expired', 'transaction', st.transaction_id::text, ${input.correlationId}, 'stalled_after_lock', ${input.now}::timestamptz
+          from stalled st
+          join intent_expired ie on ie.id = st.intent_id
+          on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
+          returning entity_id
+        ),
+        -- Mêmes libellés que TXN-G7 (l'expiration d'une demande se dit pareil, avant ou
+        -- après le verrou) ; dedupe_key distinct (suffixe locked) pour ne jamais confondre
+        -- les deux natures. Push seulement si un abonnement actif existe.
+        locked_targets as (
+          select st.buyer_account_id as recipient_account_id,
+                 'availability_request_expired' as event_type,
+                 st.request_id, null::uuid as response_id
+          from stalled st
+          join intent_expired ie on ie.id = st.intent_id
+          union all
+          select ar.responder_account_id, 'availability_response_lapsed', st.request_id, ar.id
+          from stalled st
+          join intent_expired ie on ie.id = st.intent_id
+          join v2_availability_responses ar on ar.request_id = st.request_id
+          where ar.responder_account_id is not null
+        ),
+        locked_notified as (
+          insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
+          select t.recipient_account_id, t.event_type, 'availability_request', t.request_id::text,
+                 t.request_id::text || ':locked:' || t.event_type,
+                 jsonb_build_object('kind', t.event_type, 'requestId', t.request_id::text),
+                 ${input.correlationId}
+          from locked_targets t
+          on conflict (recipient_account_id, dedupe_key) do nothing
+          returning id, recipient_account_id
+        ),
+        locked_in_app as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select id, 'in_app', 'queued' from locked_notified
+          on conflict (event_id, channel) do nothing
+          returning id
+        ),
+        locked_push as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select n.id, 'web_push', 'queued'
+          from locked_notified n
+          join v2_web_push_subscriptions s on s.account_id = n.recipient_account_id
+          where s.permission_state = 'granted' and s.revoked_at is null
+          on conflict (event_id, channel) do nothing
+          returning id
+        )
+        select st.transaction_id, st.request_id from stalled st
+        join intent_expired ie on ie.id = st.intent_id
+      `);
+      const typed = rows as Record<string, unknown>[];
+      return {
+        expired: typed.length,
+        transactionIds: typed.map((row) => String(row.transaction_id)),
+      };
+    },
+
     async getOrCreateCreditStanding(input: { authUserId: string }): Promise<BuyerCreditSummary | null> {
       const rows = await retryDatabase(() => sql`
         with account as (
