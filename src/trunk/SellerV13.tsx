@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LocateFixed, RefreshCw, ScanLine } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { createSellerProductDraft, createSellerFacility, createFacilityAdCampaign, declareSellerFacilityPosition, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, getSellerSlots, listClosedTransactions, listFacilityAdCampaigns, listTransactions, purchaseSellerSlot, refreshProductAvailability, renewFacilityPro, setFacilityRenewalOptIn, setProductAutoAvailability, setSellerFacilityOperationalState, unlockFacilityBonus, updateSellerFacilityContact } from './api';
+import { createSellerProductDraft, createSellerFacility, createFacilityAdCampaign, declareSellerFacilityPosition, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, getSellerSlots, listClosedTransactions, listFacilityAdCampaigns, listTransactions, purchaseSellerSlot, refreshProductAvailability, renewFacilityPro, setFacilityRenewalOptIn, setProductAutoAvailability, setSellerFacilityOperationalState, unlockFacilityBonus, updateSellerFacilityContact, updateSellerPaymentMethods } from './api';
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
 import { isSinglePiece } from './offer-uniqueness';
 import { Skeleton, SkeletonDetail } from './Skeleton';
@@ -370,10 +370,15 @@ export function SellerV13({ onClose, onProducts, onCompany, onReply, onRefresh, 
   const [contactWhatsappDraft, setContactWhatsappDraft] = useState('');
   const [contactEditOpen, setContactEditOpen] = useState(false);
   const [contactBusy, setContactBusy] = useState(false);
+  const [paymentCash, setPaymentCash] = useState(false);
+  const [paymentMobile, setPaymentMobile] = useState(false);
   useEffect(() => {
     if (!contactEditOpen && activeFacility) {
       setContactPhoneDraft(activeFacility.contactPhone ?? '');
       setContactWhatsappDraft(activeFacility.contactWhatsapp ?? '');
+      const declared = activeFacility.paymentMethods ?? [];
+      setPaymentCash(declared.includes('cash'));
+      setPaymentMobile(declared.includes('mobile_money'));
     }
   }, [activeFacility, contactEditOpen]);
   const saveContact = useCallback(async () => {
@@ -381,17 +386,25 @@ export function SellerV13({ onClose, onProducts, onCompany, onReply, onRefresh, 
     if (!token || !ws.selFacilityId) return;
     setContactBusy(true); setError('');
     try {
+      const methods = (() => {
+        const list: string[] = [];
+        if (paymentCash) list.push('cash');
+        if (paymentMobile) list.push('mobile_money');
+        // Aucun coché = non déclaré (null), pas « aucun moyen accepté » : on ne ment pas.
+        return list.length === 0 ? null : list;
+      })();
       const result = await updateSellerFacilityContact({ token, facilityId: ws.selFacilityId, contactPhone: contactPhoneDraft.trim() || null, contactWhatsapp: contactWhatsappDraft.trim() || null });
-      if (result.ok && result.data) {
+      const methodsResult = await updateSellerPaymentMethods({ token, facilityId: ws.selFacilityId, methods });
+      if (result.ok && result.data && methodsResult.ok) {
         setContactEditOpen(false);
-        setToast('Contact enregistré. Visible par les acheteurs après intention.');
+        setToast('Contact et moyens de paiement enregistrés.');
         if (onRefresh) onRefresh(); else void load();
       } else {
-        setError(result.error?.message ?? 'Contact non enregistré.');
+        setError(result.error?.message ?? methodsResult.error?.message ?? 'Contact non enregistré.');
       }
     } catch { setError('Contact non enregistré.'); }
     finally { setContactBusy(false); }
-  }, [ws.selFacilityId, contactPhoneDraft, contactWhatsappDraft, onRefresh, load]);
+  }, [ws.selFacilityId, contactPhoneDraft, contactWhatsappDraft, paymentCash, paymentMobile, onRefresh, load]);
 
   // BRANCHES-MOBILE-POSITION — « Je suis ici ». One manual gesture: an ambulant (mobile) moves,
   // a fixed place corrects its point. The declaration is timestamped but never called verified.
@@ -760,6 +773,22 @@ export function SellerV13({ onClose, onProducts, onCompany, onReply, onRefresh, 
               <input className="input" type="tel" value={contactPhoneDraft} onChange={(e) => setContactPhoneDraft(e.target.value)} maxLength={40} placeholder="+228 90 00 00 00" style={{ width: '100%' }} />
               <label className="tiny muted" style={{ display: 'block', marginTop: 8 }}>WhatsApp</label>
               <input className="input" type="tel" value={contactWhatsappDraft} onChange={(e) => setContactWhatsappDraft(e.target.value)} maxLength={40} placeholder="+228 90 00 00 00" style={{ width: '100%' }} />
+              <label className="tiny muted" style={{ display: 'block', marginTop: 8 }}>Moyens de paiement acceptés au point de remise</label>
+              <div className="row" style={{ gap: 8, marginTop: 4 }}>
+                <button
+                  className={`chip ${paymentCash ? 'on' : ''}`}
+                  type="button"
+                  aria-pressed={paymentCash}
+                  onClick={() => setPaymentCash((v) => !v)}
+                >Espèces</button>
+                <button
+                  className={`chip ${paymentMobile ? 'on' : ''}`}
+                  type="button"
+                  aria-pressed={paymentMobile}
+                  onClick={() => setPaymentMobile((v) => !v)}
+                >Mobile Money</button>
+              </div>
+              <span className="tiny muted" style={{ display: 'block', marginTop: 4 }}>Rien de coché = non déclaré : l'acheteur verra les deux. Les deux cochés = les deux acceptés.</span>
               <button className="btn sm" style={{ marginTop: 8 }} type="button" disabled={contactBusy} onClick={() => void saveContact()}>{contactBusy ? 'Enregistrement…' : 'Enregistrer le contact'}</button>
             </div>
           )}

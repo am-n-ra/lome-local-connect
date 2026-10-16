@@ -12,6 +12,19 @@ export const authClient = neonAuth?.adapter ?? null;
  */
 export async function getAuthToken(): Promise<string | null> {
   if (!neonAuth) return null;
+  // Un token peut échouer transitoirement (cookie tiers, aller-retour réseau pendant
+  // un tap sur « Mes demandes »). Un échec ponctuel ne veut PAS dire « déconnecté » :
+  // sans réessai, l'app redemandait la connexion à un utilisateur déjà connecté.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const token = await fetchAuthTokenOnce();
+    if (token) return token;
+    if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
+  }
+  return null;
+}
+
+async function fetchAuthTokenOnce(): Promise<string | null> {
+  if (!neonAuth) return null;
   try {
     const response = await fetch(`${authUrl}/token`, {
       headers: { Accept: 'application/json' },

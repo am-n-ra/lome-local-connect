@@ -81,4 +81,20 @@ describe('Phase C — shell PWA installable et dégradé honnête', () => {
     expect(app).toContain('installbanner');
     expect(app).toContain('dismissInstallBanner');
   });
+
+  // P2 (fondateur, 2026-10-16) — l'icône de notification doit être le logo Omni, et
+  // la PASTILLE Android doit être une silhouette MONOCHROME : lui donner le logo
+  // couleur faisait rendre un rond blanc (Android ne garde que le canal alpha).
+  // On verrouille les deux : `icon` = logo couleur, `badge` = silhouette dédiée.
+  it('la notification porte le logo Omni en couleur et un badge monochrome dédié', () => {
+    expect(sw).toContain("icon: '/omni-logo-compact.png'");
+    expect(sw).toContain("badge: '/pwa-badge-96.png'");
+    // Le badge ne doit JAMAIS être le logo couleur (rendu Android = rond blanc).
+    expect(sw).not.toContain("badge: '/omni-logo-compact.png'");
+    expect(existsSync(new URL('../../public/pwa-badge-96.png', import.meta.url))).toBe(true);
+    // Le badge doit être précaché pour être disponible hors réseau au moment du push.
+    const shellStart = sw.indexOf('APP_SHELL = [');
+    const shellEnd = sw.indexOf("'];", shellStart);
+    expect(sw.slice(shellStart, shellEnd)).toContain("'/pwa-badge-96.png'");
+  });
 });

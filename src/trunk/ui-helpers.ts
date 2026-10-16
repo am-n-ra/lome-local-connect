@@ -84,7 +84,12 @@ export type PendingAction =
   | { kind: 'recovery'; returnTo: 'recovery' }
   // Demande de disponibilité multi-produits depuis une fiche : le panier (sessionStorage)
   // survit, mais la fiche et la position étaient perdues → on rouvre la fiche après connexion.
-  | { kind: 'facility'; returnTo: 'facility'; facilityId: string; facilityName: string };
+  | { kind: 'facility'; returnTo: 'facility'; facilityId: string; facilityName: string }
+  // POINT 1 (2026-10-16) : le tap d'une notification Web Push avant connexion perdait sa
+  // cible (les paramètres d'URL étaient effacés). Le geste est désormais RETENU, donc
+  // repris à l'identique après la connexion — pour l'acheteur comme pour le vendeur.
+  | { kind: 'room'; returnTo: 'room'; transactionId: string }
+  | { kind: 'request'; returnTo: 'request'; requestId: string };
 
 export function describePendingAction(action: PendingAction | null): string {
   switch (action?.kind) {
@@ -100,6 +105,8 @@ export function describePendingAction(action: PendingAction | null): string {
     case 'notifs': return 'Notifications';
     case 'recovery': return 'Reprise';
     case 'facility': return 'Cette facilité';
+    case 'room': return 'Votre transaction';
+    case 'request': return 'Votre demande';
     default: return '';
   }
 }
@@ -117,6 +124,8 @@ export type PendingResume =
   | { sheet: 'notifs' }
   | { sheet: 'recovery' }
   | { sheet: 'facility'; facilityId: string; facilityName: string }
+  | { sheet: 'room'; transactionId: string }
+  | { sheet: 'request'; requestId: string }
   | { sheet: 'none' };
 
 export function pendingActionResume(action: PendingAction | null): PendingResume {
@@ -135,6 +144,8 @@ export function pendingActionResume(action: PendingAction | null): PendingResume
   if (action?.kind === 'notifs') return { sheet: 'notifs' };
   if (action?.kind === 'recovery') return { sheet: 'recovery' };
   if (action?.kind === 'facility') return { sheet: 'facility', facilityId: action.facilityId, facilityName: action.facilityName };
+  if (action?.kind === 'room') return { sheet: 'room', transactionId: action.transactionId };
+  if (action?.kind === 'request') return { sheet: 'request', requestId: action.requestId };
  return { sheet: 'none' };
 }
 

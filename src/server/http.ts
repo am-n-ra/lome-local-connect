@@ -2208,6 +2208,34 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'PATCH' && pathname.startsWith('/api/v2/seller/facilities/') && pathname.endsWith('/payment-methods')) {
+      // POINT 6 (2026-10-16) — le vendeur déclare ce qu'il accepte au point de remise.
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as the facility owner to declare payment methods.'));
+        return true;
+      }
+      const facilityId = pathname.slice('/api/v2/seller/facilities/'.length, -'/payment-methods'.length);
+      const input = await parseRequestBody(req);
+      const raw = input.methods;
+      let methods: string[] | null;
+      if (raw === null || raw === undefined) {
+        methods = null;
+      } else if (Array.isArray(raw) && raw.every((m) => typeof m === 'string')) {
+        methods = (raw as string[]).map((m) => m.trim());
+      } else {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'methods must be null or an array of strings (cash, mobile_money).'));
+        return true;
+      }
+      const allowed = new Set(['cash', 'mobile_money']);
+      if (methods !== null && (methods.length === 0 || methods.length > 2 || !methods.every((m) => allowed.has(m)))) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'methods must be a non-empty subset of cash, mobile_money (or null).'));
+        return true;
+      }
+      const result = await repository.updateSellerPaymentMethods({ authUserId, facilityId, methods });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname.startsWith('/api/v2/seller/facilities/') && pathname.endsWith('/position')) {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

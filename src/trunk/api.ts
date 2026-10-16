@@ -522,6 +522,16 @@ export async function updateSellerFacilityContact(input: { token: string; facili
   return parse(response);
 }
 
+// POINT 6 (2026-10-16) — le vendeur déclare ce qu'il accepte au point de remise.
+export async function updateSellerPaymentMethods(input: { token: string; facilityId: string; methods: string[] | null }): Promise<ApiResult<{ facilityId: string; methods: string[] | null }>> {
+  const response = await fetchWithRecovery(`/api/v2/seller/facilities/${input.facilityId}/payment-methods`, {
+    method: 'PATCH',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ methods: input.methods }),
+  });
+  return parse(response);
+}
+
 // BRANCHES-MOBILE-POSITION — an ambulant says "je suis ici". One manual gesture; the position
 // is DECLARED, never verified (S-31).
 export async function declareSellerFacilityPosition(input: { token: string; facilityId: string; latitude: number; longitude: number }): Promise<ApiResult<{ facilityId: string; latitude: number; longitude: number; positionDeclaredAt: string; facilityType: string | null }>> {

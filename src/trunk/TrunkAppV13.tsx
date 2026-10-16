@@ -676,7 +676,17 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     let active = true;
     void (async () => {
       try {
-        const result = await authClient?.getSession?.();
+        // POINT 3 (2026-10-16) — sur mobile, un retour d'arrière-plan ou d'une
+        // redirection externe (FedaPay) peut faire échouer le tout premier
+        // `getSession()` de façon transitoire. Un échec ponctuel ne veut PAS dire
+        // « déconnecté » : sans réessai, l'app redemandait la connexion à un
+        // utilisateur dont le cookie de session est pourtant vivant. On réessaie
+        // quelques fois avant de conclure — comme pour l'échange de jeton.
+        let result = await authClient?.getSession?.();
+        for (let attempt = 0; active && !sessionUserFromAuthResult(result) && attempt < 3; attempt += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 200 * (attempt + 1)));
+          result = await authClient?.getSession?.();
+        }
       const user = sessionUserFromAuthResult(result);
       if (active && user) {
         setSessionUser(user);
@@ -993,10 +1003,16 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const requireAuth = useCallback(async (resume?: PendingAction): Promise<string | null> => {
     try {
       const token = await getAuthToken();
-      if (!token) { if (resume) setPendingAction(resume); setAuthMode('signin'); setSheet('auth'); return null; }
-      return token;
-    } catch { if (resume) setPendingAction(resume); setAuthMode('signin'); setSheet('auth'); return null; }
-  }, []);
+      if (token) return token;
+      // POINT 3 (2026-10-16) : ne JAMAIS redemander la connexion à quelqu'un dont la
+      // session est ouverte. `sessionUser` est la vérité du client : si elle existe, un
+      // token momentanément indisponible est un incident transitoire, pas une déconnexion.
+      // Avant ce garde, taper « Mes demandes » / l'historique rouvrait l'écran d'auth à
+      // répétition sur un utilisateur pourtant connecté.
+      if (sessionUser) return null;
+      if (resume) setPendingAction(resume); setAuthMode('signin'); setSheet('auth'); return null;
+    } catch { if (sessionUser) return null; if (resume) setPendingAction(resume); setAuthMode('signin'); setSheet('auth'); return null; }
+  }, [sessionUser]);
 
   const gateRequest = useCallback((action: PendingAction): boolean => {
     if (sessionUser) return true;
@@ -1120,7 +1136,14 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     // geste de fermeture) doit voir SON espace, pas les demandes d'un acheteur.
     if (role === 'seller') { setSheet('seller'); if (sessionUser) void loadSellerWorkspace(); return; }
     const token = await requireAuth({ kind: 'home', returnTo: 'home' });
-    if (!token) return;
+    if (!token) {
+      // POINT 3 (2026-10-16) — si la session est ouverte mais que le jeton reste
+      // indisponible, on n'ouvre PAS l'écran d'auth (ce serait la boucle) et on ne
+      // laisse pas non plus un tap mort : on ouvre l'espace avec un état d'erreur
+      // honnête, que « Réessayer » recharge.
+      if (sessionUser) { setHomeFocus(focus); setSheet('home'); setBuyerRequestsState('error'); setBuyerRequestsError('Vos demandes ne peuvent pas être chargées pour le moment. Réessayez.'); }
+      return;
+    }
     setHomeFocus(focus);
     setSheet('home'); setBuyerRequestsState('loading'); setBuyerRequestsError('');
     setOpenTxnState('loading');
@@ -1204,6 +1227,22 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     setSheet('flow');
   }, []);
 
+  // POINT 1 (2026-10-16) : ouvrir le SUIVI d'une demande de disponibilité à partir de son
+  // identifiant, sans supposer qui est l'utilisateur. Extrait du traitement du deep-link
+  // pour servir AUSSI la reprise après connexion — une seule définition, il ne peut pas
+  // diverger. L'acheteur retrouve sa demande ; sinon (c'est le vendeur) sa file l'attend.
+  const openRequestTracking = useCallback(async (requestId: string) => {
+    const token = await getAuthToken();
+    if (!token) { void openNotifs(); return; }
+    const list = await getBuyerAvailabilityRequests({ token });
+    const request = list.ok ? list.data?.requests?.find((r) => r.id === requestId) : null;
+    if (request) {
+      resumeAvailabilityRequest({ requestId: request.id, facilityId: request.facilityId, facilityName: request.facilityName, productId: request.productId, productName: request.productName });
+      return;
+    }
+    setRole('seller'); setSheet('seller'); void loadSellerWorkspace();
+  }, [resumeAvailabilityRequest, loadSellerWorkspace]);
+
   // TF-8 recovery (maquette `recovery`) : après une panne, rien n'est perdu —
   // panier (session), dernière recherche commise, transactions reprenables.
   // Lecture seule d'états existants : aucune persistance neuve, aucun appel neuf
@@ -1270,7 +1309,16 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     const txn = params.get('txn');
     const requestId = params.get('request');
     window.history.replaceState(null, '', window.location.pathname);
-    if (!sessionUser) return;
+    // POINT 1 (2026-10-16) : si la session n'est pas encore là, on RETIENT la cible au
+    // lieu de la perdre. Avant ce garde, les paramètres étaient effacés puis `sessionUser`
+    // était nul → l'utilisateur se connectait et retombait sur une surface générique,
+    // jamais sur la transaction qui l'avait alerté. Le geste est repris après connexion.
+    if (!sessionUser) {
+      if (txn) setPendingAction({ kind: 'room', returnTo: 'room', transactionId: txn });
+      else if (requestId) setPendingAction({ kind: 'request', returnTo: 'request', requestId });
+      else setPendingAction({ kind: 'notifs', returnTo: 'notifs' });
+      return;
+    }
     if (txn) {
       // L'événement porteur d'une transaction est destiné au VENDEUR (intention) comme
       // à l'acheteur (tour de transaction). On ouvre la Room avec le rôle actif : le
@@ -1279,25 +1327,24 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       return;
     }
     if (requestId) {
-      void (async () => {
-        const token = await getAuthToken();
-        if (!token) { void openNotifs(); return; }
-        const list = await getBuyerAvailabilityRequests({ token });
-        const request = list.ok ? list.data?.requests?.find((r) => r.id === requestId) : null;
-        if (request) {
-          resumeAvailabilityRequest({ requestId: request.id, facilityId: request.facilityId, facilityName: request.facilityName, productId: request.productId, productName: request.productName });
-          return;
-        }
-        // Le compte n'est pas l'acheteur (c'est le vendeur) : sa file l'attend.
-        setRole('seller'); setSheet('seller'); void loadSellerWorkspace();
-      })();
+      void openRequestTracking(requestId);
       return;
     }
     void openNotifs();
-  }, [sessionUser, openNotifs, openRoom, resumeAvailabilityRequest, role, loadSellerWorkspace]);
+  }, [sessionUser, openNotifs, openRoom, openRequestTracking, role, loadSellerWorkspace]);
 
   const openNotification = useCallback(async (notification: NotificationSummary, target: NotificationTarget) => {
-    const token = await requireAuth();
+    // POINT 1 (2026-10-16) — même règle que le deep-link : si la session n'est pas
+    // encore là, on RETIENT la cible (Room / suivi de demande / file vendeur) au lieu
+    // de l'échouer. La reprise rejoue le geste exact après connexion.
+    const resume: PendingAction | undefined = target.kind === 'room' || target.kind === 'flow'
+      ? { kind: 'room', returnTo: 'room', transactionId: target.transactionId }
+      : target.kind === 'availability-response'
+        ? { kind: 'request', returnTo: 'request', requestId: target.requestId }
+        : target.kind === 'seller-queue'
+          ? { kind: 'seller-entry', returnTo: 'seller-entry' }
+          : undefined;
+    const token = await requireAuth(resume);
     if (!token) return;
     // Retour visuel immédiat : la ligne passe en « lue » AU TAP, le serveur rattrape
     // en tâche de fond (best-effort). Naviguer n'attend plus l'aller-retour réseau.
@@ -1824,6 +1871,15 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         // l'acheteur retrouve sa sélection et peut relancer la demande de disponibilité.
         await handlePinSelect({ id: resume.facilityId });
         return;
+      case 'room':
+        // POINT 1 : la notification portait une transaction ; on rouvre SA Room après
+        // connexion. Le rôle est déduit du rôle actif (la Room est symétrique, S-27).
+        await openRoom({ transactionId: resume.transactionId, actorRole: role === 'seller' ? 'seller' : 'buyer' });
+        return;
+      case 'request':
+        // POINT 1 : la notification portait une demande de disponibilité ; on rouvre son suivi.
+        await openRequestTracking(resume.requestId);
+        return;
       case 'search':
         // BRANCH-4 — relance la requête retenue (D-05 : elle survit à l'authentification).
         if (resume.query && resume.query.trim()) {
@@ -1834,7 +1890,10 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         }
         setSheet('search');
         return;
-      case 'seller': setSheet('seller'); return;
+      case 'seller':
+        // POINT 1 : le tap d'une notification de file vendeur doit ouvrir l'espace
+        // vendeur AVEC ses données chargées (sinon la file paraîtrait vide).
+        setRole('seller'); setSheet('seller'); void loadSellerWorkspace(); return;
       default: setSheet('none');
     }
     // `runEntitySearch`/`currentSearchOptions` sont déclarés plus bas : on ne les met pas dans

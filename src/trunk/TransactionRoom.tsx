@@ -4,6 +4,8 @@ import { confirmExternalPayment, declareExternalPayment, getTransaction, getTran
 import { deadlineLabel, deadlineState, transactionStateLabel, transactionStateResponsible } from './transaction-time';
 import { Skeleton } from './Skeleton';
 import { OmniQr } from './OmniQr';
+import { priceDisplay } from './price-display';
+import { formatMoney } from '../domain/currency';
 import type { ExternalPaymentMethod, TransactionMessage, TransactionSnapshotResult, TransactionState } from './types';
 
 /** S-27 — la Room réunit suivi + chat (fil complet) + reçu dans une surface, symétrique
@@ -175,9 +177,35 @@ export function TransactionRoom({ transactionId, token, actorRole, counterparty,
           </div>
 
           <div className="cardbox" style={{ marginTop: 10 }}>
-            <div className="kv"><span>Objet</span><b>{txn.quantity} unité{txn.quantity === 1 ? '' : 's'}</b></div>
-            <div className="kv"><span>Total</span><b>{txn.netAmountMinor.toLocaleString('fr-FR')} {txn.couponCode ? `· ${txn.couponCode}` : ''}</b></div>
+            <div className="kv"><span>Objet</span><b>{txn.productName ?? 'Offre'} · {txn.quantity} unité{txn.quantity === 1 ? '' : 's'}</b></div>
+            {(() => {
+              // D-TXN-PRICE (option B fondateur) : la remise Omni est ANNONCÉE avant et
+              // CIMENTÉE par la validation du vendeur. On affiche donc les DEUX prix — le
+              // prix Omni et l'original barré — via la règle partagée `priceDisplay`
+              // (même source que la fiche, la file et le flux : elles ne peuvent pas
+              // diverger). Le montant est en XOF, comme partout dans la transaction.
+              const listTotal = txn.listPriceMinor === null ? null : txn.listPriceMinor * txn.quantity;
+              const display = listTotal === null
+                ? null
+                : priceDisplay({ prixOriginal: listTotal, prixReduit: txn.netAmountMinor, currency: 'XOF' });
+              return (
+                <>
+                  <div className="kv">
+                    <span>Total{txn.cemented ? ' (prix validé)' : ''}</span>
+                    <b>
+                      {display ? display.price : formatMoney(txn.netAmountMinor, 'XOF')}
+                      {display?.original && <span className="old">{display.original}</span>}
+                    </b>
+                  </div>
+                  {display?.promo && <div className="kv"><span>Avantage Omni</span><b className="vmark">{display.promo}{txn.couponCode ? ` · ${txn.couponCode}` : ''}</b></div>}
+                  {!display && txn.couponCode && <div className="kv"><span>Avantage appliqué</span><b className="vmark">{txn.couponCode}</b></div>}
+                </>
+              );
+            })()}
             <div className="kv"><span>Vendeur</span><b>{txn.sellerFacilityName ?? counterparty ?? 'N/D'}</b></div>
+            {txn.sellerPaymentMethods && txn.sellerPaymentMethods.length > 0 && (
+              <div className="kv"><span>Paiement accepté</span><b>{txn.sellerPaymentMethods.map((m) => m === 'cash' ? 'Espèces' : 'Mobile Money').join(' · ')}</b></div>
+            )}
             {(txn.sellerContactPhone || txn.sellerContactWhatsapp) && actorRole === 'buyer' && (
               <div className="kv"><span>Contact</span><b>{txn.sellerContactPhone ?? txn.sellerContactWhatsapp}</b></div>
             )}
@@ -212,9 +240,19 @@ export function TransactionRoom({ transactionId, token, actorRole, counterparty,
             <div className="cardbox" style={{ marginTop: 10 }}>
               <div className="eyebrow">Vendeur · Demande entrante</div>
               <b style={{ display: 'block', marginTop: 3 }}>Cette disponibilité est devenue une intention d'achat</b>
-              <div className="kv"><span>Offre</span><b>{txn.quantity} unité{txn.quantity === 1 ? '' : 's'}</b></div>
-              <div className="kv"><span>Montant</span><b>{txn.netAmountMinor.toLocaleString('fr-FR')}</b></div>
-              {txn.couponCode && <div className="kv"><span>Avantage appliqué</span><b className="vmark">{txn.couponCode}</b></div>}
+              <div className="kv"><span>Objet</span><b>{txn.productName ?? 'Offre'} · {txn.quantity} unité{txn.quantity === 1 ? '' : 's'}</b></div>
+              <div className="kv">
+                <span>Montant</span>
+                <b>
+                  {formatMoney(txn.netAmountMinor, 'XOF')}
+                  {txn.listPriceMinor !== null && txn.listPriceMinor * txn.quantity > txn.netAmountMinor && (
+                    <span className="old">{formatMoney(txn.listPriceMinor * txn.quantity, 'XOF')}</span>
+                  )}
+                </b>
+              </div>
+              {txn.listPriceMinor !== null && txn.listPriceMinor * txn.quantity > txn.netAmountMinor && (
+                <div className="kv"><span>Remise Omni</span><b className="vmark">−{formatMoney(txn.listPriceMinor * txn.quantity - txn.netAmountMinor, 'XOF')}</b></div>
+              )}
               <button className="btn" style={{ marginTop: 8 }} type="button" disabled={busy} onClick={() => void transition('qr_ready', 'qr_verified')}><BadgeCheck size={15} /> Valider · ouvre le chat de transaction</button>
               <p className="tiny muted" style={{ marginTop: 6 }}>Le clic verrouille la transaction, exactement comme un scan de QR. L'acheteur voit alors « Vérifiée (verrouillée) ».</p>
             </div>
@@ -275,12 +313,25 @@ export function TransactionRoom({ transactionId, token, actorRole, counterparty,
 
           {!terminal && myTurn && (
             <div className="btnrow" style={{ marginTop: 10 }}>
-              {actorRole === 'buyer' && currentState === 'qr_verified' && (
-                <>
-                  <button className="btn" type="button" disabled={busy} onClick={() => void declarePayment('mobile_money')}><Smartphone size={15} /> Payer (Mobile Money)</button>
-                  <button className="btn ghost" type="button" disabled={busy} onClick={() => void declarePayment('cash')}><Banknote size={15} /> Payer (cash)</button>
-                </>
-              )}
+              {actorRole === 'buyer' && currentState === 'qr_verified' && (() => {
+                // Point 6 fondateur : le vendeur déclare ses moyens de paiement au point de
+                // remise (`accepted_payment_methods`). L'acheteur ne subit plus deux boutons
+                // figés : il paie comme le vendeur l'accepte. Non déclaré → les deux, repli
+                // honnête (jamais un mensonge sur ce qui est accepté).
+                const methods = txn.sellerPaymentMethods && txn.sellerPaymentMethods.length > 0
+                  ? txn.sellerPaymentMethods
+                  : ['mobile_money', 'cash'];
+                return (
+                  <>
+                    {methods.includes('mobile_money') && (
+                      <button className="btn" type="button" disabled={busy} onClick={() => void declarePayment('mobile_money')}><Smartphone size={15} /> Payer (Mobile Money)</button>
+                    )}
+                    {methods.includes('cash') && (
+                      <button className="btn ghost" type="button" disabled={busy} onClick={() => void declarePayment('cash')}><Banknote size={15} /> Payer (cash)</button>
+                    )}
+                  </>
+                );
+              })()}
               {actorRole === 'buyer' && currentState === 'fulfilled' && (
                 <button className="btn ok" type="button" disabled={busy} onClick={() => void transition('fulfilled', 'received')}><CheckCircle2 size={15} /> Confirmer la réception</button>
               )}

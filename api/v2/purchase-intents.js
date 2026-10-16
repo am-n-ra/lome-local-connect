@@ -2181,6 +2181,34 @@ function createTrunkRepository(sql = database()) {
         contactWhatsapp: row.contact_whatsapp === null || row.contact_whatsapp === void 0 ? null : String(row.contact_whatsapp)
       };
     },
+    // POINT 6 (2026-10-16) — le vendeur DÉCLARE les moyens de paiement acceptés au point de
+    // remise. Avant, la Room proposait deux boutons figés (Mobile Money, cash) : le vendeur
+    // n'avait aucun endroit pour dire ce qu'il accepte, l'acheteur ne choisissait rien.
+    // Null = non déclaré (l'acheteur voit les deux, repli honnête) ; sinon un sous-ensemble
+    // non vide de {cash, mobile_money} — le CHECK de la migration 072 le garantit.
+    async updateSellerPaymentMethods(input) {
+      const allowed = /* @__PURE__ */ new Set(["cash", "mobile_money"]);
+      const cleaned = input.methods === null ? null : Array.from(new Set(input.methods.filter((m) => allowed.has(m))));
+      if (cleaned !== null && (cleaned.length === 0 || cleaned.length > 2)) {
+        throw new SellerCataloguePolicyError("INVALID_INPUT");
+      }
+      const rows = await retryDatabase(() => sql`
+        update v2_facilities f
+        set accepted_payment_methods = ${cleaned === null ? null : sql`${cleaned}::text[]`}
+        from v2_accounts a
+        where f.id = ${input.facilityId}::uuid
+          and f.account_id = a.id
+          and a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        returning f.id as facility_id, f.accepted_payment_methods
+      `);
+      const row = rows[0];
+      if (!row) throw new SellerCataloguePolicyError("FORBIDDEN_OR_FACILITY_NOT_FOUND");
+      return {
+        facilityId: String(row.facility_id),
+        methods: Array.isArray(row.accepted_payment_methods) ? row.accepted_payment_methods.map((m) => String(m)) : null
+      };
+    },
     // BRANCHES-MOBILE-POSITION — a mobile seller (ambulant) says "je suis ici". The point moves;
     // the declaration is timestamped but NEVER marked verified (S-31): `position_declared_at`
     // records the seller's own claim, `position_verified_at` stays untouched. A `digital`
@@ -3569,6 +3597,7 @@ function createTrunkRepository(sql = database()) {
           coalesce(e.trust_state, f.trust_state) as trust_state,
           f.contact_phone,
           f.contact_whatsapp,
+          f.accepted_payment_methods,
           f.position_declared_at,
           'XOF' as currency,
           count(p.id)::int as product_count
@@ -3596,6 +3625,7 @@ function createTrunkRepository(sql = database()) {
         trustState: String(row.trust_state ?? "unclaimed"),
         contactPhone: row.contact_phone === null || row.contact_phone === void 0 ? null : String(row.contact_phone),
         contactWhatsapp: row.contact_whatsapp === null || row.contact_whatsapp === void 0 ? null : String(row.contact_whatsapp),
+        paymentMethods: Array.isArray(row.accepted_payment_methods) ? row.accepted_payment_methods.map((m) => String(m)) : null,
         positionDeclaredAt: row.position_declared_at === null || row.position_declared_at === void 0 ? null : String(row.position_declared_at)
       }));
       const rows = await retryDatabase(() => sql`
@@ -6640,12 +6670,25 @@ function createTrunkRepository(sql = database()) {
             ar.facility_id,
             r.product_id,
             least(r.requested_quantity, ar.quantity_available) as quantity,
-            ar.price_minor,
+            -- D-TXN-PRICE (option B fondateur, 2026-10-16) : la remise Omni est ANNONCÉE
+            -- avant (fiche, file, flux) et CIMENTÉE par la validation du vendeur via Omni
+            -- (scan en retrait, clic dashboard en livraison). On fige donc l'ORIGINE et la
+            -- REMISE réellement appliquée, pour que la Room affiche les DEUX prix — jamais
+            -- un montant nu. La base est le prix demandé par le vendeur ; la remise de
+            -- l'OFFRE (S-19) s'y applique. Recalculée au moment de l'intention : si le
+            -- vendeur change sa remise plus tard, cette transaction garde la sienne (S-26).
+            ar.price_minor as base_price_minor,
+            case
+              when p.discount_kind = 'percentage' then least(floor(ar.price_minor * coalesce(p.discount_value, 0) / 100), ar.price_minor)
+              when p.discount_kind = 'fixed' then least(coalesce(p.discount_value, 0), ar.price_minor)
+              else 0
+            end as discount_per_unit,
             nullif(ar.offer_snapshot ->> 'coupon_code', '') as coupon_code,
             ar.observed_at
           from v2_availability_responses ar
           join v2_availability_requests r on r.id = ar.request_id
           join v2_facilities f on f.id = ar.facility_id
+          join v2_products p on p.id = r.product_id
           join buyer b on b.buyer_account_id = r.buyer_account_id
           where ar.id = ${input.responseId}::uuid
             and ar.status in ('available', 'partial', 'corrected')
@@ -6707,8 +6750,20 @@ function createTrunkRepository(sql = database()) {
         ),
         snapshot_insert as (
           insert into v2_transaction_snapshots
-            (transaction_id, intent_id, buyer_account_id, facility_id, product_id, quantity, unit_price_minor, coupon_code, net_amount_minor, response_observed_at)
-          select i.transaction_id, i.id, e.buyer_account_id, e.facility_id, e.product_id, e.quantity, e.price_minor, e.coupon_code, e.quantity * e.price_minor, e.observed_at
+            (transaction_id, intent_id, buyer_account_id, facility_id, product_id, quantity, unit_price_minor, list_price_minor, discount_minor, coupon_code, net_amount_minor, response_observed_at)
+          select
+            i.transaction_id, i.id, e.buyer_account_id, e.facility_id, e.product_id, e.quantity,
+            -- Prix RÉELLEMENT DÛ (après remise) — le sens de unit_price_minor est préservé.
+            greatest(e.base_price_minor - e.discount_per_unit, 0),
+            -- Prix affiché PAR UNITÉ (avant remise) — même base que unit_price_minor,
+            -- pour que la garde discount_minor <= list_price_minor ait un sens.
+            e.base_price_minor,
+            -- Remise appliquée PAR UNITÉ (la Room multiplie par la quantité pour l'afficher).
+            least(e.discount_per_unit, e.base_price_minor),
+            e.coupon_code,
+            -- Total dû = prix remisé × quantité (jamais un total sur le prix plein).
+            greatest(e.base_price_minor - e.discount_per_unit, 0) * e.quantity,
+            e.observed_at
           from intent_upsert i
           join eligible e on e.response_id = i.response_id
           on conflict (transaction_id) do nothing
@@ -7756,9 +7811,13 @@ function createTrunkRepository(sql = database()) {
           s.facility_id,
           s.quantity,
           s.unit_price_minor,
+          s.list_price_minor,
+          s.discount_minor,
           s.coupon_code,
           s.net_amount_minor,
+          p.name as product_name,
           f.name as seller_facility_name,
+          f.accepted_payment_methods as seller_payment_methods,
           f.contact_phone as seller_contact_phone,
           f.contact_whatsapp as seller_contact_whatsapp,
           f.latitude as seller_facility_latitude,
@@ -7805,6 +7864,7 @@ function createTrunkRepository(sql = database()) {
         join v2_accounts a on a.id = m.account_id
         left join v2_purchase_intents pi on pi.id = s.intent_id
         left join v2_facilities f on f.id = s.facility_id
+        left join v2_products p on p.id = s.product_id
         where s.transaction_id = ${input.transactionId}::uuid
           and a.auth_user_id = ${input.authUserId}
           and a.suspended_at is null
@@ -7819,10 +7879,17 @@ function createTrunkRepository(sql = database()) {
         actorRole: String(row.actor_role),
         productId: String(row.product_id),
         facilityId: String(row.facility_id),
+        productName: row.product_name === null || row.product_name === void 0 ? null : String(row.product_name),
         quantity: Number(row.quantity),
         unitPriceMinor: Number(row.unit_price_minor),
+        listPriceMinor: row.list_price_minor === null || row.list_price_minor === void 0 ? null : Number(row.list_price_minor),
+        discountMinor: Number(row.discount_minor ?? 0),
         couponCode: row.coupon_code === null || row.coupon_code === void 0 ? null : String(row.coupon_code),
         netAmountMinor: Number(row.net_amount_minor),
+        // Le « ciment » (option B fondateur) est DÉRIVÉ de l'événement `qr_verified`, jamais
+        // d'une colonne : le snapshot est append-only, une colonne ne pourrait pas être écrite.
+        cemented: currentState !== "intent_created" && currentState !== "qr_ready" && currentState !== "expired",
+        sellerPaymentMethods: Array.isArray(row.seller_payment_methods) ? row.seller_payment_methods.map((m) => String(m)) : null,
         sellerFacilityName: row.seller_facility_name === null || row.seller_facility_name === void 0 ? null : String(row.seller_facility_name),
         sellerContactPhone: row.seller_contact_phone === null || row.seller_contact_phone === void 0 ? null : String(row.seller_contact_phone),
         sellerContactWhatsapp: row.seller_contact_whatsapp === null || row.seller_contact_whatsapp === void 0 ? null : String(row.seller_contact_whatsapp),
@@ -11211,6 +11278,33 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.updateSellerFacilityContact({ authUserId, facilityId, contactPhone, contactWhatsapp });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "PATCH" && pathname.startsWith("/api/v2/seller/facilities/") && pathname.endsWith("/payment-methods")) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as the facility owner to declare payment methods."));
+        return true;
+      }
+      const facilityId = pathname.slice("/api/v2/seller/facilities/".length, -"/payment-methods".length);
+      const input = await parseRequestBody(req);
+      const raw = input.methods;
+      let methods;
+      if (raw === null || raw === void 0) {
+        methods = null;
+      } else if (Array.isArray(raw) && raw.every((m) => typeof m === "string")) {
+        methods = raw.map((m) => m.trim());
+      } else {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "methods must be null or an array of strings (cash, mobile_money)."));
+        return true;
+      }
+      const allowed = /* @__PURE__ */ new Set(["cash", "mobile_money"]);
+      if (methods !== null && (methods.length === 0 || methods.length > 2 || !methods.every((m) => allowed.has(m)))) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "methods must be a non-empty subset of cash, mobile_money (or null)."));
+        return true;
+      }
+      const result = await repository.updateSellerPaymentMethods({ authUserId, facilityId, methods });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

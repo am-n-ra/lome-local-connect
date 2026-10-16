@@ -6,7 +6,7 @@
 //   (le client affiche ses états d'erreur), jamais du HTML 200 déguisé.
 // - Le reste same-origin : réseau d'abord, repli cache, repli `/`.
 const CACHE_NAME = 'omni-shell-v3';
-const APP_SHELL = ['/', '/offline.html', '/manifest.webmanifest', '/omni-logo-compact.png', '/pwa-icon-192.png', '/pwa-icon-512.png'];
+const APP_SHELL = ['/', '/offline.html', '/manifest.webmanifest', '/omni-logo-compact.png', '/pwa-badge-96.png', '/pwa-icon-192.png', '/pwa-icon-512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
@@ -56,8 +56,13 @@ self.addEventListener('push', (event) => {
   }
   event.waitUntil(self.registration.showNotification(payload.title, {
     body: payload.body,
+    // `icon` = la vignette couleur du logo Omni (c'est l'identité visible).
     icon: '/omni-logo-compact.png',
-    badge: '/omni-logo-compact.png',
+    // `badge` = la pastille de barre d'état Android, qui DOIT être une silhouette
+    // monochrome. Utiliser le logo couleur faisait rendre un rond blanc : Android
+    // ne garde que le canal alpha et force la couleur du système. On sert donc une
+    // silhouette blanche dédiée (pwa-badge-96.png), générée depuis le même logo.
+    badge: '/pwa-badge-96.png',
     data: { url: payload.url },
   }));
 });

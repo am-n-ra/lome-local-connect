@@ -322,10 +322,23 @@ export interface TransactionSnapshotResult {
   actorRole: 'buyer' | 'seller';
   productId: string;
   facilityId: string;
+  /** Nom de l'offre (acheteur ET vendeur doivent savoir quoi remettre, pas seulement un id). */
+  productName: string | null;
   quantity: number;
   unitPriceMinor: number;
+  /** D-TXN-PRICE : prix affiché de l'offre AVANT remise, figé à l'intention. Null = offre
+   *  héritée sans remise déclarée : on n'invente pas d'origine. */
+  listPriceMinor: number | null;
+  /** Remise Omni appliquée (unités mineures). 0 = aucune. */
+  discountMinor: number;
   couponCode: string | null;
   netAmountMinor: number;
+  /** Option B (fondateur) : le vendeur a VALIDÉ via Omni (scan retrait ou clic dashboard) —
+   *  c'est l'instant qui cimente le prix remisé. Dérivé de l'événement `qr_verified`. */
+  cemented: boolean;
+  /** Moyens de paiement acceptés au point de remise. Null = non déclaré : les deux sont
+   *  alors proposés (repli honnête), jamais un mensonge sur ce qui est accepté. */
+  sellerPaymentMethods: string[] | null;
   /** Contact vendeur (RAC-1) — exposé UNIQUEMENT dans le contexte d'une transaction
    *  dont l'appelant est membre (après intention d'achat), jamais publiquement. */
   sellerContactPhone: string | null;
@@ -443,6 +456,8 @@ export interface SellerCatalogueFacility {
   /** Contact vendeur — visible uniquement dans le contexte transactionnel (RAC-1). */
   contactPhone: string | null;
   contactWhatsapp: string | null;
+  /** POINT 6 — moyens de paiement DÉCLARÉS au point de remise. Null = non déclaré. */
+  paymentMethods: string[] | null;
   /** BRANCHES-MOBILE-POSITION — date du dernier « je suis ici » déclaré (S-31). Null = jamais déclarée. */
   positionDeclaredAt: string | null;
 }

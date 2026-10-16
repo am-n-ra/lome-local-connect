@@ -25,7 +25,7 @@ const installedCatalogue: SellerCatalogueResult = {
   authorized: true,
   catalogReady: true,
   facilities: [
-    { id: 'facility-1', name: 'Boutique A', category: 'Marché', address: null, currency: 'XOF', slotState: 'active', operationalState: 'ouvert', productCount: 0, facilityType: 'fixe', rayonKm: null, trustState: 'confirmed', contactPhone: null, contactWhatsapp: null, positionDeclaredAt: null },
+    { id: 'facility-1', name: 'Boutique A', category: 'Marché', address: null, currency: 'XOF', slotState: 'active', operationalState: 'ouvert', productCount: 0, facilityType: 'fixe', rayonKm: null, trustState: 'confirmed', contactPhone: null, contactWhatsapp: null, paymentMethods: null, positionDeclaredAt: null },
   ],
   products: [],
 };
