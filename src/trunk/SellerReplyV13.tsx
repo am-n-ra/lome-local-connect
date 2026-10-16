@@ -4,7 +4,7 @@ import { getAuthToken } from '../auth';
 import { getSellerAvailabilityQueue, requestSellerAvailabilityResponse } from './api';
 import type { SellerAvailabilityRequest } from './types';
 import { formatMoney } from '../domain/currency';
-import { relativeAge } from './transaction-time';
+import { relativeAge, requestCountdownLabel } from './transaction-time';
 import { defaultSellerReply } from './ui-helpers';
 
 type SellerReplyV13Props = { onClose: () => void };
@@ -119,6 +119,11 @@ export function SellerReplyV13({ onClose }: SellerReplyV13Props) {
               <div><b>{request.productName} ×{request.requestedQuantity}</b><br /><span className="tiny muted">{request.facilityName}</span></div>
               <span className={answered ? 'status ok' : 'status gray'}>{answered ? 'Répondu' : request.freshness}</span>
             </div>
+            {/* TXN-G6 (GAP-6) — le vendeur ignorait que la demande meurt à 15 min. Une
+                demande encore ouverte affiche le temps restant pour répondre. */}
+            {!answered && requestCountdownLabel(request.expiresAt) && (
+              <p className="tiny muted" style={{ marginTop: 4 }}>{requestCountdownLabel(request.expiresAt)}</p>
+            )}
             <div className="row" style={{ gap: 4, marginTop: 4 }}>
               <span className="chip" style={{ margin: 0 }}>{request.deliveryMode === 'livraison' ? 'Livraison' : 'Retrait'}</span>
               {request.budgetMinor !== null && <span className="chip" style={{ margin: 0 }}>≤ {formatMoney(request.budgetMinor, 'XOF')}</span>}

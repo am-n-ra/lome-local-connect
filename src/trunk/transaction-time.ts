@@ -95,3 +95,25 @@ export function resolveQrTtlMinutes(requested: unknown): number {
 export function qrExpiryFrom(issuedAtIso: string, ttlMinutes: number): string {
   return new Date(new Date(issuedAtIso).getTime() + ttlMinutes * 60 * 1000).toISOString();
 }
+
+/**
+ * TXN-G6 (GAP-6) — compte à rebours d'une DEMANDE de disponibilité.
+ *
+ * La demande meurt à `expires_at` (15 min, `trunk-repository.ts`). L'échéance était
+ * exposée par l'API mais **rendue nulle part** : l'acheteur voyait « En attente »
+ * sans savoir qu'un compte tournait, et le vendeur ignorait le délai. Un délai qu'on
+ * subit sans le savoir n'est pas un délai, c'est une disparition.
+ *
+ * Retourne `null` si l'échéance est illisible — jamais un faux « 0 min ».
+ */
+export function requestCountdownLabel(expiresAtIso: string | null | undefined, now: number = Date.now()): string | null {
+  if (!expiresAtIso) return null;
+  const deadline = new Date(expiresAtIso).getTime();
+  if (!Number.isFinite(deadline)) return null;
+  const minutesLeft = Math.ceil((deadline - now) / 60000);
+  if (minutesLeft <= 0) return 'délai écoulé';
+  if (minutesLeft < 60) return `${minutesLeft} min pour répondre`;
+  const hours = Math.floor(minutesLeft / 60);
+  const rest = minutesLeft % 60;
+  return `${hours} h${rest ? ` ${rest} min` : ''} pour répondre`;
+}

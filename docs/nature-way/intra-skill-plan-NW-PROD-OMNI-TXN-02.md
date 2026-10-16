@@ -41,7 +41,7 @@
 | T-G3 | W-01 | Types | `expired` dans `TransactionState` domaine + validateur | — | NW | `verified` | tsc + garde de parité | Aucune donnée réécrite | — |
 | T-G4 | W-01 | Phase B — QR | QR persistant dans la Room | T-G3 | NW | `verified` | Garde falsifié + SQL réel canonique | Aucun token en clair renvoyé | — |
 | T-G5 | W-01 | Notifications | Intention d'achat notifiée au vendeur | — | NW | `done` | **Déjà livré** (`caf18e5`, NR-4) — GAP-5 était FAUX | — | — |
-| T-G6 | W-01 | Phase A — délai | Fenêtre 15 min visible | — | NW | `ready` | Garde + preuve navigateur | Aucun chiffre en dur | — |
+| T-G6 | W-01 | Phase A — délai | Fenêtre 15 min visible | — | NW | `verified` | Garde falsifié + test unitaire (jamais un faux zéro) | Aucun chiffre en dur : l'échéance vient de `expires_at` | — |
 | T-G7 | W-01 | Notifications | Expiration notifiée aux deux parties | — | NW | `verified` | Preuve jetable 11/11 + falsifié (5) | Idempotent (périmètre : avant verrou, comme le sweep) | — |
 | T-G8 | W-01 | Types | `failed` : écrit ou retiré | — | NW | `todo` | tsc + garde | Additif | — |
 
@@ -55,6 +55,7 @@
 | 2026-10-15 | **TXN-G4 livré** : la Room reçoit l'ÉTAT du QR (jamais le token en clair) et dit la vérité | T-G4 `ready`→`verified` ; GAP-4 requalifié (rehydratation impossible **par conception**) | `advance` | NW | T-G5/T-G6 |
 | 2026-10-15 | **RE-MESURE : GAP-5 était FAUX** (livré par `caf18e5`, NR-4) — le registre avait été écrit par grep | T-G5 `ready`→`done` ; registre corrigé | `advance` | NW | T-G7 |
 | 2026-10-15 | **TXN-G7 livré** : l'expiration notifie les DEUX parties (acheteur → suivi ; vendeur → file), idempotent | T-G7 `blocked`→`verified` ; GAP-7 corrigé | `advance` | NW | T-G6 |
+| 2026-10-15 | **TXN-G6 livré** : le délai de 15 min est enfin VISIBLE des deux côtés (échéance réelle, rafraîchie) | T-G6 `ready`→`verified` ; GAP-6 corrigé | `advance` | NW | T-G8, puis décision T-G2 |
 
 ## Handoff to Founder HQ
 

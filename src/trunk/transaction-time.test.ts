@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deadlineLabel, deadlineState, isMyTurn, relativeAge, transactionStateLabel, transactionStateResponsible } from './transaction-time';
+import { deadlineLabel, deadlineState, isMyTurn, relativeAge, requestCountdownLabel, transactionStateLabel, transactionStateResponsible } from './transaction-time';
 
 describe('transaction-time', () => {
   it('labels every transaction state in FR', () => {
@@ -62,5 +62,16 @@ describe('transaction-time', () => {
     expect(deadlineLabel(80)).toBe('1 h 20 min restant');
     expect(deadlineLabel(-120)).toBe('dépassé de 2 h');
     expect(deadlineLabel(2880)).toBe('2 j restant');
+  });
+
+  // TXN-G6 (GAP-6) — l'échéance de la demande de dispo était invisible.
+  it('TXN-G6: requestCountdownLabel says the real time left, never a fake zero', () => {
+    const now = Date.parse('2026-10-15T12:00:00.000Z');
+    expect(requestCountdownLabel('2026-10-15T12:15:00.000Z', now)).toBe('15 min pour répondre');
+    expect(requestCountdownLabel('2026-10-15T13:30:00.000Z', now)).toBe('1 h 30 min pour répondre');
+    expect(requestCountdownLabel('2026-10-15T11:59:00.000Z', now)).toBe('délai écoulé');
+    // Une échéance illisible rend null — jamais « 0 min ».
+    expect(requestCountdownLabel(null, now)).toBeNull();
+    expect(requestCountdownLabel('not-a-date', now)).toBeNull();
   });
 });

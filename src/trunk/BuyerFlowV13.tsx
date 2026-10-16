@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { createPurchaseIntent, getAvailabilityResponses, getBuyerCreditSummary, requestAvailability } from './api';
+import { createPurchaseIntent, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, requestAvailability } from './api';
 import type { BuyerCreditSummary } from './types';
 import { canProposePrice, isNegotiable } from './offer-price';
 import { availabilitySourceLabel } from './availability-source';
 import { useFreshnessTimer } from './useFreshnessTimer';
+import { requestCountdownLabel } from './transaction-time';
 import type { PendingAction } from './ui-helpers';
 import { formatMoney } from '../domain/currency';
 
@@ -56,9 +57,19 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onEngagement,
   const [deliveryMode, setDeliveryMode] = useState<'retrait' | 'livraison'>('retrait');
   const [availNote, setAvailNote] = useState('');
   const [requestId, setRequestId] = useState<string | null>(null);
+  // TXN-G6 (GAP-6) — l'échéance de la demande (15 min). Exposée par l'API, rendue ici.
+  const [requestExpiresAt, setRequestExpiresAt] = useState<string | null>(null);
   const [liveResponse, setLiveResponse] = useState<{ priceMinor: number; quantityAvailable: number; status: string; observedAt: string | null; responderKind?: 'seller' | 'automation' } | null>(null);
   const [creditSummary, setCreditSummary] = useState<BuyerCreditSummary | null>(null);
   const pollRef = useRef<number | null>(null);
+  // TXN-G6 — un compte à rebours figé serait un mensonge au bout de quelques minutes :
+  // on re-rend chaque demi-minute tant que la demande est en attente.
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    if (stage !== 'pending') return;
+    const id = window.setInterval(() => setNowTick(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, [stage]);
   const freshness = useFreshnessTimer(liveResponse?.observedAt ?? null);
 
   const refreshCredits = useCallback(async () => {
@@ -92,6 +103,14 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onEngagement,
     if (!resumeRequestId) return;
     setRequestId(resumeRequestId);
     setStage('pending');
+    // TXN-G6 — on récupère l'échéance réelle de la demande reprise (jamais inventée).
+    void (async () => {
+      const token = await getAuthToken();
+      if (!token) return;
+      const mine = await getBuyerAvailabilityRequests({ token });
+      const found = mine.ok ? mine.data?.requests?.find((r) => r.id === resumeRequestId) : null;
+      if (found?.expiresAt) setRequestExpiresAt(found.expiresAt);
+    })();
     let cancelled = false;
     const poll = async (): Promise<void> => {
       const token = await getAuthToken();
@@ -133,6 +152,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onEngagement,
       });
       if (result.ok && result.data) {
         setRequestId(result.data.requestId);
+        setRequestExpiresAt(result.data.expiresAt ?? null);
         setToast('');
         setError('');
         // BRANCHES-NOTIF-1 — la demande part : l'acheteur attend une réponse hors écran.
@@ -241,6 +261,11 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onEngagement,
           <p className="sub">Demande envoyée. Le commerce confirme la disponibilité.</p>
           <div className="cardbox" style={{ marginTop: 8 }}>
             <div className="kv"><span>{product.name} ×{quantityValue}</span><b className="status gray">En attente</b></div>
+            {/* TXN-G6 (GAP-6) — le délai est enfin VISIBLE : l'acheteur sait combien de temps
+                il attend, au lieu de découvrir la disparition. */}
+            {requestCountdownLabel(requestExpiresAt, nowTick) && (
+              <div className="kv"><span>Réponse attendue</span><b className="status gray">{requestCountdownLabel(requestExpiresAt, nowTick)}</b></div>
+            )}
           </div>
           <p className="tiny muted" style={{ marginTop: 7 }}>Sans réponse, Omni ne transforme jamais le silence en « disponible ». Cette page se met à jour dès que le vendeur répond.</p>
         </div>
