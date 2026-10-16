@@ -138,6 +138,10 @@ export function TransactionRoom({ transactionId, token, actorRole, counterparty,
   const idx = stepIndex(currentState);
   const terminal = TERMINAL.includes(currentState);
   const responsible = transactionStateResponsible(currentState);
+  // S-22 — valider depuis le dashboard est LE MEME VERROU que scanner : le vendeur peut
+  // verrouiller à `qr_ready`. La maquette le nomme `seller-validate`. Sans cela, un vendeur
+  // sans caméra ne pouvait jamais verrouiller (le tour restait « à l'acheteur »).
+  const sellerCanValidate = actorRole === 'seller' && currentState === 'qr_ready';
   const myTurn = responsible === actorRole;
   const deadline = deadlineState(currentState, lastEventAt);
 
@@ -177,10 +181,22 @@ export function TransactionRoom({ transactionId, token, actorRole, counterparty,
           </div>
 
           <div className="cardbox">
-            <div className="kv"><span>Étape</span><b>{transactionStateLabel(currentState)}<small className="tiny muted" style={{ display: 'block' }}>{responsible === 'system' ? 'système' : responsible === 'buyer' ? 'à l\'acheteur' : 'au vendeur'}</small></b></div>
+            <div className="kv"><span>Étape</span><b>{transactionStateLabel(currentState)}<small className="tiny muted" style={{ display: 'block' }}>{sellerCanValidate ? 'vous validez (scan ou dashboard)' : responsible === 'system' ? 'système' : responsible === 'buyer' ? 'à l\'acheteur' : 'au vendeur'}</small></b></div>
           </div>
           {deadline && (
             <p className="tiny muted" style={{ marginTop: 6 }}>⏱ {deadlineLabel(deadline.minutesLeft)}. Le temps relance, il n'annule jamais.</p>
+          )}
+
+          {sellerCanValidate && (
+            <div className="cardbox" style={{ marginTop: 10 }}>
+              <div className="eyebrow">Vendeur · Demande entrante</div>
+              <b style={{ display: 'block', marginTop: 3 }}>Cette disponibilité est devenue une intention d'achat</b>
+              <div className="kv"><span>Offre</span><b>{txn.quantity} unité{txn.quantity === 1 ? '' : 's'}</b></div>
+              <div className="kv"><span>Montant</span><b>{txn.netAmountMinor.toLocaleString('fr-FR')}</b></div>
+              {txn.couponCode && <div className="kv"><span>Avantage appliqué</span><b className="vmark">{txn.couponCode}</b></div>}
+              <button className="btn" style={{ marginTop: 8 }} type="button" disabled={busy} onClick={() => void transition('qr_ready', 'qr_verified')}><BadgeCheck size={15} /> Valider · ouvre le chat de transaction</button>
+              <p className="tiny muted" style={{ marginTop: 6 }}>Le clic verrouille la transaction, exactement comme un scan de QR. L'acheteur voit alors « Vérifiée (verrouillée) ».</p>
+            </div>
           )}
 
           {actorRole === 'buyer' && (currentState === 'qr_ready' || currentState === 'intent_created') && (

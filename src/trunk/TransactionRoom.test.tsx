@@ -92,6 +92,30 @@ describe('TransactionRoom — S-27, surface symétrique acheteur/vendeur', () =>
     expect(text()).toContain('Conversation de cette transaction');
   });
 
+  // S-22 / NR-5 — la surface `seller-validate` de la maquette : à l'arrivée d'une intention
+  // (`qr_ready`), le vendeur doit pouvoir VALIDER depuis le dashboard (même verrou que scanner).
+  it("côté VENDEUR à l'intention (qr_ready) : « Valider · ouvre le chat de transaction »", async () => {
+    await renderRoom('seller', 'qr_ready');
+    expect(text()).toContain('devenue une intention');
+    expect(text()).toContain('Valider');
+    // le vendeur ne voit jamais le QR de l'acheteur (S-24 : scan strictement côté vendeur)
+    expect(text()).not.toContain('Votre QR de transaction');
+  });
+
+  it("côté VENDEUR à l'intention : le clic déclenche qr_ready -> qr_verified (le verrou)", async () => {
+    await renderRoom('seller', 'qr_ready');
+    (transitionTransaction as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, data: {} });
+    const button = [...container.querySelectorAll('button')].find((b) => b.textContent?.includes('Valider'));
+    expect(button).toBeTruthy();
+    await act(async () => { button!.click(); });
+    expect(transitionTransaction).toHaveBeenCalledWith(expect.objectContaining({ from: 'qr_ready', to: 'qr_verified', actorRole: 'seller' }));
+  });
+
+  it("côté ACHETEUR à l'intention : aucune surface de validation vendeur", async () => {
+    await renderRoom('buyer', 'qr_ready');
+    expect(text()).not.toContain('devenue une intention');
+  });
+
   it('côté VENDEUR avec un paiement déclaré : bouton « Confirmer le paiement »', async () => {
     await renderRoom('seller', 'payment_declared');
     expect(text()).toContain('Confirmer le paiement');
