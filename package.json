@@ -52,7 +52,10 @@
     "proof:branches-seller-menu": "node scripts/prove-branches-seller-menu.mjs",
     "proof:branches-notif-drain": "tsx scripts/prove-branches-notif-drain.mjs",
     "proof:notif-reply-2": "tsx scripts/prove-notif-reply-2.mjs",
-    "proof:price-freeze": "tsx scripts/prove-price-freeze.mjs"
+    "proof:price-freeze": "tsx scripts/prove-price-freeze.mjs",
+    "proof:gr1-spotlight-dock": "node scripts/prove-gr1-spotlight-dock.mjs",
+    "probe:gr2-resume": "node scripts/probe-gr2-resume.mjs",
+    "probe:gr2-room-resume": "node scripts/probe-gr2-room-resume.mjs"
   },
   "dependencies": {
     "@neondatabase/auth": "^0.5.0-beta",

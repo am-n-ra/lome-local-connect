@@ -64,3 +64,32 @@ describe('GR-2 — la feuille résultats ne se rouvre jamais VIDE', () => {
     expect(back?.searchQuery).toBeUndefined();
   });
 });
+
+describe('GR-2 (suite) — la Room en cours survit au rechargement', () => {
+  const txn = '33333333-3333-3333-3333-333333333333';
+
+  it('porte la transaction ouverte dans l’état de surface', () => {
+    const back = parseNavState(serializeNavState({ role: 'buyer', sheet: 'room', selectedId: null, selVisitId: null, roomTransactionId: txn }));
+    expect(back?.sheet).toBe('room');
+    expect(back?.roomTransactionId).toBe(txn);
+  });
+
+  it('REGRESSION : la Room n’était PAS restaurable — recharger ramenait sur la carte nue', () => {
+    // Avant le correctif, `room` n'était pas dans RESTORABLE_SHEETS : la feuille retombait
+    // sur `none` et l'utilisateur perdait le fil de sa transaction.
+    expect(sanitizeNavSheet('room')).toBe('room');
+    const restored = parseNavState(JSON.stringify({ role: 'buyer', sheet: 'room', roomTransactionId: txn }));
+    expect(restored?.sheet).toBe('room');
+  });
+
+  it('une Room SANS transaction n’est pas restaurée (jamais une Room vide)', () => {
+    expect(parseNavState(JSON.stringify({ role: 'buyer', sheet: 'room' }))).toBeNull();
+    expect(parseNavState(JSON.stringify({ role: 'buyer', sheet: 'room', roomTransactionId: 'not-a-uuid' }))).toBeNull();
+  });
+
+  it('la transaction ne voyage pas hors de la Room', () => {
+    const back = parseNavState(serializeNavState({ role: 'seller', sheet: 'seller', selectedId: null, selVisitId: null, roomTransactionId: txn }));
+    expect(back?.sheet).toBe('seller');
+    expect(back?.roomTransactionId).toBeUndefined();
+  });
+});

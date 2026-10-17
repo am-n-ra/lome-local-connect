@@ -32,12 +32,18 @@ export interface NavSurfaceState {
   searchQuery?: string;
   /** Niveau de la recherche persistée (S-11) : `offer` ou `entity`. */
   searchLevel?: 'offer' | 'entity';
+  /**
+   * GR-2 — la transaction ouverte dans la **Room** (S-27). Sans elle, recharger au milieu
+   * d'une transaction ramenait sur la carte nue : l'utilisateur perdait le fil de son achat.
+   */
+  roomTransactionId?: string;
 }
 
 /** Feuilles qu'on accepte de restaurer sans logique serveur complexe. */
 const RESTORABLE_SHEETS = new Set([
   'none', 'results', 'facility', 'home', 'menu', 'seller', 'wallet', 'plans',
   'saved', 'favorites', 'notifs', 'account', 'tour', 'op-side', 'bulk', 'compare',
+  'room',
 ]);
 
 /** Rôles valides. */
@@ -58,11 +64,15 @@ export function sanitizeNavSheet(sheet: unknown): string {
 /** Sérialise l'état de surface pour `sessionStorage`. */
 export function serializeNavState(state: NavSurfaceState): string {
   const query = safeQuery(state.searchQuery);
+  const sheet = sanitizeNavSheet(state.sheet);
+  const roomTransactionId = sheet === 'room' ? safeId(state.roomTransactionId) : null;
   const base = {
     role: ROLES.has(state.role) ? state.role : 'buyer',
-    sheet: sanitizeNavSheet(state.sheet),
+    sheet,
     selectedId: safeId(state.selectedId),
     selVisitId: safeId(state.selVisitId),
+    // La transaction ne voyage qu'avec la Room (même règle que la requête avec `results`).
+    ...(roomTransactionId ? { roomTransactionId } : {}),
   };
   // La requête (et son niveau) ne voyagent QUE s'il y en a une — la forme historique de
   // l'état reste inchangée pour les surfaces sans recherche.
@@ -93,6 +103,7 @@ export function parseNavState(raw: string | null | undefined): NavSurfaceState |
   const selectedId = safeId(record.selectedId);
   const selVisitId = safeId(record.selVisitId);
   const searchQuery = safeQuery(record.searchQuery) ?? undefined;
+  const roomTransactionId = safeId(record.roomTransactionId);
   // Une feuille qui dépend d'un lieu sans lieu, ou l'inverse, est incohérente → on ne
   // restaure que ce qui a un sens (évite une fiche vide).
   if (sheet === 'facility' && !selectedId) return null;
@@ -100,6 +111,8 @@ export function parseNavState(raw: string | null | undefined): NavSurfaceState |
   // GR-2 — la feuille `results` SANS requête se rouvrirait vide (faux « aucun résultat »).
   // Mieux vaut ne rien restaurer : l'app repart sur la carte, ce qui est honnête.
   if (sheet === 'results' && !searchQuery) return null;
+  // GR-2 — la Room SANS transaction se rouvrirait sur rien : on ne la restaure pas.
+  if (sheet === 'room' && !roomTransactionId) return null;
   return {
     role,
     sheet,
@@ -109,5 +122,6 @@ export function parseNavState(raw: string | null | undefined): NavSurfaceState |
     ...(searchQuery
       ? { searchQuery, searchLevel: record.searchLevel === 'entity' ? ('entity' as const) : ('offer' as const) }
       : {}),
+    ...(roomTransactionId ? { roomTransactionId } : {}),
   };
 }

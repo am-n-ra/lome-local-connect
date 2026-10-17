@@ -833,10 +833,13 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         // on la REJOUE au lieu d'afficher une feuille vide.
         searchQuery: sheet === 'results' ? searchCommitted.query || undefined : undefined,
         searchLevel: searchCommitted.level,
+        // GR-2 — la Room en cours voyage avec la surface : recharger au milieu d'une
+        // transaction ne doit pas ramener sur la carte nue.
+        roomTransactionId: sheet === 'room' ? roomTxn?.transactionId : undefined,
       };
       window.localStorage.setItem(NAV_STATE_STORAGE_KEY, serializeNavState(surface));
     } catch { /* stockage indisponible */ }
-  }, [role, sheet, selectedId, selVisitId, searchCommitted]);
+  }, [role, sheet, selectedId, selVisitId, searchCommitted, roomTxn]);
 
   // BRANCH-2 — restaurer la surface au premier montage (avant que la persistance n'écrive).
   useEffect(() => {
@@ -848,6 +851,10 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       if (restored.selVisitId) setSelVisitId(restored.selVisitId);
       if (restored.selectedId) {
         void handlePinSelect({ id: restored.selectedId });
+      } else if (restored.sheet === 'room' && restored.roomTransactionId) {
+        // GR-2 — la Room se rouvre sur SA transaction : le rôle est RELU cote serveur
+        // (`getTransaction` renvoie `actorRole`), jamais suppose : un vendeur reprend sa vente.
+        void resumeTransaction({ transactionId: restored.roomTransactionId });
       } else if (restored.sheet === 'results' && restored.searchQuery) {
         // GR-2 — on REJOUE la recherche : la feuille se rouvre avec ses vrais résultats,
         // jamais vide. (Le niveau S-11 est respecté : entité ou offre.)
@@ -1193,7 +1200,10 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // X3 — ouvrir la Room dédiée d'une transaction (S-27) : suivi + chat complet + actions.
   // Réutilise le token de session et la ligne de liste ; aucune lecture neuve.
   const openRoom = useCallback(async (transaction: { transactionId: string; facilityName?: string | null; productName?: string | null; actorRole: 'buyer' | 'seller'; lastEventAt?: string | null }) => {
-    const token = await requireAuth({ kind: 'home', returnTo: 'home' });
+    // GR-2 (suite) — la Room RETIENT sa transaction si la session n'est pas prete : sans
+    // cela, un rechargement a froid renvoyait sur l'accueil et la transaction etait perdue
+    // (meme classe que AUTH-RESUME). La cible de reprise est la Room, jamais `home`.
+    const token = await requireAuth({ kind: 'room', returnTo: 'room', transactionId: transaction.transactionId });
     if (!token) return;
     setRoomTxn({
       transactionId: transaction.transactionId,
@@ -1211,7 +1221,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // (qui ne portait que 4 messages et dupliquait la Room). Le rôle est LU dans le
   // snapshot (acheteur OU vendeur), jamais supposé — un vendeur reprend sa vente.
   const resumeTransaction = useCallback(async (transaction: { transactionId: string; facilityName?: string | null; productName?: string | null; lastEventAt?: string | null }) => {
-    const token = await requireAuth({ kind: 'home', returnTo: 'home' });
+    const token = await requireAuth({ kind: 'room', returnTo: 'room', transactionId: transaction.transactionId });
     if (!token) return;
     const result = await getTransaction({ transactionId: transaction.transactionId, token });
     if (!result.ok || !result.data) {
@@ -1908,8 +1918,10 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         return;
       case 'room':
         // POINT 1 : la notification portait une transaction ; on rouvre SA Room après
-        // connexion. Le rôle est déduit du rôle actif (la Room est symétrique, S-27).
-        await openRoom({ transactionId: resume.transactionId, actorRole: role === 'seller' ? 'seller' : 'buyer' });
+        // connexion. GR-2 (suite) : `resumeTransaction` RELIT le rôle côté serveur
+        // (`getTransaction` renvoie `actorRole`) au lieu de le déduire du rôle actif :
+        // un vendeur qui reprend sa vente n'est plus supposé acheteur.
+        await resumeTransaction({ transactionId: resume.transactionId });
         return;
       case 'request':
         // POINT 1 : la notification portait une demande de disponibilité ; on rouvre son suivi.
