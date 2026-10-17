@@ -35,7 +35,13 @@ describe('SEARCH-REVEAL-STEAL — la révélation ne reprend pas la main sur un 
   });
 
   it('une nouvelle recherche réarme le drapeau', () => {
-    const run = source.slice(source.indexOf('const runSearch = useCallback'), source.indexOf('const runSearch = useCallback') + 400);
+    // Borné par le VRAI bloc de `runSearch` (jusqu'au hook suivant), pas par une fenêtre
+    // de caractères : ajouter une ligne dans runSearch ne doit pas casser ce garde.
+    const start = source.indexOf('const runSearch = useCallback');
+    const end = source.indexOf('const handleRevealStateChange = useCallback');
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const run = source.slice(start, end);
     expect(run).toContain('openedDuringRevealRef.current = false');
   });
 });

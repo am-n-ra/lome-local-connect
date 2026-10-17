@@ -31,8 +31,8 @@
 
 | Order | Workstream | Gate condition | Evidence required | Status | Re-plan trigger |
 |---|---|---|---|---|---|
-| 1 | `GR-1` guide s'arrête au dock | la dernière étape du spotlight est **visible et actionnable** (clamp viewport) | browser 390×844 + 667 : `cardVisibleHeight == cardHeight` | `ready` | mesure montre un autre écran coupé |
-| 2 | `GR-2` reprise PWA | fermer/rouvrir → **même surface** y compris guide ; recherche/flow en cours **retenue** | browser : reload sur guide → guide ; flow → étape | `planned` | `nav-state` déjà couvre le cas mesuré |
+| 1 | `GR-1` guide s'arrête au dock | la dernière étape du spotlight est **visible et actionnable** (clamp viewport) | browser 390×844 + 667 : `cardVisibleHeight == cardHeight` | `done` | **Déjà corrigé par `GUIDE-1c` (`091104e`)** — `placeSpotlightCard` + clamp. **Prouvé maintenant à l'étape dock** (`prove-gr1-spotlight-dock.mjs`, 14/14) et **falsifié** contre le défaut d'origine (bulle sous l'anneau, non clampée → `visible=4` sur 128, exactement la mesure du 2026-10-15). Le script `prove-guide-1b.mjs` ne cliquait que « Passer » : **il n'atteignait jamais la 3ᵉ étape** — d'où le `ready` périmé. |
+| 2 | `GR-2` reprise PWA | fermer/rouvrir → **même surface** ; la **recherche en cours** est **retenue et REJOUÉE** | browser : reload sur `results` → la recherche repart (`q=…`) | `partial` | **Volet RECHERCHE livré 2026-10-17** (défaut réel mesuré : la feuille `results` se rouvrait **vide** → faux « aucun résultat »). **Restent** : reprise du **guide** (`how-it-works` n'est pas dans `RESTORABLE_SHEETS`) et d'un **flux en cours** (étape de transaction) — tranches séparées, non faites. |
 | 3 | `GR-3` guide une fois / option ensuite | accueil montré **une seule fois** par compte, ré-ouvrable depuis le menu | flag persistant + browser 2 créations | `planned` | décision fondateur : « à chaque connexion » |
 | 4 | `NT-1` manifestation notification | **réponse documentée** (son OS, contenu, tap) ; aucun réglage app tant que non décidé | doc + inventaire mesuré | `planned` | fondateur veut un son/vibration propre |
 | 5 | `NR-7` « source : auto » retiré | l'acheteur ne lit plus « auto » pour une réponse **humaine** | garde falsifié + bundle servi sans la chaîne | `done` | la réponse auto existe un jour (alors la marque devient vraie) |
@@ -50,8 +50,8 @@
 | ID | Parent | Phase | Objective | Depends on | Owner | Status | Acceptance / proof | Boundary | Re-plan trigger |
 |---|---|---|---|---|---|---|---|---|---|
 | G-01 | — | Branches | durcir 4 écarts guide/reprise/notif | HQ gate | relais | `in_progress` | preuve par tranche | aucune fondation neuve | écart hors périmètre |
-| GR-1 | G-01 | Heartwood | spotlight étape dock visible | — | relais | `ready` | browser 390/667, carte entièrement à l'écran | CSS/positionnement seul | carte toujours coupée |
-| GR-2 | G-01 | Trunk | reprise de surface élargie (guide + flow) | GR-1 | relais | `planned` | reload → même surface | pas de nouvelle donnée sensible | nav-state suffit |
+| GR-1 | G-01 | Heartwood | spotlight étape dock visible | — | relais | `done` | browser 390/667, bulle entièrement à l'écran | CSS/positionnement seul | fermé 2026-10-17 |
+| GR-2 | G-01 | Trunk | reprise de surface élargie (guide + flow) | GR-1 | relais | `partial` | reload → même surface | pas de nouvelle donnée sensible | **recherche livrée 2026-10-17** ; guide + flux restent |
 | GR-3 | G-01 | Branch | accueil une fois par compte | décision fondateur | relais | `planned` | 2 créations → 1 accueil | flag local, pas serveur | veut à chaque connexion |
 | NT-1 | G-01 | Canopy | documenter la manifestation | — | relais | `planned` | doc + inventaire | pas de son custom sans décision | — |
 | NR-1 | G-01 | Branch | visibilité réponse vendeur (3 défauts) | — | relais | `done` | 3 gardes falsifiés + preuve backend | pas de badge neuf (hors maquette) | fondateur veut un badge |
@@ -76,6 +76,7 @@
 |---|---|---|---|---|---|
 | 2026-10-15 | spotlight 3/3 à `top=840` sous dock (4/128 px visibles) | `GR-1` créé `ready` | replan | relais | après preuve GR-1 |
 | 2026-10-15 | `nav-state` sans `how-it-works` ; pas de reprise de flow | `GR-2` créé `planned` | replan | relais | après GR-1 |
+| 2026-10-17 | **mesuré** : reload sur `results` → feuille **vide** (faux « aucun résultat ») car la recherche vit en mémoire ; `nav-state` ne portait que la feuille | `GR-2` → `partial` (volet recherche livré) | replan | relais | décision sur le flux en cours |
 | 2026-10-15 | aucun `sound`/`vibrate` dans SW/push | `NT-1` créé `planned` (doc) | replan | fondateur | décision son |
 | 2026-10-15 | backend réponse/notif sain (11/11 + inbox) ; 3 défauts de visibilité | `NR-1` créé `done` | replan | relais | fondateur veut un badge ? |
 | 2026-10-15 | 2ᵉ demande → event+livraisons écrits, `web_push` resté `queued` ; routes dispo/claim/activation sans drain | `NR-2` créé `done` | replan | relais | producteur non drainé ? |
@@ -84,13 +85,13 @@
 
 ## Handoff to Founder HQ
 
-> **Local status:** `complete` pour `NR-4…NR-11` ; **1 tranche ouverte** (`GUIDE-SPEC`)
+> **Local status:** `complete` pour `NR-4…NR-11` **et `GR-1`** ; **restent** `GR-2`, `GR-3`, `NT-1`, `GUIDE-SPEC`
 > **Gate decision:** `go` — fondateur a autorisé la capacité neuve (« 1 ok ») et l'explication du plan (« 2 ok ») ; **décision A/B/C en attente sur l'entrée/guide**
 > **Closed:** `NR-1` (visibilité réponse vendeur) · `NR-2` (drain Web Push) · `NR-3` (le vendeur **peut** répondre : stock nommé, formulaire pré-rempli) · **`MB-1`/`MB-2`** (2026-10-16 : frontière budget partagée ; cible push verrouillée pour chaque producteur)
-> **Open:** `GUIDE-SPEC` (**blocked** — décision A/B/C), `GR-1`, `GR-2`, `GR-3`, `NT-1`. **Fermés le 2026-10-15 :** `NR-4`…`NR-11`.
+> **Open:** `GR-2` (**reprise RECHERCHE livrée** ; guide + flux en cours restent), `GR-3` (**décision fondateur** : « à chaque connexion » contredit « une seule fois »), `NT-1` (doc), `GUIDE-SPEC` (**blocked** — décision A/B/C). **Fermés le 2026-10-15 :** `NR-4`…`NR-11` ; **fermé le 2026-10-17 :** `GR-1`.
 > **Residual gap:** la **réponse auto** est construite (`actor_kind`, `decideAutoResponse`, prouvé 18/18) ; VAPID **est armé** (`push-key` `configured:true`, 4 `web_push` `delivered`). `NR-10` (« alertes » acheteur) et `NR-11` (explication du plan) sont **livrés le 2026-10-15**. Reste : **l'entrée/guide sans direction visuelle** (`GUIDE-SPEC` : la maquette, 74 écrans, n'a **aucune** surface de guide → 3 `orphaned leaves`).
-> **Next smallest action:** `GUIDE-SPEC` reste **bloqué** sur la décision fondateur A/B/C (entrée/guide) ; sinon `GR-2`/`GR-3`/`NT-1` sur ordre.
-> **Re-plan trigger:** le fondateur tranche A/B/C sur l'entrée/guide, ordonne `NR-10`/`NR-11`, ou veut un badge de notif / un son.
+> **Next smallest action:** `GR-2` suite — reprise du **flux en cours** (étape de transaction) ; puis reprise du guide ; `GR-3`/`GUIDE-SPEC` attendent une **décision fondateur**.
+> **Re-plan trigger:** le fondateur tranche A/B/C sur l'entrée/guide, tranche « accueil à chaque connexion » (`GR-3`), ou veut un badge de notif / un son.
 | 2026-10-15 | `caf18e5` : NR-4/5/6/7/8 livrés (1259→1260 tests, 7 gardes verts) | `NR-4/5/6/7/8` → `done` | exécution | relais | après push + T-07d |
 | 2026-10-15 | `NR-9` livrée : migration `072` (canonique), `decideAutoResponse`, producteur, **18/18** Postgres réel · **bug R-H pré-existant** trouvé et corrigé (`price_minor` absent de la requête de nature → toute proposition refusée) | `NR-9` → `done` | exécution | relais | après push + T-07d |
 | 2026-10-15 | `check:dock-search` échouait sur HEAD propre ; `--selftest` passait à tort | garde réparé (2 mutations périmées, règle poll renforcée) | correction de garde | relais | — |

@@ -32,3 +32,35 @@ describe('BRANCH-2 — mémoire de surface (revenir au même endroit)', () => {
     expect(parsed).toBeNull();
   });
 });
+
+describe('GR-2 — la feuille résultats ne se rouvre jamais VIDE', () => {
+  it('porte la requête et son niveau (S-11) dans l’état de surface', () => {
+    const state = { role: 'buyer', sheet: 'results', selectedId: null, selVisitId: null, searchQuery: 'pain', searchLevel: 'offer' as const };
+    const back = parseNavState(serializeNavState(state));
+    expect(back?.searchQuery).toBe('pain');
+    expect(back?.searchLevel).toBe('offer');
+  });
+
+  it('REGRESSION : une feuille `results` sans requête n’est pas restaurée', () => {
+    // Avant le correctif, cette surface se restaurait et rouvrait une feuille vide
+    // (« 0 résultat » qui n'en est pas un). Mieux vaut ne rien restaurer.
+    const parsed = parseNavState(JSON.stringify({ role: 'buyer', sheet: 'results', selectedId: null, searchQuery: null }));
+    expect(parsed).toBeNull();
+  });
+
+  it('borne la requête et refuse une valeur vide ou non textuelle', () => {
+    expect(parseNavState(JSON.stringify({ role: 'buyer', sheet: 'results', searchQuery: '   ' }))).toBeNull();
+    const long = parseNavState(JSON.stringify({ role: 'buyer', sheet: 'results', searchQuery: 'x'.repeat(500) }));
+    expect(long?.searchQuery?.length).toBe(200);
+    // Un niveau inconnu retombe sur `offer` — jamais une surface d'entités par accident.
+    const weird = parseNavState(JSON.stringify({ role: 'buyer', sheet: 'results', searchQuery: 'pain', searchLevel: 'hack' }));
+    expect(weird?.searchLevel).toBe('offer');
+  });
+
+  it('ne fait pas voyager la requête hors de la feuille résultats', () => {
+    const state = { role: 'buyer', sheet: 'menu', selectedId: null, selVisitId: null };
+    const back = parseNavState(serializeNavState(state));
+    expect(back?.sheet).toBe('menu');
+    expect(back?.searchQuery).toBeUndefined();
+  });
+});

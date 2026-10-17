@@ -478,6 +478,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // TF-8 recovery : dernière recherche commise — la requête ET son niveau (S-11), pour que
   // « Revenir à ma recherche » rouvre la BONNE surface (résultats d'offres ou d'entités).
   const lastSearchRef = useRef<{ query: string; level: 'offer' | 'entity' }>({ query: '', level: 'offer' });
+  // GR-2 — miroir d'ÉTAT de la recherche commise, pour que l'effet de persistance se
+  // rejoue quand on relance une recherche en restant sur `results` (une ref ne re-rend pas).
+  const [searchCommitted, setSearchCommitted] = useState<{ query: string; level: 'offer' | 'entity' }>({ query: '', level: 'offer' });
 
   const bulkCost = useMemo(() => {
     const facilities = bulkFacilities ?? [];
@@ -763,6 +766,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     const trimmed = raw.trim();
     if (!trimmed) return;
     lastSearchRef.current = { query: trimmed, level: 'offer' };
+    setSearchCommitted({ query: trimmed, level: 'offer' });
     setSearchedTerm(trimmed);
     // Nouvelle recherche = nouvelle cinématique : l'acheteur n'a encore rien ouvert.
     openedDuringRevealRef.current = false;
@@ -820,10 +824,19 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   useEffect(() => {
     if (restoringRef.current) return;
     try {
-      const surface: NavSurfaceState = { role, sheet, selectedId, selVisitId };
+      const surface: NavSurfaceState = {
+        role,
+        sheet,
+        selectedId,
+        selVisitId,
+        // GR-2 — la recherche en cours voyage avec la surface : au retour sur `results`,
+        // on la REJOUE au lieu d'afficher une feuille vide.
+        searchQuery: sheet === 'results' ? searchCommitted.query || undefined : undefined,
+        searchLevel: searchCommitted.level,
+      };
       window.localStorage.setItem(NAV_STATE_STORAGE_KEY, serializeNavState(surface));
     } catch { /* stockage indisponible */ }
-  }, [role, sheet, selectedId, selVisitId]);
+  }, [role, sheet, selectedId, selVisitId, searchCommitted]);
 
   // BRANCH-2 — restaurer la surface au premier montage (avant que la persistance n'écrive).
   useEffect(() => {
@@ -835,6 +848,12 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       if (restored.selVisitId) setSelVisitId(restored.selVisitId);
       if (restored.selectedId) {
         void handlePinSelect({ id: restored.selectedId });
+      } else if (restored.sheet === 'results' && restored.searchQuery) {
+        // GR-2 — on REJOUE la recherche : la feuille se rouvre avec ses vrais résultats,
+        // jamais vide. (Le niveau S-11 est respecté : entité ou offre.)
+        setSearchLevel(restored.searchLevel === 'entity' ? 'entity' : 'offer');
+        if (restored.searchLevel === 'entity') void runEntitySearch(restored.searchQuery);
+        else void runSearch(restored.searchQuery, currentSearchOptions());
       } else if (restored.sheet !== 'none') {
         setSheet(restored.sheet as Sheet);
       }
@@ -2454,7 +2473,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
    *  pour ce nom (S-05). On le dit, et on renvoie au niveau offre — jamais « introuvable » sec. */
   const runEntitySearch = useCallback(async (raw: string) => {
     const trimmed = raw.trim();
-    if (trimmed) lastSearchRef.current = { query: trimmed, level: 'entity' };
+    if (trimmed) { lastSearchRef.current = { query: trimmed, level: 'entity' }; setSearchCommitted({ query: trimmed, level: 'entity' }); }
     setEntityLoading(true);
     setEntityPlaceHint(null);
     setSheet('results');

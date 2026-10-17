@@ -24,6 +24,14 @@ export interface NavSurfaceState {
   selectedId: string | null;
   /** Visite de tournée ouverte (opérateur), si applicable. */
   selVisitId: string | null;
+  /**
+   * GR-2 — la requête de la feuille `results`, pour la REJOUER au retour.
+   * Sans elle, la feuille se rouvrirait vide : un « aucun résultat » qui n'en est pas un
+   * (la recherche vit en mémoire, elle ne survit pas au rechargement).
+   */
+  searchQuery?: string;
+  /** Niveau de la recherche persistée (S-11) : `offer` ou `entity`. */
+  searchLevel?: 'offer' | 'entity';
 }
 
 /** Feuilles qu'on accepte de restaurer sans logique serveur complexe. */
@@ -49,12 +57,25 @@ export function sanitizeNavSheet(sheet: unknown): string {
 
 /** Sérialise l'état de surface pour `sessionStorage`. */
 export function serializeNavState(state: NavSurfaceState): string {
-  return JSON.stringify({
+  const query = safeQuery(state.searchQuery);
+  const base = {
     role: ROLES.has(state.role) ? state.role : 'buyer',
     sheet: sanitizeNavSheet(state.sheet),
     selectedId: safeId(state.selectedId),
     selVisitId: safeId(state.selVisitId),
-  });
+  };
+  // La requête (et son niveau) ne voyagent QUE s'il y en a une — la forme historique de
+  // l'état reste inchangée pour les surfaces sans recherche.
+  return query
+    ? JSON.stringify({ ...base, searchQuery: query, searchLevel: state.searchLevel === 'entity' ? 'entity' : 'offer' })
+    : JSON.stringify(base);
+}
+
+/** Une requête persistée est du texte court et non vide (jamais une valeur arbitraire). */
+function safeQuery(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim().slice(0, 200);
+  return trimmed === '' ? null : trimmed;
 }
 
 /**
@@ -71,9 +92,22 @@ export function parseNavState(raw: string | null | undefined): NavSurfaceState |
   const sheet = sanitizeNavSheet(record.sheet);
   const selectedId = safeId(record.selectedId);
   const selVisitId = safeId(record.selVisitId);
+  const searchQuery = safeQuery(record.searchQuery) ?? undefined;
   // Une feuille qui dépend d'un lieu sans lieu, ou l'inverse, est incohérente → on ne
   // restaure que ce qui a un sens (évite une fiche vide).
   if (sheet === 'facility' && !selectedId) return null;
   if (sheet === 'none' && role === 'buyer' && !selectedId) return null;
-  return { role, sheet, selectedId, selVisitId };
+  // GR-2 — la feuille `results` SANS requête se rouvrirait vide (faux « aucun résultat »).
+  // Mieux vaut ne rien restaurer : l'app repart sur la carte, ce qui est honnête.
+  if (sheet === 'results' && !searchQuery) return null;
+  return {
+    role,
+    sheet,
+    selectedId,
+    selVisitId,
+    // Le niveau ne porte que s'il y a une requête (miroir exact de la sérialisation).
+    ...(searchQuery
+      ? { searchQuery, searchLevel: record.searchLevel === 'entity' ? ('entity' as const) : ('offer' as const) }
+      : {}),
+  };
 }
