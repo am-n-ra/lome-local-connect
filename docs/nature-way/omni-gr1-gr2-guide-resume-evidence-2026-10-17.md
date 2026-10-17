@@ -98,9 +98,49 @@ globe → rue prend ~8 s sur prod. Le harnais mesurait **avant** que la feuille 
 un **faux négatif**. Corrigé en attendant le **vrai signal** (`section[data-sheet="results"]`).
 *Un délai fixe est une hypothèse sur la machine, pas une preuve sur le produit.*
 
-## Reste ouvert
+## GR-2 (suite) — la Room d'une transaction survit au rechargement (2026-10-17, `ed34472`)
 
-- `GR-2` suite : reprise du **flux en cours** puis du **guide** (tranches séparées).
+**Défaut mesuré** : `room` n'était **pas** dans `RESTORABLE_SHEETS` → `sanitizeNavSheet('room') === 'none'`,
+donc recharger au milieu d'une transaction retombait sur la **carte nue** : l'utilisateur perdait le fil
+de son achat (même classe que `GR-2` recherche, une surface de plus).
+
+**Livré**
+- `nav-state` : `roomTransactionId` porté par la surface, gardé par `sheet === 'room'` **des deux côtés**
+  (sérialisation ET relecture) ; une Room **sans** transaction n'est **jamais** restaurée (pas de Room vide) ;
+  `room` ajouté aux feuilles restaurables.
+- `TrunkAppV13` : persistance de la transaction avec la surface ; au montage, la Room se rouvre par
+  `resumeTransaction`, qui **RELIT le rôle côté serveur** (`getTransaction` → `actorRole`) au lieu de le
+  supposer — un vendeur reprend sa vente, il n'est plus supposé acheteur.
+- **Même classe que AUTH-RESUME** : `openRoom`/`resumeTransaction` passaient `requireAuth({kind:'home'})` —
+  un rechargement à froid **sans session prête** renvoyait sur l'accueil et **perdait la transaction**.
+  La cible de reprise est désormais la **Room** ; le tap d'une notification de transaction passe aussi par
+  `resumeTransaction` (rôle relu, plus de vendeur supposé acheteur).
+
+**Gardes falsifiables** (chaque falsification produit un échec réel, puis restaurée) :
+
+| Falsification | Résultat |
+|---|---|
+| Retirer `room` des feuilles restaurables | `nav-state.test.ts` → **2 échecs** |
+| Retirer la garde « Room sans transaction » | `nav-state.test.ts` → **1 échec** |
+| Retirer `resumeTransaction` de la restauration | `room-resume.test.ts` → **1 échec** |
+| Remettre `kind:'home'` dans `openRoom` | `room-resume.test.ts` → **1 échec** |
+
+**Preuve navigateur `probe-gr2-room-resume.mjs` — A/B décisif** (le preview local n'a pas d'API : la lecture
+du snapshot est interceptée avec l'enveloppe réelle `{ ok, data }`) :
+
+| État | Trace de surface | Lectures serveur |
+|---|---|---|
+| **Avant** (`room` hors restaurables) | `none` | **0** |
+| **Après** | `none → room` | **2** |
+
+**Preuve PROD + `T-07d`** : commit `ed34472` · déploiement GitHub **`ed34472` Production**
+(`2026-10-17T11:21:03Z`) · prod `index-DAxwCCDN.js` **=== build local** (byte-identique) → **`T-07d ✅`** ·
+`probe:gr2-room-resume` **sur PROD → 4 ok / 0 fail** (`trace=none→room`, 2 lectures, 0 erreur console).
+
+**1353/1353** tests (170 fichiers) · `tsc -b` exit 0 · **7 gardes** verts. **Aucune migration.**
+
+**Reste ouvert**
+- `GR-2` suite : reprise du **flux en cours** (étape de disponibilité) puis du **guide** (tranches séparées).
 - `GR-3` (**décision fondateur** : « accueil à chaque connexion » contredit « une seule fois »).
 - `NT-1` (documenter la manifestation de la notification — déjà répondu : son du système OS).
 - `GUIDE-SPEC` (**bloqué** — décision A/B/C : la maquette, 74 écrans, n'a **aucune** surface de guide).

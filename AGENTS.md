@@ -1637,3 +1637,38 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
   migration**. Preuves **prod** : `probe-gr2-resume` (recherche rejouée) + `prove-gr1-spotlight-dock`
   (**14/14**). Dossier `omni-gr1-gr2-guide-resume-evidence-2026-10-17.md` ; retour
   `handoff-receipt-HO-OMNI-46.md`.
+
+## GR-2 (suite) — la Room d'une transaction survit au rechargement (2026-10-17, `ed34472`, prod `index-DAxwCCDN.js` === local, T-07d ✅)
+
+- **Défaut mesuré** : `room` n'était **pas** dans `RESTORABLE_SHEETS` → `sanitizeNavSheet('room') === 'none'`.
+  Recharger au milieu d'une transaction retombait sur la **carte nue** : l'utilisateur perdait le fil de son
+  achat. Même classe que le volet recherche de `GR-2`, une surface de plus.
+- **Livré** : `nav-state` porte `roomTransactionId`, gardé par `sheet === 'room'` **des deux côtés**
+  (sérialisation ET relecture) ; une Room **sans** transaction n'est **jamais** restaurée (pas de Room vide) ;
+  `room` ajouté aux feuilles restaurables. `TrunkAppV13` persiste la transaction avec la surface et la
+  restauration REJOUE la Room par `resumeTransaction`, qui **RELIT le rôle côté serveur**
+  (`getTransaction` → `actorRole`) — un vendeur reprend sa vente, il n'est plus supposé acheteur.
+- **⚠️ Deuxième défaut trouvé dans la même tranche, même classe que AUTH-RESUME** : `openRoom` et
+  `resumeTransaction` passaient `requireAuth({ kind: 'home', returnTo: 'home' })`. Un rechargement à froid
+  **sans session prête** (`getAuthToken()` vide) ouvrait donc l'écran de connexion avec `home` comme cible de
+  reprise → **la transaction était perdue**. Corrigé : la cible est `{ kind: 'room', transactionId }`. Le tap
+  d'une notification de transaction passe aussi par `resumeTransaction` (rôle relu, plus de vendeur supposé
+  acheteur). **Leçon : une surface qui se garde doit RETENIR sa clé, pas seulement son nom — `home` était un
+  mensonge dormant sur la destination de reprise.**
+- **Gardes falsifiables** : `nav-state.test.ts` (+4) et `room-resume.test.ts` (6, source). Falsifiés :
+  retirer `room` des feuilles restaurables → **2 échecs** ; retirer la garde « Room sans transaction » → **1** ;
+  retirer `resumeTransaction` de la restauration → **1** ; remettre `kind:'home'` dans `openRoom` → **1**.
+- **Preuve navigateur `probe:gr2-room-resume` — A/B décisif** : **avant** `trace=none` / **0** lecture
+  serveur ; **après** `none→room` / **2** lectures, 0 erreur. **Prod 4 ok / 0 fail** (T-07d ✅, déploiement
+  GitHub `ed34472` Production).
+- **Pièges de harnais attrapés (à ne pas réapprendre)** :
+  1. le client attend l'enveloppe `{ ok, data }` (`parse()` d'`api.ts`) — un mock qui renvoie le snapshot
+     **nu** donne `result.ok === undefined` et la Room ne s'ouvre jamais (faux négatif silencieux) ;
+  2. `MutationObserver` **batche** les mutations d'attribut : `room` puis `none` dans le même tick se lisent
+     « none ». Pour tracer un état transitoire, **échantillonner les valeurs distinctes** (`setInterval` +
+     comparaison), pas observer les mutations ;
+  3. l'endpoint de lecture d'une transaction est `transaction-transitions?action=snapshot`, pas
+     `/api/v2/transactions/<id>` (celui-ci liste).
+- **État** : **1353/1353** tests (170 fichiers) · `tsc -b` 0 · **7 gardes verts** · **aucune migration**.
+  Dossier `omni-gr1-gr2-guide-resume-evidence-2026-10-17.md`. **Reste** : reprise du **flux de disponibilité
+  en cours**, puis du **guide** ; `GR-3`/`GUIDE-SPEC` attendent une **décision fondateur**.
