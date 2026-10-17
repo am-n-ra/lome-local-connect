@@ -1593,3 +1593,47 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 - **T-07d** : entrée GitHub `deployments` `6f7a8e3` (Production) · prod `index-BfhBAR51.js` **=== build local** · route `POST /api/v2/seller/catalogue/:id` → **401** · producteur présent dans le **bundle servi**.
 - **Reste ouvert** : **`GUIDE-SPEC`** (entrée/guide/spotlight) **bloqué** — la maquette (74 écrans) n'a **aucune** surface de guide → **décision A/B/C fondateur** ; **badge non-lu / son** = fondation neuve (hors durcissement) ; **terrain (`TT-1`/`TT-2`/Gate 7) EN DERNIER**.
 
+
+## GR-1 + GR-2 (2026-10-17, commits `5f13a55` + `054fc39`, prod `index-CNy9ua4l.js` === local, T-07d ✅)
+
+- **`GR-1` — le guide s'arrêtait au dock : DÉJÀ CORRIGÉ, mais le plan le portait `ready`.**
+  Le correctif existait depuis `GUIDE-1c` (`091104e` : `placeSpotlightCard` + clamp fenêtre). Il
+  avait survécu au plan **parce que le seul harnais navigateur (`prove-guide-1b.mjs`) cliquait
+  « Passer »** — il fermait le guide **sans jamais atteindre la 3e étape** (le dock, le cas même du
+  défaut). Il prouvait les étapes 1–2 (haut d'écran) et **jamais le dock**. **Nouveau harnais
+  `scripts/prove-gr1-spotlight-dock.mjs`** qui **avance réellement** (`Suivant` ×2) et mesure la
+  géométrie à chaque étape : **14 ok / 0 fail** (`390×844` **et** `390×667`) ; bulle du dock
+  `placement=above`, **entièrement visible**. **Falsifié** en restaurant le défaut d'origine → `top=840`
+  sur `win=844`, **4 px visibles sur 128** — la mesure **exacte** du 2026-10-15.
+  **Leçon : un harnais qui n'atteint pas le cas mesuré ne le prouve pas.** Vérifier **où** s'arrête le
+  parcours avant de croire un test « vert ».
+
+- **`GR-2` — reprise : la feuille résultats se rouvrait VIDE (volet RECHERCHE livré).** Au rechargement
+  sur `results`, la recherche vivait **en mémoire** (`lastSearchRef`) et `nav-state` ne persistait que la
+  **feuille** → la feuille se rouvrait sur un **« 0 résultat » qui n'en était pas un**. **Correctif** :
+  la requête (+ son **niveau** S-11) **voyage avec la surface** et est **REJOUÉE** au retour ; une
+  feuille `results` **sans** requête n'est **pas restaurée** (`return null`) — mieux vaut la carte
+  qu'une feuille vide. `searchCommitted` est un **état**, pas une ref : l'effet de persistance ne se
+  rejouait pas quand on relançait une recherche **en restant sur `results`**.
+  **Preuve = la REQUÊTE RÉSEAU, pas le nombre de cartes** (le preview local n'a pas d'API : 0 carte des
+  deux côtés) : **avant** 0 requête / `sheet=none` → **après** `q=pain` rejoué / `sheet=results`.
+  **Falsifié** (requête non persistée → 0 requête) ; garde `nav-state.test.ts` **falsifiée** (garde
+  retiré → 2 échecs). **`GR-2` reste `partial`** : la reprise du **guide** (`how-it-works` hors
+  `RESTORABLE_SHEETS`) et d'un **flux en cours** sont des tranches séparées, **non faites**.
+
+- **Bug d'outillage trouvé en chemin.** `search-reveal-steal.test.ts` lisait `runSearch` sur une
+  **fenêtre de 400 caractères** : ajouter une ligne légitime (`setSearchCommitted`) a **fait échouer**
+  le garde **sans contrat violé**. Réparé en bornant par le **vrai bloc** (jusqu'à
+  `handleRevealStateChange`), puis **re-falsifié**. *Un garde qui casse sur un ajout légitime est un
+  garde fragile, pas une preuve.*
+
+- **Piège de harnais attrapé sur PROD.** L'attente était fixée à **2,5 s** alors que la révélation
+  globe → rue prend **~8 s** sur prod → le harnais mesurait **avant** l'ouverture de la feuille et
+  rapportait un **faux négatif**. Corrigé en attendant le **vrai signal**
+  (`section[data-sheet="results"]`). *Un délai fixe est une hypothèse sur la machine, pas une preuve
+  sur le produit.*
+
+- **État** : **1343/1343** tests (169 fichiers) · `tsc -b` 0 · **7 gardes verts** · **aucune
+  migration**. Preuves **prod** : `probe-gr2-resume` (recherche rejouée) + `prove-gr1-spotlight-dock`
+  (**14/14**). Dossier `omni-gr1-gr2-guide-resume-evidence-2026-10-17.md` ; retour
+  `handoff-receipt-HO-OMNI-46.md`.

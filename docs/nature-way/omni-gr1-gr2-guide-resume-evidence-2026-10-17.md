@@ -82,6 +82,22 @@ restauré → passe. *Un garde qui casse sur un ajout légitime est un garde fra
 - **Aucune migration.** Aucune donnée sensible ajoutée : la requête est du texte **public** tapé par
   l'utilisateur, borné à 200 caractères, stocké en `localStorage` (même classe que la feuille/l'id de lieu).
 
+## Preuve PROD + `T-07d` (2026-10-17)
+
+| Élément | Valeur |
+|---|---|
+| Commit | `5f13a55` (GR-1/GR-2) puis `054fc39` (harnais) |
+| Déploiement GitHub | entrée `deployments` **`5f13a55` Production** (`2026-10-17T10:46:25Z`) |
+| Hash prod | `index-CNy9ua4l.js` **=== build local** (byte-identique) → **`T-07d ✅`** |
+| Bundle servi | `searchQuery` présent (2 occurrences) — le correctif est bien **dans l'artefact déployé**, pas seulement dans le source |
+| **`probe-gr2-resume` sur PROD** | après rechargement : **1 requête `q=pain` rejouée**, `sheet=results` (**avant** : 0 requête, `sheet=none`) |
+| **`prove-gr1-spotlight-dock` sur PROD** | **14 ok / 0 fail** (dock `placement=above`, `top=458 bottom=585` sur 667) |
+
+**Piège de harnais attrapé sur prod** : l'attente était fixée à 2,5 s alors que la révélation
+globe → rue prend ~8 s sur prod. Le harnais mesurait **avant** que la feuille s'ouvre et rapportait
+un **faux négatif**. Corrigé en attendant le **vrai signal** (`section[data-sheet="results"]`).
+*Un délai fixe est une hypothèse sur la machine, pas une preuve sur le produit.*
+
 ## Reste ouvert
 
 - `GR-2` suite : reprise du **flux en cours** puis du **guide** (tranches séparées).
