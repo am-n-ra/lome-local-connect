@@ -2139,7 +2139,10 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       if (req.method === 'POST') {
         const to = input.to === 'published' || input.to === 'archived' ? input.to : null;
         if (!to) throw new ApiInputError('Choose a valid publication transition.');
-        const result = await repository.transitionSellerProduct({ authUserId, productId, to });
+        const result = await repository.transitionSellerProduct({ authUserId, productId, to, correlationId });
+        // NR-10 : la publication vient de mettre les alertes en file (web_push 'queued').
+        // On les dépile maintenant, en mieux-effort : jamais bloquant pour l'acquittement.
+        await drainWebPushBestEffort(repository);
         json(res, 200, { ok: true, correlationId, data: result });
         return true;
       }

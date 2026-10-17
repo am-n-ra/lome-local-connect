@@ -41,8 +41,8 @@
 | 8 | `NR-6` scan QR → ouvre la transaction | le scanner ouvre la Room de la transaction scannée | preuve navigateur + garde | `done` | le QR doit rester un simple verrou |
 | 9 | `NR-8` logo Omni in-app | le centre de notifications porte le logo | garde de rendu | `done` | — |
 | 10 | `NR-9` réponse auto au nom de l'entité | conditions C1–C10 tenues et prouvées (Species §95/§113, Root §6.3) | contrat + migration (`actor_kind`) + preuve | `done` | **LIVRÉE 2026-10-15** (fondateur « ok go ») : `decideAutoResponse` + `actor_kind` + producteur, **18/18** Postgres réel. **Abstention sur négociation** (deux couches, falsifiée) |
-| 11 | `NR-10` « alertes » acheteur (promesse du plan sans producteur) | une recherche sauvegardée produit un **événement** quand une offre correspond | producteur + cible de tap + garde | `ready` | **Fondateur « 1 ok » (2026-10-15)** → **construire**. Même famille que `NR-9` ; aucun mensonge à corriger, une capacité à créer |
-| 12 | `NR-11` expliquer le plan Pro vendeur | chaque capacité Pro porte une phrase, dont **quand l'automate s'abstient** | texte + garde de complétude | `ready` | **Fondateur « 2 ok » (2026-10-15)**. Le plus petit pas à valeur immédiate ; **durcissement**, pas de fondation |
+| 11 | `NR-10` « alertes » acheteur (promesse du plan sans producteur) | une recherche sauvegardée produit un **événement** quand une offre correspond | producteur + cible de tap + garde | `done` | **Fondateur « 1 ok » (2026-10-15)** → **livré**. Producteur `saved_search_match` dans la transition de publication (matcher **partagé** avec la recherche), cible `search` (in-app + push `?notifs=1&search=`), drain push, 2 gardes **falsifiées**. Aucune migration. |
+| 12 | `NR-11` expliquer le plan Pro vendeur | chaque capacité Pro porte une phrase, dont **quand l'automate s'abstient** | texte + garde de complétude | `done` | **Fondateur « 2 ok » (2026-10-15)** → **livré**. `AUTO_RESPONSE_ABSTENTION` (5 motifs, dont `negotiation-open`) + une phrase par ligne Pro + bloc d'abstention ; garde **falsifiée** (retirer un motif → échec). |
 | 13 | `GUIDE-SPEC` entrée & guide (accueil · guide · spotlight) | direction visuelle **acceptée** avant tout redessin | mini-maquette Species V2b + acceptation | `blocked` | **Fondateur « 3 trop génériques » (2026-10-15)**. **La maquette (74 écrans) n'a AUCUNE surface de guide** → les 3 surfaces de l'app sont des `orphaned leaves`. **Décision A/B/C demandée** (`omni-guide-onboarding-diagnostic-2026-10-15.md`) |
 
 ## Dependency-aware task tree
@@ -63,8 +63,8 @@
 | NR-6 | G-01 | Branch | le scan QR ouvre la transaction | NR-5 | relais | `done` | preuve navigateur : scan → Room de la bonne txn | le verrou reste (S-22) | le QR doit rester un verrou nu |
 | NR-8 | G-01 | Branch | logo Omni dans le centre in-app | — | relais | `done` | garde de rendu | visuel seul | — |
 | NR-9 | G-01 | Branch | réponse auto au nom de l'entité | décisions §5 | relais | `done` | contrat C1–C10 + migration `072` + preuve SQL **18/18** | **fondation neuve AUTORISÉE** (fondateur « ok go ») | — |
-| NR-10 | G-01 | Branch | « alertes » acheteur (promesse du plan sans producteur) | NR-9 | relais | `ready` | recherche sauvegardée → événement ; garde falsifiée | **capacité neuve AUTORISÉE** (fondateur « 1 ok ») | décision d'ordre |
-| NR-11 | G-01 | Branch | expliquer le plan Pro vendeur | — | relais | `ready` | garde : chaque ligne Pro porte une phrase | durcissement d'honnêteté | — |
+| NR-10 | G-01 | Branch | « alertes » acheteur (promesse du plan sans producteur) | NR-9 | relais | `done` | recherche sauvegardée → événement ; garde falsifiée | **capacité neuve AUTORISÉE** (fondateur « 1 ok ») | livré 2026-10-15 |
+| NR-11 | G-01 | Branch | expliquer le plan Pro vendeur | — | relais | `done` | garde : chaque ligne Pro porte une phrase | durcissement d'honnêteté | livré 2026-10-15 |
 | MB-1 | G-01 | Branch | frontière budget/prix par le helper partagé (UNI-MONEY-1) | — | relais | `done` | garde falsifié `buyer-flow-money` + 0 conversion manuelle dans le bundle servi | bug latent : champ vide → plafond 0 FCFA | — |
 | MB-2 | G-01 | Branch | chaque producteur de push produit un deep-link | — | relais | `done` | garde falsifié `push-target-coverage` (2) | **risque latent** : aujourd'hui les 4 types poussés sont ciblés ; le garde empêche une régression future | — |
 | IOS-PWA-1 | G-01 | Branch | session perdue sur iPhone **en PWA** (cookie tiers bloqué) | décision **B** (fondateur 2026-10-16) | relais | `done` **+ CLOS (fondateur, appareil réel 2026-10-16)** | proxy same-origin + cookie first-party prouvé serveur **ET confirmé sur iPhone PWA** | **fermé : le fondateur a vérifié sur son appareil** | — |
@@ -84,12 +84,12 @@
 
 ## Handoff to Founder HQ
 
-> **Local status:** `complete` pour `NR-4…NR-9` ; **3 tranches ouvertes** (`NR-10`, `NR-11`, `GUIDE-SPEC`)
+> **Local status:** `complete` pour `NR-4…NR-11` ; **1 tranche ouverte** (`GUIDE-SPEC`)
 > **Gate decision:** `go` — fondateur a autorisé la capacité neuve (« 1 ok ») et l'explication du plan (« 2 ok ») ; **décision A/B/C en attente sur l'entrée/guide**
 > **Closed:** `NR-1` (visibilité réponse vendeur) · `NR-2` (drain Web Push) · `NR-3` (le vendeur **peut** répondre : stock nommé, formulaire pré-rempli) · **`MB-1`/`MB-2`** (2026-10-16 : frontière budget partagée ; cible push verrouillée pour chaque producteur)
-> **Open:** `NR-10` (ready — « alertes » à construire), `NR-11` (ready — expliquer le plan), `GUIDE-SPEC` (**blocked** — décision A/B/C), `GR-1`, `GR-2`, `GR-3`, `NT-1`. **Fermés le 2026-10-15 :** `NR-4`…`NR-9`.
-> **Residual gap:** la **réponse auto** est construite (`actor_kind`, `decideAutoResponse`, prouvé 18/18) ; VAPID **est armé** (`push-key` `configured:true`, 4 `web_push` `delivered`). Restent : **« alertes » acheteur** (promesse du plan **sans producteur** — `NR-10`), **explication du plan** (`NR-11`), et **l'entrée/guide sans direction visuelle** (`GUIDE-SPEC` : la maquette, 74 écrans, n'a **aucune** surface de guide → 3 `orphaned leaves`).
-> **Next smallest action:** `NR-11` (expliquer le plan) — le plus petit pas à valeur immédiate, sans visuel ni migration ; puis `NR-10` sur ordre.
+> **Open:** `GUIDE-SPEC` (**blocked** — décision A/B/C), `GR-1`, `GR-2`, `GR-3`, `NT-1`. **Fermés le 2026-10-15 :** `NR-4`…`NR-11`.
+> **Residual gap:** la **réponse auto** est construite (`actor_kind`, `decideAutoResponse`, prouvé 18/18) ; VAPID **est armé** (`push-key` `configured:true`, 4 `web_push` `delivered`). `NR-10` (« alertes » acheteur) et `NR-11` (explication du plan) sont **livrés le 2026-10-15**. Reste : **l'entrée/guide sans direction visuelle** (`GUIDE-SPEC` : la maquette, 74 écrans, n'a **aucune** surface de guide → 3 `orphaned leaves`).
+> **Next smallest action:** `GUIDE-SPEC` reste **bloqué** sur la décision fondateur A/B/C (entrée/guide) ; sinon `GR-2`/`GR-3`/`NT-1` sur ordre.
 > **Re-plan trigger:** le fondateur tranche A/B/C sur l'entrée/guide, ordonne `NR-10`/`NR-11`, ou veut un badge de notif / un son.
 | 2026-10-15 | `caf18e5` : NR-4/5/6/7/8 livrés (1259→1260 tests, 7 gardes verts) | `NR-4/5/6/7/8` → `done` | exécution | relais | après push + T-07d |
 | 2026-10-15 | `NR-9` livrée : migration `072` (canonique), `decideAutoResponse`, producteur, **18/18** Postgres réel · **bug R-H pré-existant** trouvé et corrigé (`price_minor` absent de la requête de nature → toute proposition refusée) | `NR-9` → `done` | exécution | relais | après push + T-07d |

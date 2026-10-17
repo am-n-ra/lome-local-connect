@@ -18,6 +18,7 @@ export type NotificationTarget =
   | { kind: 'seller-queue' }
   | { kind: 'review' }
   | { kind: 'availability-response'; requestId: string }
+  | { kind: 'search'; query: string; level: 'offer' | 'entity' }
   | { kind: 'none' };
 
 export function notificationLabel(notification: Pick<NotificationSummary, 'eventType' | 'reviewOutcome'>): string {
@@ -38,6 +39,9 @@ export function notificationLabel(notification: Pick<NotificationSummary, 'event
     case 'seller_account_activated': return 'Compte vendeur activé';
     case 'seller_account_suspended': return 'Compte vendeur suspendu';
     case 'seller_account_reactivated': return 'Compte vendeur réactivé';
+    // NR-10 — l'alerte acheteur. La promesse « être alerté » de la sheet « Recherches
+    // enregistrées » n'avait aucun producteur : on ne pouvait être alerté de rien.
+    case 'saved_search_match': return 'Une offre correspond à votre alerte';
     default: return 'Notification';
   }
 }
@@ -79,6 +83,11 @@ export function notificationTarget(notification: Pick<NotificationSummary, 'even
     && entityType === 'account'
   ) {
     return { kind: 'seller' };
+  }
+  // NR-10 — l'alerte ouvre la RECHERCHE (les résultats), pas un écran générique : c'est là
+  // que l'acheteur voit l'offre qui correspond. `entityId` porte la requête sauvegardée.
+  if (eventType === 'saved_search_match' && entityType === 'saved_search' && entityId) {
+    return { kind: 'search', query: entityId, level: 'offer' };
   }
   return { kind: 'none' };
 }

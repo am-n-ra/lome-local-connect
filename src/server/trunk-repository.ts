@@ -3555,7 +3555,22 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       return { productId: String(row.id), publicationState: 'draft', prixReduit: input.prixOriginal - discount };
     },
 
-    async transitionSellerProduct(input: { authUserId: string; productId: string; to: 'published' | 'archived' }): Promise<{ productId: string; publicationState: 'published' | 'archived' }> {
+    async transitionSellerProduct(input: { authUserId: string; productId: string; to: 'published' | 'archived'; correlationId: string }): Promise<{ productId: string; publicationState: 'published' | 'archived' }> {
+      // NR-10 — le motif de correspondance des alertes est EXACTEMENT celui de la recherche.
+      // On le dérive des RECHERCHES SAUVEGARDÉES (leur requête est l'entrée, le nom de l'offre
+      // est la meule), jamais l'inverse : `pattern(query) ~ name` n'est pas symétrique, et
+      // l'inverser ferait manquer toute recherche de plus d'un mot. Une requête sans jeton
+      // exploitable (que des chiffres/ponctuation) ne produit pas d'alerte, comme elle ne
+      // produit pas de résultat en recherche.
+      const alertRows = input.to === 'published'
+        ? (await retryDatabase(() => sql`
+            select id, account_id, query from v2_saved_searches where active
+          `)) as Record<string, unknown>[]
+        : [];
+      const alertTargets = alertRows
+        .map((r) => ({ id: String(r.id), accountId: String(r.account_id), query: String(r.query), pattern: buildWordBoundaryPattern(String(r.query)) }))
+        .filter((t): t is { id: string; accountId: string; query: string; pattern: string } => t.pattern !== null);
+      const alertJson = JSON.stringify(alertTargets.map((t) => ({ search_id: t.id, account_id: t.accountId, query: t.query, pattern: t.pattern })));
       const rows = await retryDatabase(() => sql`
         with owned as (
           select p.id, p.facility_id, p.publication_state,
@@ -3656,10 +3671,59 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
               or ((select publication_state from owned) = 'published' and ${input.to} = 'archived')
             )
           returning p.id, p.publication_state
+        ),
+        -- NR-10 — l'ALERTE acheteur. La sheet « Recherches enregistrées » promet « être alerté »,
+        -- mais rien n'écrivait jamais d'événement : on ne pouvait être alerté de RIEN.
+        --
+        -- Le moment honnête est la PREMIÈRE publication d'une offre : c'est là qu'une offre
+        -- devient visible sur la carte (la disponibilité est un fait séparé, D-02/D-03, et
+        -- alerter sur une dispo non confirmée serait le mensonge que le produit refuse).
+        --
+        -- changed_offer ne retient QUE la transition draft -> published (jamais une
+        -- re-publication d'une offre déjà publiée, jamais un archivage) : une alerte par
+        -- publication réelle, pas une par clic.
+        --
+        -- Le prédicat de correspondance est EXACTEMENT celui de la recherche (buildWordBoundaryPattern
+        -- + translate(lower(…), fold)) — deux copies divergeraient, et l'alerte annoncerait une
+        -- offre que la recherche ne retrouve pas. Le mot entier est exigé (jamais %pain% vers
+        -- painter), donc une alerte ne se déclenche pas sur une sous-chaîne trompeuse.
+        changed_offer as (
+          select (select id from owned) as product_id,
+                 translate(lower(coalesce((select name from v2_products where id = (select id from owned)), '')), ${ACCENT_FOLD_FROM}, ${ACCENT_FOLD_TO}) as folded_name
+          where ${input.to} = 'published'
+            and exists (select 1 from changed)
+        ), alert_targets as (
+          select item.search_id, item.account_id::uuid as account_id, item.query, item.pattern
+          from jsonb_to_recordset(${alertJson}::jsonb) as item(search_id text, account_id text, query text, pattern text)
+        ), alerted as (
+          insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
+          select at.account_id, 'saved_search_match', 'saved_search', at.query,
+                 co.product_id::text || ':saved_search_match:' || at.search_id,
+                 jsonb_build_object('kind', 'saved_search_match', 'query', at.query, 'productId', co.product_id::text),
+                 ${input.correlationId}
+          from changed_offer co
+          cross join alert_targets at
+          where co.folded_name ~ at.pattern
+          on conflict (recipient_account_id, dedupe_key) do nothing
+          returning id, recipient_account_id
+        ), alert_deliveries as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select id, 'in_app', 'queued' from alerted
+          on conflict (event_id, channel) do nothing
+          returning id
+        ), alert_push_deliveries as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select n.id, 'web_push', 'queued'
+          from alerted n
+          join v2_web_push_subscriptions s on s.account_id = n.recipient_account_id
+          where s.permission_state = 'granted' and s.revoked_at is null
+          on conflict (event_id, channel) do nothing
+          returning id
         ) select
           (select id from changed) as changed_id,
           (select publication_state from changed) as changed_state,
-          (select reason from publication_block) as block_reason
+          (select reason from publication_block) as block_reason,
+          (select count(*)::int from alerted) as alerted_count
       `);
       const row = (rows as Record<string, unknown>[])[0];
       // Distinguish the honest failures: blocked by E-03/E-04 (actionable, named reason) versus

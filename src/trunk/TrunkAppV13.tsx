@@ -1308,6 +1308,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     if (params.get('notifs') !== '1') return;
     const txn = params.get('txn');
     const requestId = params.get('request');
+    const searchQuery = params.get('search');
     window.history.replaceState(null, '', window.location.pathname);
     // POINT 1 (2026-10-16) : si la session n'est pas encore là, on RETIENT la cible au
     // lieu de la perdre. Avant ce garde, les paramètres étaient effacés puis `sessionUser`
@@ -1316,6 +1317,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     if (!sessionUser) {
       if (txn) setPendingAction({ kind: 'room', returnTo: 'room', transactionId: txn });
       else if (requestId) setPendingAction({ kind: 'request', returnTo: 'request', requestId });
+      else if (searchQuery) setPendingAction({ kind: 'search', returnTo: 'search', query: searchQuery, level: 'offer' });
       else setPendingAction({ kind: 'notifs', returnTo: 'notifs' });
       return;
     }
@@ -1328,6 +1330,13 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     }
     if (requestId) {
       void openRequestTracking(requestId);
+      return;
+    }
+    if (searchQuery) {
+      // NR-10 — l'alerte ouvre la recherche de la requête enregistrée : l'acheteur voit
+      // l'offre qui correspond, jamais un écran vide.
+      setQuery(searchQuery);
+      void runSearch(searchQuery, currentSearchOptions());
       return;
     }
     void openNotifs();
@@ -1343,7 +1352,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         ? { kind: 'request', returnTo: 'request', requestId: target.requestId }
         : target.kind === 'seller-queue'
           ? { kind: 'seller-entry', returnTo: 'seller-entry' }
-          : undefined;
+          : target.kind === 'search'
+            ? { kind: 'search', returnTo: 'search', query: target.query, level: target.level }
+            : undefined;
     const token = await requireAuth(resume);
     if (!token) return;
     // Retour visuel immédiat : la ligne passe en « lue » AU TAP, le serveur rattrape
@@ -1381,6 +1392,11 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         setRole('seller'); setSheet('seller'); if (sessionUser) void loadSellerWorkspace();
       } else if (target.kind === 'review') {
         setSheet('admin');
+      } else if (target.kind === 'search') {
+        // NR-10 — l'alerte ouvre la RECHERCHE : l'acheteur voit l'offre qui correspond.
+        // On relance SA requête (celle qu'il avait enregistrée), pas un écran vide.
+        setQuery(target.query);
+        void runSearch(target.query, currentSearchOptions());
       }
     } catch {
       setNotifsError('Cette notification ne peut pas être ouverte pour le moment.');

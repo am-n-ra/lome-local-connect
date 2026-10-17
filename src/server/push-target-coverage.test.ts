@@ -38,7 +38,7 @@ describe('la cible du push est profonde pour CHAQUE producteur de web_push', () 
     for (const { name, body } of methodBodies()) {
       if (!isWebPushProducer(body)) continue;
       // Les paires (event_type, entity_type) écrites dans v2_notification_events.
-      const pairs = [...body.matchAll(/'([a-z_]+)',\s*'(transaction|availability_request)'/g)];
+      const pairs = [...body.matchAll(/'([a-z_]+)',\s*'(transaction|availability_request|saved_search)'/g)];
       expect(pairs.length, `${name} pousse sans événement identifiable`).toBeGreaterThan(0);
       for (const [, eventType, entityType] of pairs) {
         const url = pushMessageFor({ kind: eventType }, { entityType, entityId: 'x' }).url;

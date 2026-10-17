@@ -39,6 +39,9 @@ describe('notification centre contract (MV1 X03)', () => {
       .toEqual({ kind: 'review' });
     expect(notificationTarget({ eventType: 'seller_account_activated', entityType: 'account', entityId: 'acc-1' }))
       .toEqual({ kind: 'seller' });
+    // NR-10 — l'alerte ouvre la RECHERCHE de la requête enregistrée, jamais un écran générique.
+    expect(notificationTarget({ eventType: 'saved_search_match', entityType: 'saved_search', entityId: 'pain' }))
+      .toEqual({ kind: 'search', query: 'pain', level: 'offer' });
   });
 
   it('refuses an unknown or identifier-less event instead of misrouting it', () => {

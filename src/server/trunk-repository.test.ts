@@ -2678,51 +2678,51 @@ describe('publication honnête Root seam (E-03 / E-04, RH-01)', () => {
   it('refuses to publish an offer with no visual, naming the reason', async () => {
     const call = stubSql([{ changed_id: null, changed_state: null, block_reason: 'MEDIA_REQUIRED' }]);
     const repository = createTrunkRepository(call.sql);
-    await expect(repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published' }))
+    await expect(repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published', correlationId: 'c' }))
       .rejects.toThrow('MEDIA_REQUIRED');
-    expect(call.queries[0]).toContain('publication_block');
-    expect(call.queries[0]).toContain('jsonb_array_length');
+    expect(call.queries.join('')).toContain('publication_block');
+    expect(call.queries.join('')).toContain('jsonb_array_length');
   });
 
   it('refuses to publish an offer with no advantage, naming the reason', async () => {
     const call = stubSql([{ changed_id: null, changed_state: null, block_reason: 'ADVANTAGE_REQUIRED' }]);
     const repository = createTrunkRepository(call.sql);
-    await expect(repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published' }))
+    await expect(repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published', correlationId: 'c' }))
       .rejects.toThrow('ADVANTAGE_REQUIRED');
   });
 
   it('refuses to publish an occasion with no word on its state, naming the reason (R-I)', async () => {
     const call = stubSql([{ changed_id: null, changed_state: null, block_reason: 'OCCASION_DETAIL_REQUIRED' }]);
     const repository = createTrunkRepository(call.sql);
-    await expect(repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published' }))
+    await expect(repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published', correlationId: 'c' }))
       .rejects.toThrow('OCCASION_DETAIL_REQUIRED');
-    expect(call.queries[0]).toContain('publication_block');
-    expect(call.queries[0]).toContain('OCCASION_DETAIL_REQUIRED');
+    expect(call.queries.join('')).toContain('publication_block');
+    expect(call.queries.join('')).toContain('OCCASION_DETAIL_REQUIRED');
   });
 
   it('refuses a physical pickup on an immaterial offer, naming the reason (R-I handover)', async () => {
     const call = stubSql([{ changed_id: null, changed_state: null, block_reason: 'HANDOVER_INCOHERENT' }]);
     const repository = createTrunkRepository(call.sql);
-    await expect(repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published' }))
+    await expect(repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published', correlationId: 'c' }))
       .rejects.toThrow('HANDOVER_INCOHERENT');
-    expect(call.queries[0]).toContain('publication_block');
-    expect(call.queries[0]).toContain('HANDOVER_INCOHERENT');
+    expect(call.queries.join('')).toContain('publication_block');
+    expect(call.queries.join('')).toContain('HANDOVER_INCOHERENT');
   });
 
   it('the refusal only fires on draft→published, never on archive (grandfathering D-RH-5)', async () => {
     // The block CTE must be scoped so an already-published offer is never retro-blocked.
     const call = stubSql([{ changed_id: 'product-1', changed_state: 'archived', block_reason: null }]);
     const repository = createTrunkRepository(call.sql);
-    const result = await repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'archived' });
+    const result = await repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'archived', correlationId: 'c' });
     expect(result).toEqual({ productId: 'product-1', publicationState: 'archived' });
-    expect(call.queries[0]).toContain("when (select publication_state from owned) <> 'draft'");
+    expect(call.queries.join('')).toContain("when (select publication_state from owned) <> 'draft'");
     expect(call.queries[0]).toContain('then null');
   });
 
   it('publishes and returns the changed row when both facts are present', async () => {
     const call = stubSql([{ changed_id: 'product-1', changed_state: 'published', block_reason: null }]);
     const repository = createTrunkRepository(call.sql);
-    const result = await repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published' });
+    const result = await repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published', correlationId: 'c' });
     expect(result).toEqual({ productId: 'product-1', publicationState: 'published' });
   });
 
@@ -2731,9 +2731,9 @@ describe('publication honnête Root seam (E-03 / E-04, RH-01)', () => {
     // `p.id = (select id from owned)` filter and an archive would have hit EVERY product.
     const call = stubSql([{ changed_id: 'product-1', changed_state: 'archived', block_reason: null }]);
     const repository = createTrunkRepository(call.sql);
-    await repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'archived' });
+    await repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'archived', correlationId: 'c' });
     expect(call.queries[0]).toContain('and (\n');
-    expect(call.queries[0]).toContain("or ((select publication_state from owned) = 'published'");
+    expect(call.queries.join('')).toContain("or ((select publication_state from owned) = 'published'");
   });
 
   it('attaches offer media owner-bound and normalises the references', async () => {
@@ -2870,10 +2870,10 @@ describe('Product availability Root seam (G-04 trunk)', () => {
     // n'alimentait (toujours 'free') -> un vendeur Pro PAYANT ne pouvait pas depasser le plafond.
     const call = stubSql([{ changed_id: 'product-1', changed_state: 'published', block_reason: null }]);
     const repository = createTrunkRepository(call.sql);
-    await repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published' });
-    expect(call.queries[0]).toContain("fe.entitlement_kind = 'facility_pro'");
-    expect(call.queries[0]).toContain('fe.ends_at > now()');
-    expect(call.queries[0]).toContain('is_pro');
+    await repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published', correlationId: 'c' });
+    expect(call.queries.join('')).toContain("fe.entitlement_kind = 'facility_pro'");
+    expect(call.queries.join('')).toContain('fe.ends_at > now()');
+    expect(call.queries.join('')).toContain('is_pro');
   });
 
   it('liste StockEvent history newest first, bounded to 50', async () => {

@@ -72,7 +72,9 @@ export function pushMessageFor(
     ? `/?notifs=1&txn=${encodeURIComponent(entity.entityId)}`
     : entity.entityType === 'availability_request' && entity.entityId
       ? `/?notifs=1&request=${encodeURIComponent(entity.entityId)}`
-      : '/?notifs=1';
+      : entity.entityType === 'saved_search' && entity.entityId
+        ? `/?notifs=1&search=${encodeURIComponent(entity.entityId)}`
+        : '/?notifs=1';
   const kindMessages: Record<string, { title: string; body: string; url: string }> = {
     transaction_intent_created: {
       title: 'Omni · intention d’achat',
@@ -99,6 +101,13 @@ export function pushMessageFor(
     availability_response_lapsed: {
       title: 'Omni · demande expirée',
       body: 'Cette demande a expiré avant la transaction. Le stock réservé a été libéré.',
+      url: targetUrl,
+    },
+    // NR-10 — l'alerte d'une recherche sauvegardée. La cible est la RECHERCHE elle-même
+    // (`entityId` porte la requête), jamais l'Inbox : le tap doit montrer l'offre qui correspond.
+    saved_search_match: {
+      title: 'Omni · nouvelle offre',
+      body: 'Une offre correspond à votre alerte.',
       url: targetUrl,
     },
   };

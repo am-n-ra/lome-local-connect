@@ -68,6 +68,24 @@ export type AutoResponseDecision =
   | { kind: 'defer'; reason: AutoResponseRefusal; detail: string };
 
 /**
+ * NR-11 — les conditions d'abstention, ENSEIGNÉES au vendeur.
+ *
+ * Le vendeur qui paie Pro doit savoir **quand** la promesse ne se réalise pas. Sans ça, il
+ * constate un silence et devine la cause (c'est la famille du bug `(source : auto)`).
+ *
+ * `Record<AutoResponseRefusal, string>` et non un tableau : ajouter un motif de refus sans
+ * écrire sa phrase devient une **erreur de compilation**, pas un oubli silencieux. Le type
+ * est la garde ; le test ne fait que la rendre visible.
+ */
+export const AUTO_RESPONSE_ABSTENTION: Record<AutoResponseRefusal, string> = {
+  'not-enabled': 'Vous n’avez pas activé la réponse automatique pour cette offre.',
+  'not-pro': 'La facilité n’a pas de Pro vivant (le renouvellement a peut-être échu).',
+  'not-fresh': 'Le stock Omni n’est plus frais : le vendeur doit re-confirmer.',
+  'insufficient-stock': 'Le stock Omni ne couvre pas la quantité demandée (jamais de partiel automatique).',
+  'negotiation-open': 'L’acheteur propose un prix : la négociation revient au vendeur.',
+};
+
+/**
  * Ce que l'automate peut répondre — ou pourquoi il s'abstient.
  *
  * L'ordre des refus suit la chaîne d'autorité : d'abord le DROIT (réglage, Pro), puis la VÉRITÉ

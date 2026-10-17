@@ -390,11 +390,17 @@ body{background:#dadad7;padding:0}
 .plans-head,.plans-row{display:grid;grid-template-columns:1fr 72px 96px;gap:6px;align-items:baseline}
 .plans-head{padding:6px 0 3px;border-bottom:1px solid var(--line);font-size:8px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--ink-soft)}
 .plans-head span:nth-child(2),.plans-head span:nth-child(3){text-align:right}
-.plans-row{padding:6px 0;border-top:1px solid var(--line);font-size:9px}
-.plans-row:first-of-type{border-top:none}
+/* NR-11 — la ligne porte désormais SA phrase : la bordure vit sur l'item, pas sur la grille. */
+.plans-item{padding:6px 0;border-top:1px solid var(--line)}
+.plans-item:first-of-type{border-top:none}
+.plans-row{font-size:9px}
 .plans-label{color:var(--ink-soft);min-width:0}
 .plans-cell{text-align:right;font-weight:800;color:var(--ink-soft)}
 .plans-pro{color:var(--ink)}
+.plans-explain{margin:3px 0 0;font-size:8.5px;line-height:1.35;color:var(--ink-soft)}
+.plans-note{margin-top:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.plans-note ul{margin:4px 0 0;padding-left:16px}
+.plans-note li{margin:2px 0;line-height:1.35}
 @media (max-width:360px){.plans-head,.plans-row{grid-template-columns:1fr 60px 84px;font-size:8.5px}}
 
 /* GUIDE-1b — spotlight de première fois sur la carte. Il EXPLIQUE, il ne BLOQUE pas :
