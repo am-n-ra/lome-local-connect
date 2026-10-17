@@ -30,14 +30,18 @@ await page.waitForTimeout(600);
 const input = page.locator('.searchdock input, input[type="search"], .fld input').first();
 await input.fill('pain').catch(async () => { await page.keyboard.type('pain'); });
 await page.keyboard.press('Enter');
-await page.waitForTimeout(2500);
+// La révélation (globe → rue) doit se TERMINER avant que la feuille résultats s'ouvre :
+// sur prod elle prend ~8 s, on attend le vrai signal plutôt qu'une durée fixe.
+await page.waitForSelector('section[data-sheet="results"]', { timeout: 25000 }).catch(() => {});
+await page.waitForTimeout(1500);
 
 const nav = await page.evaluate(() => { try { return localStorage.getItem('omni-nav-state'); } catch { return null; } });
 console.log('APRÈS RECHERCHE : requêtes q= =', searches.length, '| nav =', nav);
 
 searches.length = 0;
 await page.reload({ waitUntil: 'load' });
-await page.waitForTimeout(3500);
+await page.waitForSelector('section[data-sheet="results"]', { timeout: 25000 }).catch(() => {});
+await page.waitForTimeout(1500);
 
 const after = await page.evaluate(() => ({
   sheet: document.querySelector('.omni-v13-stage')?.getAttribute('data-sheet'),
